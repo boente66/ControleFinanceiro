@@ -1,0 +1,73 @@
+# ========================
+# AMBIENTE VIRTUAL
+# ========================
+financeiro/
+venv/
+source/
+build-env/
+
+# ========================
+# VARIÁVEIS SENSÍVEIS
+# ========================
+.env
+
+# ========================
+# BANCO DE DADOS
+# ========================
+*.db
+*.sqlite
+*.sqlite3
+
+# ========================
+# BACKUP
+# ========================
+*.kp
+*.backup
+*.zip
+
+# ========================
+# PYTHON
+# ========================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# ========================
+# LOGS
+# ========================
+*.log
+
+# ========================
+# IDE / EDITOR
+# ========================
+.vscode/
+.idea/
+
+# ========================
+# SISTEMA OPERACIONAL
+# ========================
+.DS_Store
+Thumbs.db
+
+# ========================
+# BUILD / DISTRIBUIÇÃO
+# ========================
+output/
+dist/
+build/
+*.egg-info/
+
+# Python
+__pycache__/
+*.pyc
+.env
+venv/
+.env.*
+
+# Database local
+*.db
+*.sqlite
+# IDE
+.vscode/
+.idea/

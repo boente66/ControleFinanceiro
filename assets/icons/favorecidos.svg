@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24" height="24" viewBox="0 0 24 24"
+     fill="none"
+     xmlns="http://www.w3.org/2000/svg">
+
+  <!-- Pessoa principal -->
+  <circle cx="9" cy="8" r="3"
+          stroke="currentColor"
+          stroke-width="2"/>
+
+  <path d="M3 19C3 15.7 5.7 13 9 13C12.3 13 15 15.7 15 19"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"/>
+
+  <!-- Pessoa secundária -->
+  <circle cx="17" cy="10" r="2"
+          stroke="currentColor"
+          stroke-width="2"/>
+
+  <path d="M14 19C14 16.8 15.8 15 18 15C20.2 15 21 16.8 21 19"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"/>
+
+</svg>

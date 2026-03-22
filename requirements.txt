@@ -1,0 +1,7 @@
+PyQt5
+openpyxl
+pdfplumber
+python-docx
+pandas
+reportlab
+spacy

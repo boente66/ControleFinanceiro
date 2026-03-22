@@ -1,0 +1,19 @@
+# services/pdf_service.py
+
+from utilitarios.makepdf import MakePDF
+
+
+class PdfService:
+    """
+    Serviço de infraestrutura para manipulação de PDF.
+    NÃO contém regra de negócio.
+    """
+
+    def ler_texto(self, caminho_arquivo: str) -> str | None:
+        if not caminho_arquivo:
+            return None
+
+        return MakePDF.ler_pdf(caminho_arquivo)
+
+    def gerar_pdf(self, caminho_arquivo: str, titulo: str, conteudo: str) -> bool:
+        return MakePDF.gerar_pdf(caminho_arquivo, titulo, conteudo)

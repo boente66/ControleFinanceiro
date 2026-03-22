@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 24 24"
+     fill="none"
+     stroke="currentColor"
+     stroke-width="2"
+     stroke-linecap="round"
+     stroke-linejoin="round">
+
+  <!-- Base -->
+  <line x1="12" y1="3" x2="12" y2="21"/>
+
+  <!-- Braço da balança -->
+  <line x1="5" y1="8" x2="19" y2="8"/>
+
+  <!-- Prato esquerdo -->
+  <path d="M5 8 L2 13 H8 Z"/>
+
+  <!-- Prato direito -->
+  <path d="M19 8 L16 13 H22 Z"/>
+
+</svg>

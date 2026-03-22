@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24" height="24" viewBox="0 0 24 24"
+     fill="none"
+     xmlns="http://www.w3.org/2000/svg">
+
+  <!-- Banco de dados (camadas) -->
+  <ellipse cx="12" cy="5" rx="8" ry="3"
+           stroke="currentColor"
+           stroke-width="2"/>
+
+  <path d="M4 5V11C4 12.7 7.6 14 12 14C16.4 14 20 12.7 20 11V5"
+        stroke="currentColor"
+        stroke-width="2"/>
+
+  <path d="M4 11V17C4 18.7 7.6 20 12 20C16.4 20 20 18.7 20 17V11"
+        stroke="currentColor"
+        stroke-width="2"/>
+
+  <!-- Seta de proteção -->
+  <path d="M12 9V15M12 15L10 13M12 15L14 13"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+
+</svg>

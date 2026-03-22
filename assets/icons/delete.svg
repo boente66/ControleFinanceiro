@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="24" height="24"
+     viewBox="0 0 24 24"
+     fill="none"
+     stroke="currentColor"
+     stroke-width="2.5"
+     stroke-linecap="round"
+     stroke-linejoin="round">
+
+    <!-- Tampa -->
+    <line x1="3" y1="6" x2="21" y2="6"/>
+    <path d="M8 6V4h8v2"/>
+
+    <!-- Corpo da lixeira -->
+    <rect x="6" y="6" width="12" height="14" rx="2"/>
+
+    <!-- Linhas internas -->
+    <line x1="10" y1="10" x2="10" y2="18"/>
+    <line x1="14" y1="10" x2="14" y2="18"/>
+
+</svg>

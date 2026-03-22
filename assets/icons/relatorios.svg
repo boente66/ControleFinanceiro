@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24" height="24" viewBox="0 0 24 24"
+     fill="none"
+     xmlns="http://www.w3.org/2000/svg">
+
+  <!-- Eixo base -->
+  <line x1="4" y1="19" x2="20" y2="19"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"/>
+
+  <!-- Eixo lateral -->
+  <line x1="4" y1="5" x2="4" y2="19"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"/>
+
+  <!-- Linha do gráfico -->
+  <path d="M6 15L10 11L13 13L18 7"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+
+  <!-- Pontos -->
+  <circle cx="6" cy="15" r="1.5" fill="currentColor"/>
+  <circle cx="10" cy="11" r="1.5" fill="currentColor"/>
+  <circle cx="13" cy="13" r="1.5" fill="currentColor"/>
+  <circle cx="18" cy="7" r="1.5" fill="currentColor"/>
+
+</svg>

@@ -4,7 +4,7 @@ import os
 import json
 from datetime import datetime
 
-from core.database import Database
+from database.database import Database
 from utilitarios.crypto_util import encrypt_bytes, decrypt_bytes
 
 

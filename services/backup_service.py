@@ -5,7 +5,8 @@ import os
 from typing import List, Dict
 
 from core.config import DB_PATH
-from backup.backup_model import BackupModel
+from models.backup_model import BackupModel
+
 
 
 logger = logging.getLogger(__name__)

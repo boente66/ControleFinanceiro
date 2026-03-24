@@ -1,14 +1,18 @@
+import logging
+import os
+
 from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QDialog, QLabel, QFrame
 )
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QIcon
-import os
 
 from core.session import Session
 from core.i18n import t
 from core.theme_manager import ThemeManager
+
+from utilitarios.ion_path import IonPath
 
 from views.transacao_view import TransacaoView
 from views.agendamento_view import AgendamentoView
@@ -24,6 +28,9 @@ from views.meta_view import MetaView
 from views.login_dialog import LoginDialog
 
 
+logger = logging.getLogger(__name__)
+
+
 class MainView(QMainWindow):
 
     # ==================================================
@@ -34,13 +41,15 @@ class MainView(QMainWindow):
         super().__init__()
 
         Session.set_usuario(usuario_logado)
-        self.usuario = usuario_logado
+        self.usuario = usuario_logado or {}
 
         self._current_view_class = None
         self._current_widget = None
         self._menu_buttons = []
         self._user_menu_buttons = []
         self._user_menu_expanded = False
+
+        self._icon_cache = {}
 
         self.setWindowTitle("Controle Financeiro")
         self.setGeometry(100, 100, 1200, 800)
@@ -80,6 +89,7 @@ class MainView(QMainWindow):
         self.content = QWidget()
         self.content_layout = QVBoxLayout(self.content)
         self.content_layout.setContentsMargins(20, 20, 20, 20)
+        self.content_layout.setSpacing(10)
 
         main_layout.addWidget(self.content, 4)
 
@@ -88,21 +98,27 @@ class MainView(QMainWindow):
     # ==================================================
 
     def _is_admin(self):
-        return self.usuario.get("Nivel_Acesso", "").lower() == "admin"
+        return (self.usuario.get("Nivel_Acesso") or "").lower() == "admin"
 
     def _icon(self, nome):
-        """
-        Retorna QIcon com validação segura.
-        """
-        base_path = os.path.dirname(os.path.abspath(__file__))
-        project_root = os.path.abspath(os.path.join(base_path, ".."))
-        icon_path = os.path.join(project_root, "assets", "icons", f"{nome}.svg")
+        if nome in self._icon_cache:
+            return self._icon_cache[nome]
 
-        if not os.path.exists(icon_path):
-            print(f"[Ícone não encontrado] {icon_path}")
+        try:
+            path = IonPath.resource("assets", "icons", f"{nome}.svg")
+
+            if not os.path.exists(path):
+                logger.warning(f"[Ícone não encontrado] {path}")
+                icon = QIcon()
+            else:
+                icon = QIcon(path)
+
+            self._icon_cache[nome] = icon
+            return icon
+
+        except Exception:
+            logger.exception(f"Erro ao carregar ícone: {nome}")
             return QIcon()
-
-        return QIcon(icon_path)
 
     # ==================================================
     # MENU PRINCIPAL
@@ -130,7 +146,6 @@ class MainView(QMainWindow):
             self.sidebar_layout.addWidget(btn)
             self._menu_buttons.append((btn, texto_chave, view_cls))
 
-        # BLOCO PRINCIPAL
         add_btn("Resumo Financeiro", ResumoFinanceiroView, "resumo")
         add_btn("Contas e Lançamentos", TransacaoView, "transacoes")
         add_btn("Metas Financeiras", MetaView, "metas")
@@ -156,7 +171,9 @@ class MainView(QMainWindow):
 
         idioma = Session.get_config("idioma", "Português")
 
-        self.lbl_usuario = QLabel(self.usuario.get("Nome", "Usuário"))
+        nome = self.usuario.get("Nome", "Usuário")
+
+        self.lbl_usuario = QLabel(nome)
         self.lbl_usuario.setObjectName("sidebarUser")
         self.lbl_usuario.setAlignment(Qt.AlignLeft)
         self.lbl_usuario.setContentsMargins(15, 10, 10, 10)
@@ -212,7 +229,7 @@ class MainView(QMainWindow):
     # TOGGLE MENU USUÁRIO
     # ==================================================
 
-    def _toggle_user_menu(self, event):
+    def _toggle_user_menu(self, event=None):
         self._user_menu_expanded = not self._user_menu_expanded
         self.user_menu_container.setVisible(self._user_menu_expanded)
 
@@ -248,6 +265,7 @@ class MainView(QMainWindow):
 
         if self._current_widget:
             self.content_layout.removeWidget(self._current_widget)
+            self._current_widget.setParent(None)
             self._current_widget.deleteLater()
             self._current_widget = None
 
@@ -263,6 +281,8 @@ class MainView(QMainWindow):
 
         self._current_view_class = view_cls
         self._current_widget = view
+
+        logger.info(f"View carregada: {view_cls.__name__}")
 
     # ==================================================
     # IDIOMA
@@ -284,10 +304,13 @@ class MainView(QMainWindow):
 
         self.close()
 
-        login = LoginDialog()
-        if login.exec_() == QDialog.Accepted:
-            nova_main = MainView(login.usuario_logado)
-            nova_main.show()
+        try:
+            login = LoginDialog()
+            if login.exec_() == QDialog.Accepted:
+                nova_main = MainView(login.usuario_logado)
+                nova_main.show()
+        except Exception:
+            logger.exception("Erro ao realizar logout")
 
     # ==================================================
     # TEMA

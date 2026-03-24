@@ -1,21 +1,19 @@
 import logging
-import os
-
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
     QListWidget, QListWidgetItem,
     QLabel, QPushButton, QMenu,
-    QMessageBox
+    QMessageBox, QApplication
 )
-from PyQt5.QtCore import Qt, QSize
-from PyQt5.QtGui import QIcon
+from PyQt5.QtCore import Qt
+
 
 from core.i18n import t
-from core.session import Session
 
 from controllers.account_controller import AccountController
 from controllers.fatura_controller import FaturaController
 
+from core.session import Session
 from views.criar_conta_dialog import CriarContaDialog
 from views.editar_conta_dialog import EditarContaDialog
 from views.criar_cartao_dialog import CriarCartaoDialog, EditCartaoDialog
@@ -33,6 +31,7 @@ class TransacaoView(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+    
 
         self.account_controller = AccountController()
         self.fatura_controller = FaturaController()
@@ -51,19 +50,8 @@ class TransacaoView(QWidget):
         self._retranslate(Session.get_config("idioma", "Português"))
 
     # ==========================================================
-    # UTIL ÍCONE
-    # ==========================================================
-
-    def _icon(self, nome):
-        base_path = os.path.dirname(os.path.abspath(__file__))
-        project_root = os.path.abspath(os.path.join(base_path, ".."))
-        icon_path = os.path.join(project_root, "assets", "icons", f"{nome}.svg")
-        return QIcon(icon_path)
-
-    # ==========================================================
     # PAINEL ESQUERDO
     # ==========================================================
-
     def _montar_painel_esquerdo(self):
 
         self.left = QVBoxLayout()
@@ -106,7 +94,6 @@ class TransacaoView(QWidget):
     # ==========================================================
     # ÁREA DE PAINEL
     # ==========================================================
-
     def _montar_area_painel(self):
         self.area_painel = QVBoxLayout()
         self.main_layout.addLayout(self.area_painel, 1)
@@ -123,7 +110,6 @@ class TransacaoView(QWidget):
     # ==========================================================
     # SELEÇÃO
     # ==========================================================
-
     def selecionar_conta(self, item):
 
         self.lista_cartoes.clearSelection()
@@ -159,7 +145,6 @@ class TransacaoView(QWidget):
     # ==========================================================
     # CARREGAMENTOS
     # ==========================================================
-
     def carregar_contas(self):
 
         idioma = Session.get_config("idioma", "Português")
@@ -193,13 +178,13 @@ class TransacaoView(QWidget):
         idioma = Session.get_config("idioma", "Português")
 
         self.lista_cartoes.clear()
-        cartoes = self.fatura_controller.get_all_cartoes()
+        cartoes = self.fatura_controller.get_all_cartoes() 
 
         for cartao in cartoes:
             texto = (
-                f"{cartao.get('Nome', 'Cartão')}\n"
+                f"{cartao.get('nome', 'Cartão')}\n"
                 f"{t('Vencimento', idioma)}: "
-                f"{cartao.get('Dia_Vencimento', '--')}"
+                f"{cartao.get('dia_vencimento', '--')}"
             )
 
             item = QListWidgetItem(texto)
@@ -207,54 +192,145 @@ class TransacaoView(QWidget):
             self.lista_cartoes.addItem(item)
 
     # ==========================================================
-    # MENUS COM ÍCONES
+    # MENUS
     # ==========================================================
-
     def menu_conta(self, pos):
-
         idioma = Session.get_config("idioma", "Português")
 
         menu = QMenu(self)
-
-        menu.addAction(self._icon("adjust"),
-                       t("Ajustar saldo", idioma),
-                       self._ajustar_saldo_conta)
-
+        menu.addAction(t("Ajustar saldo", idioma), self._ajustar_saldo_conta)
         menu.addSeparator()
-
-        menu.addAction(self._icon("edit"),
-                       t("Editar", idioma),
-                       self._editar_conta)
-
+        menu.addAction(t("Editar", idioma), self.editar_conta)
+        menu.addAction(t("Copiar", idioma), self._copiar_conta)
         menu.addSeparator()
-
-        menu.addAction(self._icon("delete"),
-                       t("Excluir", idioma),
-                       self._excluir_conta)
+        menu.addAction(t("Excluir", idioma), self._excluir_conta)
 
         menu.exec_(self.lista_contas.mapToGlobal(pos))
 
     def menu_cartao(self, pos):
-
         idioma = Session.get_config("idioma", "Português")
 
         menu = QMenu(self)
-
-        menu.addAction(self._icon("edit"),
-                       t("Editar", idioma),
-                       self._editar_cartao)
-
+        menu.addAction(t("Copiar", idioma), self._copiar_cartao)
+        menu.addAction(t("Editar", idioma), self.editar_cartao)
         menu.addSeparator()
-
-        menu.addAction(self._icon("delete"),
-                       t("Excluir", idioma),
-                       self._excluir_cartao)
+        menu.addAction(t("Excluir", idioma), self._excluir_cartao)
 
         menu.exec_(self.lista_cartoes.mapToGlobal(pos))
 
-    # ==========================================================
-    # AÇÕES
-    # ==========================================================
+     # ========================================================
+     # COPIADORES E AJUSTADORES
+     # ========================================================
+    def _copiar_conta(self):
+        item = self.lista_contas.currentItem()
+        if not item:
+            return
+
+        conta_id = item.data(Qt.UserRole)
+        conta = self.account_controller.get_account_by_id(conta_id)
+
+        if conta:
+            # Lógica para copiar a conta
+            pass
+
+    def _copiar_cartao(self):
+        item = self.lista_cartoes.currentItem()
+        if not item:
+            return
+
+        cartao_id = item.data(Qt.UserRole)
+        cartao = self.fatura_controller.get_cartao_by_id(cartao_id, self.usuario_id)
+
+        if cartao:
+            try:
+                idioma = Session.get_config("idioma", "Português")
+
+                # Tenta carregar o cartão (compatível com nomes de método diferentes)
+                cartao = None
+                uid = getattr(self, "usuario_id", None)
+                if uid is None and hasattr(Session, "get_user_id"):
+                    try:
+                        uid = Session.get_user_id()
+                    except Exception:
+                        uid = None
+
+                # Preferir métodos já vistos no projeto, com fallback
+                if hasattr(self.fatura_controller, "get_cartao_by_id"):
+                    try:
+                        cartao = self.fatura_controller.get_cartao_by_id(cartao_id, uid)
+                    except TypeError:
+                        cartao = self.fatura_controller.get_cartao_by_id(cartao_id)
+                if not cartao and hasattr(self.fatura_controller, "buscar_cartao_por_id"):
+                    cartao = self.fatura_controller.buscar_cartao_por_id(cartao_id)
+
+                if not cartao:
+                    QMessageBox.warning(self, t("Erro", idioma), t("Cartão não encontrado", idioma))
+                    return
+
+                # Criar cópia do dicionário/objeto do cartão
+                if isinstance(cartao, dict):
+                    novo = cartao.copy()
+                else:
+                    try:
+                        novo = dict(cartao)
+                    except Exception:
+                        try:
+                            novo = vars(cartao).copy()
+                        except Exception:
+                            novo = {}
+
+                # Remover identificadores para forçar criação de novo registro
+                for key in list(novo.keys()):
+                    if key.lower().startswith("id"):
+                        novo.pop(key, None)
+
+                # Ajustar nome para indicar que é uma cópia
+                name_key = None
+                for k in ("nome", "Nome", "name", "nome_cartao", "Nome_Cartao"):
+                    if k in novo:
+                        name_key = k
+                        break
+                if name_key:
+                    novo[name_key] = f"{novo.get(name_key)} (cópia)"
+
+                # Tenta vários nomes de método para salvar/criar cartão no controller
+                created = False
+                for fn in ("create_cartao", "add_cartao", "salvar_cartao", "insert_cartao"):
+                    if hasattr(self.fatura_controller, fn):
+                        func = getattr(self.fatura_controller, fn)
+                        try:
+                            # tentar enviar uid se disponível
+                            if uid is not None:
+                                try:
+                                    result = func(novo, uid)
+                                except TypeError:
+                                    result = func(novo)
+                            else:
+                                result = func(novo)
+                            created = bool(result) if result is not None else True
+                        except Exception as e:
+                            logger.debug(f"Tentativa {fn} falhou: {e}")
+                        break
+
+                if not created:
+                    QMessageBox.warning(
+                        self,
+                        t("Erro", idioma),
+                        t("Não foi possível criar a cópia do cartão. Verifique o controller.", idioma)
+                    )
+                    return
+
+                QMessageBox.information(
+                    self,
+                    t("Concluído", idioma),
+                    t("Cartão copiado com sucesso.", idioma)
+                )
+                self.carregar_cartoes()
+
+            except Exception as e:
+                logger.error(f"Erro ao copiar cartão: {e}")
+                QMessageBox.critical(self, t("Erro", idioma), t("Ocorreu um erro ao copiar o cartão.", idioma))
+            pass
 
     def _ajustar_saldo_conta(self):
         item = self.lista_contas.currentItem()
@@ -269,6 +345,9 @@ class TransacaoView(QWidget):
             if dialog.exec_():
                 self.carregar_contas()
 
+    # ==========================================================
+    # EDITORES
+    # ==========================================================
     def _editar_conta(self):
         item = self.lista_contas.currentItem()
         if not item:
@@ -281,6 +360,7 @@ class TransacaoView(QWidget):
             editar = EditarContaDialog(self, conta)
             if editar.exec_():
                 self.carregar_contas()
+            pass
 
     def _editar_cartao(self):
         item = self.lista_cartoes.currentItem()
@@ -294,7 +374,11 @@ class TransacaoView(QWidget):
             editar = EditCartaoDialog(self, cartao)
             if editar.exec_():
                 self.carregar_cartoes()
+            pass
 
+    # ==========================================================
+    # EXCLUSÕES
+    # ==========================================================
     def _excluir_conta(self):
         item = self.lista_contas.currentItem()
         if not item:
@@ -331,22 +415,21 @@ class TransacaoView(QWidget):
 
         if confirmar == QMessageBox.Yes:
             cartao_id = item.data(Qt.UserRole)
-            self.fatura_controller.delete_cartao(cartao_id)
+            self.fatura_controller.delete_cartao(cartao_id, self.usuario_id)
             self.carregar_cartoes()
             self._trocar_painel(QWidget())
 
     # ==========================================================
     # I18N
     # ==========================================================
-
     def _retranslate(self, idioma):
+        self.setWindowTitle(t("Transações", idioma))
         self.carregar_contas()
         self.carregar_cartoes()
 
     # ==========================================================
     # CRIADORES
     # ==========================================================
-
     def criar_conta_dialog(self):
         try:
             dlg = CriarContaDialog(self)
@@ -364,12 +447,9 @@ class TransacaoView(QWidget):
             logger.error(f"Erro ao criar cartão: {e}")
 
     # ==========================================================
-    # HEADER COM ÍCONE ADD
+    # UTIL
     # ==========================================================
-
-    def _criar_lista_com_header(self, titulo, callback_novo,
-                                largura=220, altura_max=200):
-
+    def _criar_lista_com_header(self, titulo, callback_novo, largura=220, altura_max=200):
         container = QVBoxLayout()
         container.setSpacing(6)
 
@@ -378,12 +458,8 @@ class TransacaoView(QWidget):
         label = QLabel(titulo)
         label.setStyleSheet("font-size: 15px; font-weight: bold;")
 
-        btn = QPushButton()
-        btn.setIcon(self._icon("add"))
-        btn.setIconSize(QSize(16, 16))
-        btn.setFixedSize(28, 28)
-        btn.setCursor(Qt.PointingHandCursor)
-        btn.setToolTip("Novo")
+        btn = QPushButton("+")
+        btn.setFixedSize(24, 24)
         btn.clicked.connect(callback_novo)
 
         header.addWidget(label)

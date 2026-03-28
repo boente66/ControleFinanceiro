@@ -38,8 +38,7 @@ class PainelAccount(QWidget):
         super().__init__(parent)
 
         self.conta = None
-        usuario = Session.get_usuario() or {}
-        self.usuario_id = usuario.get("ID_Usuario")
+        
 
         self.transaction_controller = TransactionController()
         self.category_controller = CategoryController()

@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime
 from database.database import Database
 from models.credito_model import CreditoModel
 
@@ -7,17 +6,13 @@ logger = logging.getLogger(__name__)
 
 
 class LancamentoModel(Database):
-    """
-    Modelo responsável pelos lançamentos de cartão.
-    A fatura é DERIVADA da coluna Data.
-    """
 
     def __init__(self):
         super().__init__()
         self.credito = CreditoModel()
 
     # ============================================================
-    # CRIAR LANÇAMENTO
+    # CRIAR LANÇAMENTO (SEM LÓGICA)
     # ============================================================
     def add_lancamento(self, dados: dict) -> bool:
 
@@ -27,6 +22,8 @@ class LancamentoModel(Database):
             "Descricao",
             "Valor",
             "Data",
+            "Competencia_Mes",
+            "Competencia_Ano"
         ]
 
         for campo in obrigatorios:
@@ -41,6 +38,7 @@ class LancamentoModel(Database):
         if not cartao:
             raise PermissionError("Cartão não pertence ao usuário.")
 
+        # Normalizar data
         data = dados["Data"]
         if not isinstance(data, str):
             data = data.strftime("%Y-%m-%d")
@@ -49,6 +47,8 @@ class LancamentoModel(Database):
             INSERT INTO lancamentos (
                 ID_Cartao,
                 Data,
+                Competencia_Mes,
+                Competencia_Ano,
                 Descricao,
                 Valor,
                 ID_Categoria,
@@ -61,12 +61,14 @@ class LancamentoModel(Database):
                 ID_Conta,
                 ID_Transacao
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
 
         params = (
             dados["ID_Cartao"],
             data,
+            int(dados["Competencia_Mes"]),
+            int(dados["Competencia_Ano"]),
             dados["Descricao"],
             float(dados["Valor"]),
             dados.get("ID_Categoria"),
@@ -87,24 +89,52 @@ class LancamentoModel(Database):
     # BUSCAR POR ID
     # ============================================================
     def get_lancamento_by_id(self, id_lancamento, id_usuario):
+
         sql = """
             SELECT *
             FROM lancamentos
             WHERE ID_Lancamento = ?
               AND ID_Usuario = ?
         """
+
         return self.fetch_one(sql, (id_lancamento, id_usuario))
 
     # ============================================================
-    # ATUALIZAR
+    # ATUALIZAR (SEM LÓGICA)
     # ============================================================
     def update_lancamento(self, id_lancamento, dados, id_usuario):
+
+        obrigatorios = [
+            "Descricao",
+            "Valor",
+            "Data",
+            "Competencia_Mes",
+            "Competencia_Ano"
+        ]
+
+        for campo in obrigatorios:
+            if campo not in dados:
+                raise ValueError(f"{campo} é obrigatório.")
+
+        cartao = self.credito.get_cartao_by_id(
+            dados["ID_Cartao"],
+            id_usuario
+        )
+
+        if not cartao:
+            raise PermissionError("Cartão inválido.")
+
+        data = dados["Data"]
+        if not isinstance(data, str):
+            data = data.strftime("%Y-%m-%d")
 
         sql = """
             UPDATE lancamentos
             SET Descricao = ?,
                 Valor = ?,
                 Data = ?,
+                Competencia_Mes = ?,
+                Competencia_Ano = ?,
                 ID_Categoria = ?,
                 Parcelado = ?,
                 Num_Parcelas = ?,
@@ -117,7 +147,9 @@ class LancamentoModel(Database):
         self.execute_query(sql, (
             dados["Descricao"],
             float(dados["Valor"]),
-            dados["Data"],
+            data,
+            int(dados["Competencia_Mes"]),
+            int(dados["Competencia_Ano"]),
             dados.get("ID_Categoria"),
             int(dados.get("Parcelado", 0)),
             int(dados.get("Num_Parcelas", 1)),
@@ -130,7 +162,7 @@ class LancamentoModel(Database):
         return True
 
     # ============================================================
-    # FATURA POR MÊS
+    # FATURA (SQL LIMPO E RÁPIDO)
     # ============================================================
     def get_lancamentos_por_fatura(self, id_cartao, mes, ano, id_usuario):
 
@@ -139,47 +171,15 @@ class LancamentoModel(Database):
             FROM lancamentos
             WHERE ID_Cartao = ?
               AND ID_Usuario = ?
-              AND strftime('%m', Data) = ?
-              AND strftime('%Y', Data) = ?
-            ORDER BY date(Data)
+              AND Competencia_Mes = ?
+              AND Competencia_Ano = ?
+            ORDER BY Data
         """
-
-        mes_str = f"{int(mes):02d}"
-        ano_str = str(int(ano))
 
         return self.fetch_all(
             sql,
-            (id_cartao, id_usuario, mes_str, ano_str)
+            (id_cartao, id_usuario, int(mes), int(ano))
         )
-
-    # ============================================================
-    # HISTÓRICO DE FATURAS
-    # ============================================================
-    def get_all_faturas(self, id_usuario, id_cartao=None):
-
-        sql = """
-            SELECT
-                ID_Cartao,
-                strftime('%m', Data) AS Mes,
-                strftime('%Y', Data) AS Ano,
-                COUNT(*) AS Quantidade,
-                SUM(Valor) AS Total
-            FROM lancamentos
-            WHERE ID_Usuario = ?
-        """
-
-        params = [id_usuario]
-
-        if id_cartao:
-            sql += " AND ID_Cartao = ?"
-            params.append(id_cartao)
-
-        sql += """
-            GROUP BY ID_Cartao, Ano, Mes
-            ORDER BY Ano DESC, Mes DESC
-        """
-
-        return self.fetch_all(sql, tuple(params))
 
     # ============================================================
     # NÃO PAGOS

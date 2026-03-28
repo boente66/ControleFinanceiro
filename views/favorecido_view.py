@@ -1,13 +1,16 @@
 import unicodedata
+
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
-    QPushButton, QLabel, QLineEdit, QMessageBox, QDialog, QStyle,
+    QPushButton, QLabel, QLineEdit, QMessageBox, QDialog,
     QAbstractItemView
 )
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QIcon
 
 from views.FavorecidoDialog import FavorecidoDialog
 from controllers.favorecido_controller import FavorecidoController
+from utilitarios.ion_path import IonPath
 
 
 class FavorecidoView(QWidget):
@@ -35,20 +38,17 @@ class FavorecidoView(QWidget):
 
         self.add_btn = QPushButton("Adicionar")
         self.add_btn.setObjectName("primaryButton")
+        self.add_btn.setIcon(self._icon("add"))
         self.add_btn.clicked.connect(self.open_add_favorecido_dialog)
 
         self.edit_btn = QPushButton("Editar")
         self.edit_btn.setObjectName("primaryButton")
-        self.edit_btn.setIcon(
-            self.style().standardIcon(QStyle.SP_FileDialogContentsView)
-        )
+        self.edit_btn.setIcon(self._icon("edit"))
         self.edit_btn.clicked.connect(self.edit_favorecido)
 
         self.delete_btn = QPushButton("Excluir")
         self.delete_btn.setObjectName("deleteButton")
-        self.delete_btn.setIcon(
-            self.style().standardIcon(QStyle.SP_TrashIcon)
-        )
+        self.delete_btn.setIcon(self._icon("delete"))
         self.delete_btn.clicked.connect(self.delete_favorecido)
 
         for btn in (self.add_btn, self.edit_btn, self.delete_btn):
@@ -86,6 +86,17 @@ class FavorecidoView(QWidget):
         main_layout.addWidget(self.table)
 
         self.load_favorecidos()
+
+    # =====================================================
+    # ICON UTIL
+    # =====================================================
+    def _icon(self, nome: str):
+        """
+        Retorna um QIcon baseado no nome do ícone.
+        Ex: self._icon("add") -> assets/icons/add.svg
+        """
+        caminho = IonPath.resource("assets", "icons", f"{nome}.svg")
+        return QIcon(caminho)
 
     # =====================================================
     # NORMALIZAÇÃO

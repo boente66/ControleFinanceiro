@@ -101,6 +101,9 @@ class MainView(QMainWindow):
         return (self.usuario.get("Nivel_Acesso") or "").lower() == "admin"
 
     def _icon(self, nome):
+        """
+        Carrega ícone SVG com cache e fallback seguro
+        """
         if nome in self._icon_cache:
             return self._icon_cache[nome]
 
@@ -169,8 +172,6 @@ class MainView(QMainWindow):
 
     def _criar_bloco_usuario(self):
 
-        idioma = Session.get_config("idioma", "Português")
-
         nome = self.usuario.get("Nome", "Usuário")
 
         self.lbl_usuario = QLabel(nome)
@@ -218,9 +219,11 @@ class MainView(QMainWindow):
         add_user_btn("Perfil", PerfilView, "perfil")
 
         if self._is_admin():
-            add_user_btn("Gerenciamento de Usuários",
-                         GerenciamentoUsuariosView,
-                         "gerenciar_usuarios")
+            add_user_btn(
+                "Gerenciamento de Usuários",
+                GerenciamentoUsuariosView,
+                "gerenciar_usuarios"
+            )
 
         add_user_btn("Configurações", ConfiguracoesView, "configuracoes")
         add_user_btn("Backup e Restauração", BackupView, "backup")
@@ -317,5 +320,8 @@ class MainView(QMainWindow):
     # ==================================================
 
     def aplicar_tema(self):
-        tema = Session.get_config("tema", "Claro")
-        ThemeManager.aplicar_tema(tema)
+        try:
+            tema = Session.get_config("tema", "Claro")
+            ThemeManager.aplicar_tema(tema)
+        except Exception:
+            logger.exception("Erro ao aplicar tema")

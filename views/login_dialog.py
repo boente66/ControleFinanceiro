@@ -11,6 +11,7 @@ from PyQt5.QtGui import QIcon
 
 from views.cadastro_usuario_dialog import CadastroUsuarioDialog
 from controllers.user_controller import UserController
+from utilitarios.ion_path import IonPath
 
 
 logger = logging.getLogger(__name__)
@@ -36,21 +37,36 @@ class LoginDialog(QDialog):
         self.controller = UserController()
         self.usuario_logado = None
 
+        self._icon_cache = {}
+
         self._build_ui()
 
+        # foco inicial
+        self.login_input.setFocus()
+
     # =====================================================
-    # UTIL - ÍCONE
+    # UTIL - ÍCONE (COM IONPATH + CACHE)
     # =====================================================
 
     def _icon(self, nome):
-        base_path = os.path.dirname(os.path.abspath(__file__))
-        project_root = os.path.abspath(os.path.join(base_path, ".."))
-        icon_path = os.path.join(project_root, "assets", "icons", f"{nome}.svg")
+        if nome in self._icon_cache:
+            return self._icon_cache[nome]
 
-        if os.path.exists(icon_path):
-            return QIcon(icon_path)
+        try:
+            path = IonPath.resource("assets", "icons", f"{nome}.svg")
 
-        return QIcon()
+            if not os.path.exists(path):
+                logger.warning(f"[Ícone não encontrado] {path}")
+                icon = QIcon()
+            else:
+                icon = QIcon(path)
+
+            self._icon_cache[nome] = icon
+            return icon
+
+        except Exception:
+            logger.exception(f"Erro ao carregar ícone: {nome}")
+            return QIcon()
 
     # =====================================================
     # UI
@@ -118,13 +134,15 @@ class LoginDialog(QDialog):
         # -------------------------
 
         self.btn_login = QPushButton("Entrar")
-        self.btn_login.setObjectName("QPushButton")
+        self.btn_login.setObjectName("primaryButton")
         self.btn_login.setIcon(self._icon("login"))
         self.btn_login.setIconSize(QSize(18, 18))
         layout.addWidget(self.btn_login)
 
         self.btn_cadastrar = QPushButton("Cadastrar")
-        self.btn_cadastrar.setObjectName("QPushButton")
+        self.btn_cadastrar.setObjectName("secondaryButton")
+        self.btn_cadastrar.setIcon(self._icon("add_user"))
+        self.btn_cadastrar.setIconSize(QSize(18, 18))
         layout.addWidget(self.btn_cadastrar)
 
         self.btn_recuperar = QPushButton("Esqueci minha senha")

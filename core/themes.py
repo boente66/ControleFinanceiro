@@ -1,10 +1,7 @@
 # =========================================================
-# SISTEMA DE TEMAS PROFISSIONAL — CONTROLE FINANCEIRO
+# SISTEMA DE TEMAS PROFISSIONAL — FINAL
 # =========================================================
 
-# ---------------------------------------------------------
-# BASE GLOBAL
-# ---------------------------------------------------------
 BASE = """
 QWidget {
     font-family: "Segoe UI", Arial, sans-serif;
@@ -17,18 +14,17 @@ QToolTip {
 }
 """
 
-# ---------------------------------------------------------
-# TOKENS VISUAIS
-# ---------------------------------------------------------
+# =========================================================
+# TOKENS
+# =========================================================
 V = {
-    # Base
     "bg_light": "#f4f6f9",
     "bg_dark": "#121212",
 
     "panel_light": "#ffffff",
     "panel_dark": "#1e1e1e",
 
-    "sidebar_light": "#000000",
+    "sidebar_light": "#111827",  # melhor que preto puro
     "sidebar_dark": "#181818",
 
     "border_light": "#e5e7eb",
@@ -43,7 +39,6 @@ V = {
     "highlight_light": "#f3f4f6",
     "highlight_dark": "#2a2a2a",
 
-    # Ações
     "primary_light": "#2563eb",
     "primary_dark": "#3b82f6",
 
@@ -56,7 +51,6 @@ V = {
     "warning_light": "#d97706",
     "warning_dark": "#f59e0b",
 
-    # Menu
     "menu_active_light": "#16a34a",
     "menu_active_dark": "#3b82f6",
 }
@@ -66,18 +60,10 @@ V = {
 # =========================================================
 LIGHT = BASE + f"""
 
-/* ===================================================== */
-/* FUNDO PRINCIPAL                                       */
-/* ===================================================== */
-
 QWidget {{
     background-color: {V['panel_light']};
-    color: #000000;
+    color: {V['text_light']};
 }}
-
-/* ===================================================== */
-/* SIDEBAR                                               */
-/* ===================================================== */
 
 QWidget#sidebar {{
     background-color: {V['sidebar_light']};
@@ -85,8 +71,8 @@ QWidget#sidebar {{
 }}
 
 QPushButton#menuButton {{
-    background-color: #111111;
-    color: #ffffff;
+    background-color: transparent;
+    color: white;
     border: none;
     padding: 14px;
     text-align: left;
@@ -94,150 +80,72 @@ QPushButton#menuButton {{
 }}
 
 QPushButton#menuButton:hover {{
-    background-color: #1f1f1f;
+    background-color: #1f2937;
 }}
 
 QPushButton#menuButton[active="true"] {{
     background-color: {V['menu_active_light']};
-    color: #ffffff;
+    color: white;
     font-weight: bold;
 }}
-
-/* ===================================================== */
-/* TÍTULO                                                */
-/* ===================================================== */
-
-QLabel#pageTitle {{
-    font-size: 22px;
-    font-weight: bold;
-    padding: 12px 0;
-}}
-
-/* ===================================================== */
-/* CONTAINERS (CARD)                                     */
-/* ===================================================== */
-
-QGroupBox {{
-    background-color: {V['panel_light']};
-    border: 2px solid {V['border_light']};
-    border-radius: 16px;
-    margin-top: 18px;
-    padding: 20px;
-}}
-
-QGroupBox::title {{
-    padding: 6px;
-    font-weight: bold;
-}}
-
-/* ===================================================== */
-/* INPUTS                                                */
-/* ===================================================== */
-
-QLineEdit, QComboBox, QDateEdit, QSpinBox {{
-    background-color: #ffffff;
-    border: 2px solid #d1d5db;
-    border-radius: 12px;
-    padding: 10px;
-    min-height: 36px;
-}}
-
-QLineEdit:focus, QComboBox:focus, QDateEdit:focus {{
-    border: 2px solid {V['success_light']};
-}}
-
-/* ===================================================== */
-/* BOTÕES                                                */
-/* ===================================================== */
 
 QPushButton {{
-    background-color: #000000;
-    color: #ffffff;
+    background-color: {V['primary_light']};
+    color: white;
     padding: 10px 16px;
     border-radius: 10px;
 }}
 
 QPushButton:hover {{
-    background-color: #333333;
+    background-color: #1d4ed8;
+}}
+
+QPushButton:pressed {{
+    background-color: #1e40af;
+}}
+
+QPushButton:disabled {{
+    background-color: #9ca3af;
+    color: #e5e7eb;
 }}
 
 QPushButton#primaryButton {{
     background-color: {V['success_light']};
-    border-radius: 18px;
-    padding: 12px;
     font-weight: 600;
-    min-height: 40px;
-}}
-
-QPushButton#primaryButton:hover {{
-    background-color: #15803d;
-}}
-
-QPushButton#addButton {{
-    background-color: {V['success_light']};
 }}
 
 QPushButton#deleteButton {{
     background-color: {V['danger_light']};
 }}
 
-QPushButton#secondaryButton {{
-    background-color: {V['highlight_light']};
-    color: #000000;
+QLineEdit, QComboBox, QDateEdit {{
+    background-color: white;
+    border: 2px solid {V['border_light']};
+    border-radius: 10px;
+    padding: 8px;
 }}
 
-/* ===================================================== */
-/* TABELAS                                               */
-/* ===================================================== */
+QLineEdit:focus {{
+    border: 2px solid {V['primary_light']};
+}}
 
 QTableWidget {{
-    background-color: #ffffff;
-    gridline-color: #e0e0e0;
+    background-color: white;
 }}
-
-QHeaderView::section {{
-    background-color: #f5f5f5;
-    border: 1px solid #dddddd;
-    padding: 6px;
-}}
-
-/* ===================================================== */
-/* PROGRESS                                              */
-/* ===================================================== */
 
 QProgressBar {{
-    border: 1px solid #c0c0c0;
+    background-color: {V['highlight_light']};
     border-radius: 8px;
-    background-color: #eeeeee;
-    height: 16px;
 }}
 
 QProgressBar::chunk {{
     background-color: {V['success_light']};
 }}
 
-/* ===================================================== */
-/* CORES FINANCEIRAS                                     */
-/* ===================================================== */
-
-QLabel#positivo {{
-    color: {V['success_light']};
-    font-weight: bold;
-}}
-
-QLabel#negativo {{
-    color: {V['danger_light']};
-    font-weight: bold;
-}}
-
-QLabel#warning {{
-    color: {V['warning_light']};
-    font-weight: bold;
-}}
-
-QLabel#muted {{
-    color: {V['muted_light']};
-}}
+QLabel#positivo {{ color: {V['success_light']}; font-weight: bold; }}
+QLabel#negativo {{ color: {V['danger_light']}; font-weight: bold; }}
+QLabel#warning {{ color: {V['warning_light']}; font-weight: bold; }}
+QLabel#muted {{ color: {V['muted_light']}; }}
 """
 
 # =========================================================
@@ -259,7 +167,6 @@ QPushButton#menuButton {{
     background-color: transparent;
     border: none;
     padding: 14px;
-    text-align: left;
     border-radius: 10px;
 }}
 
@@ -269,93 +176,77 @@ QPushButton#menuButton:hover {{
 
 QPushButton#menuButton[active="true"] {{
     background-color: {V['menu_active_dark']};
-    color: black;
-    font-weight: 600;
-}}
-
-QLabel#pageTitle {{
-    font-size: 24px;
-    font-weight: 700;
-    margin: 14px 0;
-}}
-
-QGroupBox {{
-    background-color: {V['panel_dark']};
-    border: 2px solid {V['border_dark']};
-    border-radius: 18px;
-    margin-top: 20px;
-    padding: 20px;
-}}
-
-QLineEdit, QComboBox, QDateEdit, QSpinBox {{
-    background-color: {V['panel_dark']};
-    border: 2px solid {V['border_dark']};
-    border-radius: 12px;
-    padding: 10px;
-    min-height: 36px;
-}}
-
-QLineEdit:focus, QComboBox:focus, QDateEdit:focus {{
-    border: 2px solid {V['primary_dark']};
+    color: white;
 }}
 
 QPushButton {{
     background-color: {V['primary_dark']};
-    color: black;
-    border-radius: 12px;
-    padding: 10px 16px;
+    color: white;
 }}
 
 QPushButton:hover {{
     background-color: #2563eb;
 }}
 
-QPushButton#primaryButton {{
-    background-color: {V['success_dark']};
-    border-radius: 20px;
-    padding: 12px;
-    font-weight: 600;
-    min-height: 40px;
+QPushButton:pressed {{
+    background-color: #1e40af;
+}}
+
+QPushButton:disabled {{
+    background-color: #555;
+    color: #aaa;
 }}
 
 QPushButton#deleteButton {{
     background-color: {V['danger_dark']};
-    color: black;
 }}
 
-QPushButton#secondaryButton {{
-    background-color: {V['highlight_dark']};
-    color: {V['text_dark']};
+QLineEdit, QComboBox {{
+    background-color: {V['panel_dark']};
+    border: 2px solid {V['border_dark']};
+    border-radius: 10px;
+    padding: 8px;
+}}
+
+QLineEdit:focus {{
+    border: 2px solid {V['primary_dark']};
 }}
 
 QProgressBar {{
     background-color: {V['highlight_dark']};
-    border-radius: 10px;
-    height: 18px;
 }}
 
 QProgressBar::chunk {{
     background-color: {V['primary_dark']};
 }}
 
-QLabel#positivo {{
-    color: {V['success_dark']};
-    font-weight: 600;
-}}
+QLabel#positivo {{ color: {V['success_dark']}; }}
+QLabel#negativo {{ color: {V['danger_dark']}; }}
+QLabel#warning {{ color: {V['warning_dark']}; }}
+QLabel#muted {{ color: {V['muted_dark']}; }}
+"""
 
-QLabel#negativo {{
-    color: {V['danger_dark']};
-    font-weight: 600;
-}}
+# =========================================================
+# TEMA VERDE (IDENTIDADE)
+# =========================================================
+GREEN = BASE + """
+QWidget {
+    background-color: #022c22;
+    color: #d1fae5;
+}
 
-QLabel#warning {{
-    color: {V['warning_dark']};
-    font-weight: 600;
-}}
+QPushButton {
+    background-color: #16a34a;
+    color: white;
+}
 
-QLabel#muted {{
-    color: {V['muted_dark']};
-}}
+QPushButton:hover {
+    background-color: #15803d;
+}
+
+#sidebar {
+    background-color: #011a13;
+}
 """
 
 # =========================================================
@@ -364,10 +255,11 @@ QLabel#muted {{
 THEMES = {
     "Claro": LIGHT,
     "Escuro": DARK,
+    "Verde": GREEN,
 }
 
 # =========================================================
-# FUNÇÃO SEGURA
+# FUNÇÃO
 # =========================================================
 def get_theme(nome: str) -> str:
     tema = THEMES.get(nome)

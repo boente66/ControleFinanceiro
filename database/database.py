@@ -390,6 +390,10 @@ CREATE TABLE IF NOT EXISTS lancamentos (
 
     Data TEXT NOT NULL,
 
+    -- 🔥 NOVO (ESSENCIAL)
+    Competencia_Mes INTEGER NOT NULL,
+    Competencia_Ano INTEGER NOT NULL,
+
     Descricao TEXT,
 
     Valor REAL NOT NULL,
@@ -397,7 +401,6 @@ CREATE TABLE IF NOT EXISTS lancamentos (
     ID_Categoria INTEGER,
 
     Parcelado INTEGER DEFAULT 0,
-
     Num_Parcelas INTEGER,
     Parcela_Atual INTEGER,
 
@@ -426,7 +429,6 @@ CREATE TABLE IF NOT EXISTS lancamentos (
 
     FOREIGN KEY (ID_Transacao)
     REFERENCES transacoes(ID_Transacao)
-
 );
 
 

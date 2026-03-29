@@ -1,3 +1,5 @@
+import logging
+
 from PyQt5.QtWidgets import (
     QWidget, QLabel, QVBoxLayout, QHBoxLayout,
     QPushButton, QTableWidget, QTableWidgetItem,
@@ -9,7 +11,7 @@ from controllers.category_controller import CategoryController
 from views.categoria_dialog import CategoriaDialog
 from views.subcategoria_dialog import SubcategoriaDialog
 
-import logging
+from core.translator_app import TranslatorApp
 
 logging.basicConfig(level=logging.ERROR)
 
@@ -20,30 +22,35 @@ class ListaCategoriasView(QWidget):
         super().__init__(parent)
 
         self.controller = CategoryController()
-        self.setWindowTitle("Gerenciar Categorias")
         self.resize(600, 400)
 
         layout = QVBoxLayout(self)
 
         # ---------------- TÍTULO ----------------
-        title = QLabel("Listas e Categorias")
-        title.setObjectName("title")
-        layout.addWidget(title)
+        self.title = QLabel()
+        self.title.setObjectName("title")
+        layout.addWidget(self.title)
+
+        TranslatorApp.text(self.title, "Listas e Categorias")
 
         # ---------------- BOTÕES ----------------
         buttons = QHBoxLayout()
 
-        btn_nova = QPushButton("Nova Categoria")
-        btn_nova.clicked.connect(self.add_categoria_dialog)
-        buttons.addWidget(btn_nova)
+        self.btn_nova = QPushButton()
+        self.btn_sub = QPushButton()
+        self.btn_excluir = QPushButton()
 
-        btn_sub = QPushButton("Nova Subcategoria")
-        btn_sub.clicked.connect(self.add_subcategoria_dialog)
-        buttons.addWidget(btn_sub)
+        TranslatorApp.text(self.btn_nova, "Nova Categoria")
+        TranslatorApp.text(self.btn_sub, "Nova Subcategoria")
+        TranslatorApp.text(self.btn_excluir, "Excluir")
 
-        btn_excluir = QPushButton("Excluir")
-        btn_excluir.clicked.connect(self.excluir_categoria)
-        buttons.addWidget(btn_excluir)
+        self.btn_nova.clicked.connect(self.add_categoria_dialog)
+        self.btn_sub.clicked.connect(self.add_subcategoria_dialog)
+        self.btn_excluir.clicked.connect(self.excluir_categoria)
+
+        buttons.addWidget(self.btn_nova)
+        buttons.addWidget(self.btn_sub)
+        buttons.addWidget(self.btn_excluir)
 
         buttons.addStretch()
         layout.addLayout(buttons)
@@ -51,9 +58,12 @@ class ListaCategoriasView(QWidget):
         # ---------------- TABELA ----------------
         self.table = QTableWidget()
         self.table.setColumnCount(3)
-        self.table.setHorizontalHeaderLabels(
+
+        TranslatorApp.table_headers(
+            self.table,
             ["Categoria", "Tipo", "ID"]
         )
+
         self.table.setColumnHidden(2, True)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -77,12 +87,12 @@ class ListaCategoriasView(QWidget):
             logging.error(e)
             QMessageBox.critical(
                 self,
-                "Erro",
-                f"Erro ao carregar categorias:\n{e}"
+                TranslatorApp.get("Erro"),
+                f"{TranslatorApp.get('Erro ao carregar categorias')}:\n{e}"
             )
 
     # ==================================================
-    # POPULAR TABELA (RECURSIVO)
+    # POPULAR TABELA
     # ==================================================
     def _popular_tabela(self, categorias, pai_id=None, indent=""):
 
@@ -93,20 +103,17 @@ class ListaCategoriasView(QWidget):
                 row = self.table.rowCount()
                 self.table.insertRow(row)
 
-                # Nome
                 item_nome = QTableWidgetItem(
                     indent + categoria["Nome"]
                 )
                 self.table.setItem(row, 0, item_nome)
 
-                # Tipo
                 self.table.setItem(
                     row,
                     1,
                     QTableWidgetItem(categoria["Tipo"])
                 )
 
-                # ID oculto
                 id_item = QTableWidgetItem(
                     str(categoria["ID_Categoria"])
                 )
@@ -116,7 +123,6 @@ class ListaCategoriasView(QWidget):
                 )
                 self.table.setItem(row, 2, id_item)
 
-                # Subcategorias recursivas
                 self._popular_tabela(
                     categorias,
                     categoria["ID_Categoria"],
@@ -142,10 +148,14 @@ class ListaCategoriasView(QWidget):
                 self.load_categorias()
 
             except Exception as e:
-                QMessageBox.critical(self, "Erro", str(e))
+                QMessageBox.critical(
+                    self,
+                    TranslatorApp.get("Erro"),
+                    str(e)
+                )
 
     # ==================================================
-    # NOVA SUBCATEGORIA (CORRIGIDO)
+    # NOVA SUBCATEGORIA
     # ==================================================
     def add_subcategoria_dialog(self):
 
@@ -160,7 +170,6 @@ class ListaCategoriasView(QWidget):
             data = dialog.get_data()
 
             try:
-                # 🔎 Buscar categoria pai para herdar o tipo
                 categoria_pai = self.controller.get_category_by_id(
                     data["ID_Categoria_Pai"]
                 )
@@ -168,8 +177,8 @@ class ListaCategoriasView(QWidget):
                 if not categoria_pai:
                     QMessageBox.warning(
                         self,
-                        "Erro",
-                        "Categoria pai não encontrada."
+                        TranslatorApp.get("Erro"),
+                        TranslatorApp.get("Categoria pai não encontrada")
                     )
                     return
 
@@ -184,7 +193,11 @@ class ListaCategoriasView(QWidget):
                 self.load_categorias()
 
             except Exception as e:
-                QMessageBox.critical(self, "Erro", str(e))
+                QMessageBox.critical(
+                    self,
+                    TranslatorApp.get("Erro"),
+                    str(e)
+                )
 
     # ==================================================
     # EXCLUIR
@@ -196,8 +209,8 @@ class ListaCategoriasView(QWidget):
         if row < 0:
             QMessageBox.warning(
                 self,
-                "Aviso",
-                "Selecione uma categoria."
+                TranslatorApp.get("Aviso"),
+                TranslatorApp.get("Selecione uma categoria")
             )
             return
 
@@ -214,12 +227,20 @@ class ListaCategoriasView(QWidget):
             )
 
             if not ok:
-                QMessageBox.warning(self, "Aviso", msg)
+                QMessageBox.warning(
+                    self,
+                    TranslatorApp.get("Aviso"),
+                    msg
+                )
             else:
                 self.load_categorias()
 
         except Exception as e:
-            QMessageBox.critical(self, "Erro", str(e))
+            QMessageBox.critical(
+                self,
+                TranslatorApp.get("Erro"),
+                str(e)
+            )
 
     # ==================================================
     # MENU CONTEXTO
@@ -231,9 +252,9 @@ class ListaCategoriasView(QWidget):
 
         menu = QMenu(self)
 
-        copiar = QAction("Copiar", self)
-        editar = QAction("Editar", self)
-        excluir = QAction("Excluir", self)
+        copiar = QAction(TranslatorApp.get("Copiar"), self)
+        editar = QAction(TranslatorApp.get("Editar"), self)
+        excluir = QAction(TranslatorApp.get("Excluir"), self)
 
         copiar.triggered.connect(self.copiar_categoria)
         editar.triggered.connect(self.editar_categoria)
@@ -267,8 +288,8 @@ class ListaCategoriasView(QWidget):
         if row < 0:
             QMessageBox.warning(
                 self,
-                "Aviso",
-                "Selecione uma categoria."
+                TranslatorApp.get("Aviso"),
+                TranslatorApp.get("Selecione uma categoria")
             )
             return
 
@@ -301,4 +322,8 @@ class ListaCategoriasView(QWidget):
                 self.load_categorias()
 
             except Exception as e:
-                QMessageBox.critical(self, "Erro", str(e))
+                QMessageBox.critical(
+                    self,
+                    TranslatorApp.get("Erro"),
+                    str(e)
+                )

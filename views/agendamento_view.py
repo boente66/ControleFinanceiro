@@ -13,12 +13,12 @@ from views.agendamento_dialog import AgendamentoDialog
 from controllers.schedule_controller import ScheduleController
 from controllers.main_controller import MainController
 from controllers.account_controller import AccountController
-from core.session import Session
-from core.i18n import t
 
 from utilitarios.currency_formatter import CurrencyFormatter
 from utilitarios.date_formatter import DateFormatter
 from utilitarios.ion_path import IonPath
+
+from core.translator_app import TranslatorApp
 
 logger = logging.getLogger(__name__)
 
@@ -37,8 +37,6 @@ class AgendamentoView(QWidget):
         self._init_ui()
         self.load_agendamentos()
 
-        Session.on_idioma_change(self._retranslate)
-
     # ==================================================
     # ICON UTIL
     # ==================================================
@@ -46,21 +44,11 @@ class AgendamentoView(QWidget):
         if nome in self._icon_cache:
             return self._icon_cache[nome]
 
-        try:
-            caminho = IonPath.resource("assets", "icons", f"{nome}.svg")
+        path = IonPath.resource("assets", "icons", f"{nome}.svg")
+        icon = QIcon(path) if os.path.exists(path) else QIcon()
 
-            if not os.path.exists(caminho):
-                logger.warning(f"[Ícone não encontrado] {caminho}")
-                icon = QIcon()
-            else:
-                icon = QIcon(caminho)
-
-            self._icon_cache[nome] = icon
-            return icon
-
-        except Exception:
-            logger.exception(f"Erro ao carregar ícone: {nome}")
-            return QIcon()
+        self._icon_cache[nome] = icon
+        return icon
 
     # ==================================================
     # UI
@@ -74,14 +62,13 @@ class AgendamentoView(QWidget):
         self.main_panel = self._create_main_panel()
         main_layout.addWidget(self.main_panel, 3)
 
-        self._retranslate(Session.get_config("idioma", "Português"))
-
     # ==================================================
     # SIDEBAR
     # ==================================================
     def _create_sidebar(self):
         group = QGroupBox()
         group.setObjectName("sidebar")
+
         layout = QVBoxLayout(group)
 
         self.btn_receber = QPushButton()
@@ -105,6 +92,12 @@ class AgendamentoView(QWidget):
             btn.setCursor(Qt.PointingHandCursor)
             layout.addWidget(btn)
 
+        # Texto traduzido
+        TranslatorApp.text(self.btn_receber, "Contas a Receber")
+        TranslatorApp.text(self.btn_pagar, "Contas a Pagar")
+        TranslatorApp.text(self.btn_transfer, "Transferências")
+        TranslatorApp.text(self.btn_todos, "Todos")
+
         self.btn_receber.clicked.connect(lambda: self.apply_quick_filter("Contas a Receber"))
         self.btn_pagar.clicked.connect(lambda: self.apply_quick_filter("Contas a Pagar"))
         self.btn_transfer.clicked.connect(lambda: self.apply_quick_filter("Transferências"))
@@ -123,10 +116,17 @@ class AgendamentoView(QWidget):
         filtros = QHBoxLayout()
 
         self.filter_label = QLabel()
+        TranslatorApp.text(self.filter_label, "Filtrar por:")
+
         self.filter_combo = QComboBox()
+        TranslatorApp.combo(
+            self.filter_combo,
+            ["Todos", "Contas a Receber", "Contas a Pagar", "Transferências"]
+        )
         self.filter_combo.currentIndexChanged.connect(self.apply_filter)
 
         self.search_input = QLineEdit()
+        TranslatorApp.placeholder(self.search_input, "Pesquisar...")
         self.search_input.textChanged.connect(self.apply_filter)
 
         filtros.addWidget(self.filter_label)
@@ -151,29 +151,37 @@ class AgendamentoView(QWidget):
             btn.setCursor(Qt.PointingHandCursor)
             filtros.addWidget(btn)
 
-        # Estado inicial
-        self.edit_btn.setEnabled(False)
-        self.cancel_btn.setEnabled(False)
-        self.execute_btn.setEnabled(False)
+        TranslatorApp.text(self.add_btn, "Adicionar")
+        TranslatorApp.text(self.edit_btn, "Editar")
+        TranslatorApp.text(self.cancel_btn, "Cancelar")
+        TranslatorApp.text(self.execute_btn, "Executar")
 
-        # Conexões
         self.add_btn.clicked.connect(self.open_add_dialog)
         self.edit_btn.clicked.connect(self.open_edit_dialog)
         self.cancel_btn.clicked.connect(self.cancel_agendamento)
         self.execute_btn.clicked.connect(self.execute_agendamento)
+
+        self.edit_btn.setEnabled(False)
+        self.cancel_btn.setEnabled(False)
+        self.execute_btn.setEnabled(False)
 
         layout.addLayout(filtros)
 
         # -------- TABELA --------
         self.table = QTableWidget()
         self.table.setColumnCount(7)
+
+        TranslatorApp.table_headers(
+            self.table,
+            ["ID", "Conta", "Favorecido", "Descrição", "Vencimento", "Valor", "Status"]
+        )
+
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setSelectionMode(QAbstractItemView.SingleSelection)
         self.table.setColumnHidden(0, True)
         self.table.setSortingEnabled(True)
 
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-
         self.table.itemSelectionChanged.connect(self.update_buttons_state)
 
         layout.addWidget(self.table)
@@ -199,8 +207,6 @@ class AgendamentoView(QWidget):
     # DADOS
     # ==================================================
     def load_agendamentos(self, tipo_filtro=None, termo_busca=None):
-
-        idioma = Session.get_config("idioma", "Português")
 
         try:
             agendamentos = self.schedule_controller.get_all_schedules()
@@ -240,34 +246,38 @@ class AgendamentoView(QWidget):
                     elif tipo_ag == "Contas a Receber":
                         total_receber += valor
 
-            # Feedback vazio
-            if self.table.rowCount() == 0:
-                self.table.setRowCount(1)
-                self.table.setItem(0, 1, QTableWidgetItem("Nenhum agendamento encontrado"))
-
             # Totais
-            self.lbl_total_pagar.setText(f"{t('Total a pagar:', idioma)} {CurrencyFormatter.format(total_pagar)}")
-            self.lbl_total_receber.setText(f"{t('Total a receber:', idioma)} {CurrencyFormatter.format(total_receber)}")
+            self.lbl_total_pagar.setText(
+                f"{TranslatorApp.get('Total a pagar')}: {CurrencyFormatter.format(total_pagar)}"
+            )
+
+            self.lbl_total_receber.setText(
+                f"{TranslatorApp.get('Total a receber')}: {CurrencyFormatter.format(total_receber)}"
+            )
 
             contas = self.account_controller.get_all_accounts()
 
             saldo_atual_total = sum(float(c.get("Saldo_Atual", 0)) for c in contas)
 
             self.lbl_saldo_atual.setText(
-                f"{t('Saldo atual total:', idioma)} {CurrencyFormatter.format(saldo_atual_total)}"
+                f"{TranslatorApp.get('Saldo atual total')}: {CurrencyFormatter.format(saldo_atual_total)}"
             )
 
             saldo_previsto_total = saldo_atual_total - total_pagar + total_receber
 
             self.lbl_saldo_previsto.setText(
-                f"{t('Saldo previsto:', idioma)} {CurrencyFormatter.format(saldo_previsto_total)}"
+                f"{TranslatorApp.get('Saldo previsto')}: {CurrencyFormatter.format(saldo_previsto_total)}"
             )
 
             self.update_buttons_state()
 
         except Exception:
             logger.exception("Erro ao carregar agendamentos")
-            QMessageBox.critical(self, t("Erro", idioma), t("Erro ao carregar agendamentos.", idioma))
+            QMessageBox.critical(
+                self,
+                TranslatorApp.get("Erro"),
+                TranslatorApp.get("Erro ao carregar agendamentos")
+            )
 
     # ==================================================
     # FILTROS
@@ -276,17 +286,15 @@ class AgendamentoView(QWidget):
         tipo = self.filter_combo.currentText()
         termo = self.search_input.text().strip()
 
-        idioma = Session.get_config("idioma", "Português")
-
-        if tipo == t("Todos", idioma):
+        if tipo == TranslatorApp.get("Todos"):
             tipo = None
 
         self.load_agendamentos(tipo, termo)
 
     def apply_quick_filter(self, tipo):
-        idioma = Session.get_config("idioma", "Português")
-
-        self.filter_combo.setCurrentText(tipo if tipo else t("Todos", idioma))
+        self.filter_combo.setCurrentText(
+            tipo if tipo else TranslatorApp.get("Todos")
+        )
         self.search_input.clear()
         self.load_agendamentos(tipo)
 
@@ -339,40 +347,3 @@ class AgendamentoView(QWidget):
         self.edit_btn.setEnabled(enabled)
         self.cancel_btn.setEnabled(enabled)
         self.execute_btn.setEnabled(enabled)
-
-    # ==================================================
-    # TRADUÇÃO
-    # ==================================================
-    def _retranslate(self, idioma):
-        self.sidebar.setTitle(t("Agendamentos", idioma))
-
-        self.btn_receber.setText(t("Contas a Receber", idioma))
-        self.btn_pagar.setText(t("Contas a Pagar", idioma))
-        self.btn_transfer.setText(t("Transferências", idioma))
-        self.btn_todos.setText(t("Todos", idioma))
-
-        self.filter_label.setText(t("Filtrar por:", idioma))
-        self.search_input.setPlaceholderText(t("Pesquisar...", idioma))
-
-        self.filter_combo.clear()
-        self.filter_combo.addItems([
-            t("Todos", idioma),
-            t("Contas a Receber", idioma),
-            t("Contas a Pagar", idioma),
-            t("Transferências", idioma),
-        ])
-
-        self.add_btn.setText(t("Adicionar", idioma))
-        self.edit_btn.setText(t("Editar", idioma))
-        self.cancel_btn.setText(t("Cancelar", idioma))
-        self.execute_btn.setText(t("Executar", idioma))
-
-        self.table.setHorizontalHeaderLabels([
-            "ID",
-            t("Conta", idioma),
-            t("Favorecido", idioma),
-            t("Descrição", idioma),
-            t("Vencimento", idioma),
-            t("Valor", idioma),
-            t("Status", idioma),
-        ])

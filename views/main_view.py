@@ -9,8 +9,8 @@ from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QIcon
 
 from core.session import Session
-from core.i18n import t
 from core.theme_manager import ThemeManager
+from core.translator_app import TranslatorApp
 
 from utilitarios.ion_path import IonPath
 
@@ -51,14 +51,15 @@ class MainView(QMainWindow):
 
         self._icon_cache = {}
 
-        self.setWindowTitle("Controle Financeiro")
         self.setGeometry(100, 100, 1200, 800)
+
+        # 🔥 título traduzível
+        TranslatorApp.text(self, "Controle Financeiro")
 
         self._init_ui()
         self._criar_menu()
         self.aplicar_tema()
 
-        Session.on_idioma_change(self._retranslate_menu)
         Session.on_tema_change(lambda _: self.aplicar_tema())
 
         self._abrir_primeira_view()
@@ -101,9 +102,6 @@ class MainView(QMainWindow):
         return (self.usuario.get("Nivel_Acesso") or "").lower() == "admin"
 
     def _icon(self, nome):
-        """
-        Carrega ícone SVG com cache e fallback seguro
-        """
         if nome in self._icon_cache:
             return self._icon_cache[nome]
 
@@ -129,14 +127,15 @@ class MainView(QMainWindow):
 
     def _criar_menu(self):
 
-        idioma = Session.get_config("idioma", "Português")
-
         def add_btn(texto_chave, view_cls, icon_name):
 
-            btn = QPushButton(t(texto_chave, idioma))
+            btn = QPushButton()
             btn.setObjectName("menuButton")
             btn.setProperty("active", False)
             btn.setCursor(Qt.PointingHandCursor)
+
+            # 🔥 tradução automática
+            TranslatorApp.text(btn, texto_chave)
 
             btn.setIcon(self._icon(icon_name))
             btn.setIconSize(QSize(18, 18))
@@ -147,7 +146,7 @@ class MainView(QMainWindow):
             )
 
             self.sidebar_layout.addWidget(btn)
-            self._menu_buttons.append((btn, texto_chave, view_cls))
+            self._menu_buttons.append((btn, view_cls))
 
         add_btn("Resumo Financeiro", ResumoFinanceiroView, "resumo")
         add_btn("Contas e Lançamentos", TransacaoView, "transacoes")
@@ -172,9 +171,7 @@ class MainView(QMainWindow):
 
     def _criar_bloco_usuario(self):
 
-        nome = self.usuario.get("Nome", "Usuário")
-
-        self.lbl_usuario = QLabel(nome)
+        self.lbl_usuario = QLabel(self.usuario.get("Nome", "Usuário"))
         self.lbl_usuario.setObjectName("sidebarUser")
         self.lbl_usuario.setAlignment(Qt.AlignLeft)
         self.lbl_usuario.setContentsMargins(15, 10, 10, 10)
@@ -199,13 +196,14 @@ class MainView(QMainWindow):
 
     def _criar_menu_usuario(self):
 
-        idioma = Session.get_config("idioma", "Português")
-
         def add_user_btn(texto_chave, view_cls, icon_name):
 
-            btn = QPushButton(t(texto_chave, idioma))
+            btn = QPushButton()
             btn.setObjectName("menuButton")
             btn.setCursor(Qt.PointingHandCursor)
+
+            # 🔥 tradução automática
+            TranslatorApp.text(btn, texto_chave)
 
             btn.setIcon(self._icon(icon_name))
             btn.setIconSize(QSize(16, 16))
@@ -214,7 +212,7 @@ class MainView(QMainWindow):
             btn.clicked.connect(lambda _, v=view_cls: self._carregar_view(v))
 
             self.user_menu_layout.addWidget(btn)
-            self._user_menu_buttons.append((btn, texto_chave))
+            self._user_menu_buttons.append(btn)
 
         add_user_btn("Perfil", PerfilView, "perfil")
 
@@ -242,7 +240,7 @@ class MainView(QMainWindow):
 
     def _abrir_primeira_view(self):
         if self._menu_buttons:
-            btn, _, view_cls = self._menu_buttons[0]
+            btn, view_cls = self._menu_buttons[0]
             self._handle_menu_click(btn, view_cls)
 
     def _handle_menu_click(self, clicked_button, view_cls):
@@ -255,7 +253,7 @@ class MainView(QMainWindow):
 
     def _ativar_botao(self, clicked_button):
 
-        for btn, _, _ in self._menu_buttons:
+        for btn, _ in self._menu_buttons:
             btn.setProperty("active", False)
             btn.style().unpolish(btn)
             btn.style().polish(btn)
@@ -286,18 +284,6 @@ class MainView(QMainWindow):
         self._current_widget = view
 
         logger.info(f"View carregada: {view_cls.__name__}")
-
-    # ==================================================
-    # IDIOMA
-    # ==================================================
-
-    def _retranslate_menu(self, idioma):
-
-        for btn, texto_chave, _ in self._menu_buttons:
-            btn.setText(t(texto_chave, idioma))
-
-        for btn, texto_chave in self._user_menu_buttons:
-            btn.setText(t(texto_chave, idioma))
 
     # ==================================================
     # LOGOUT

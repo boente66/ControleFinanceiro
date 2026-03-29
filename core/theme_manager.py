@@ -9,13 +9,11 @@ logger = logging.getLogger(__name__)
 class ThemeManager:
     """
     Gerenciador central de temas da aplicação.
-    Controla aplicação visual e fornece acesso a tokens semânticos.
     """
 
     # ======================================================
     # APLICAÇÃO DE TEMA
     # ======================================================
-
     @staticmethod
     def aplicar_tema(nome_tema: str, app: QApplication = None) -> bool:
         try:
@@ -26,7 +24,10 @@ class ThemeManager:
                 logger.error("Nenhuma instância QApplication ativa.")
                 return False
 
+            # 🔥 força refresh visual
+            app.setStyleSheet("")
             app.setStyleSheet(css)
+
             logger.info(f"Tema aplicado: {nome_tema}")
             return True
 
@@ -37,67 +38,83 @@ class ThemeManager:
     # ======================================================
     # ESTADO DO TEMA
     # ======================================================
-
     @staticmethod
     def tema_atual() -> str:
         usuario = Session.get_usuario()
-        if not usuario:
-            return "Claro"
-        return usuario.get("Tema", "Claro")
+
+        if usuario and usuario.get("Tema"):
+            return usuario["Tema"]
+
+        # 🔥 fallback global
+        return Session.get_config("tema", "Claro")
 
     @staticmethod
     def definir_tema(nome_tema: str) -> bool:
         usuario = Session.get_usuario()
-        if not usuario:
-            return False
 
-        usuario["Tema"] = nome_tema
+        if usuario:
+            usuario["Tema"] = nome_tema
+
+        # 🔥 também salva globalmente
+        Session.set_config("tema", nome_tema)
+
         return ThemeManager.aplicar_tema(nome_tema)
 
     @staticmethod
     def alternar_tema() -> str:
         atual = ThemeManager.tema_atual()
-        novo = "Escuro" if atual == "Claro" else "Claro"
+
+        if atual in ("Escuro", "Organizze Escuro", "VSCode"):
+            novo = "Claro"
+        else:
+            novo = "Escuro"
 
         ThemeManager.definir_tema(novo)
         return novo
 
     # ======================================================
-    # TOKENS VISUAIS (ACESSO SEMÂNTICO)
+    # TOKENS VISUAIS
     # ======================================================
-
     @staticmethod
     def get_color(token: str) -> str:
         """
-        Retorna cor baseada no tema atual.
-        Exemplo:
-            ThemeManager.get_color("success")
-            ThemeManager.get_color("border")
+        Retorna cor baseada no tema atual com fallback seguro.
         """
         tema = ThemeManager.tema_atual()
 
-        if tema == "Escuro":
-            return V.get(f"{token}_dark")
-        return V.get(f"{token}_light")
+        chave = f"{token}_dark" if "Escuro" in tema or tema == "VSCode" else f"{token}_light"
+
+        cor = V.get(chave)
+
+        if not cor:
+            logger.warning(f"[Theme] Token não encontrado: {chave}")
+            return "#000000"
+
+        return cor
 
     # ======================================================
-    # CORES FINANCEIRAS (USO LOCAL)
+    # CORES FINANCEIRAS
     # ======================================================
-
     @staticmethod
     def get_finance_color(tipo: str) -> str:
         """
-        Retorna cor financeira baseada no tema atual.
-        tipo:
-            - "receita"
-            - "despesa"
+        Tipo:
+            - receita
+            - despesa
         """
-        if tipo not in ("receita", "despesa"):
-            logger.warning(f"Tipo financeiro inválido: {tipo}")
-            return None
+        if tipo == "receita":
+            return ThemeManager.get_color("success")
 
+        elif tipo == "despesa":
+            return ThemeManager.get_color("danger")
+
+        logger.warning(f"Tipo financeiro inválido: {tipo}")
+        return "#000000"
+
+    # ======================================================
+    # UTIL EXTRA (OPCIONAL)
+    # ======================================================
+    @staticmethod
+    def is_dark() -> bool:
         tema = ThemeManager.tema_atual()
-
-        if tema == "Escuro":
-            return V.get(f"{tipo}_dark")
-        return V.get(f"{tipo}_light")
+        return "Escuro" in tema or tema == "VSCode"

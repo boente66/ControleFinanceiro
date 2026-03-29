@@ -14,6 +14,7 @@ class IonPath:
     ✔ Executável (PyInstaller)
     ✔ Seguro contra falhas de ambiente
     ✔ Cache interno para performance
+    ✔ Pronto para produção
     """
 
     APP_NAME = "ControleFinanceiro"
@@ -23,31 +24,48 @@ class IonPath:
     # =====================================================
     # BASE (DEV OU EXECUTÁVEL)
     # =====================================================
-    @staticmethod
-    def get_base_path() -> str:
+    @classmethod
+    def get_base_path(cls) -> str:
+
+        if "base_path" in cls._cache:
+            return cls._cache["base_path"]
+
         try:
+            # PyInstaller (onefile / onedir)
             if getattr(sys, "frozen", False):
-                return sys._MEIPASS  # PyInstaller
-            return os.path.dirname(os.path.abspath(sys.argv[0]))
+                base = getattr(sys, "_MEIPASS", os.path.dirname(sys.executable))
+            else:
+                base = os.path.dirname(os.path.abspath(sys.argv[0]))
+
+            base = os.path.normpath(base)
+
         except Exception:
             logger.exception("Erro ao obter base_path")
-            return os.getcwd()
+            base = os.getcwd()
+
+        cls._cache["base_path"] = base
+        return base
 
     # =====================================================
     # RESOURCE (ASSETS)
     # =====================================================
-    @staticmethod
-    def resource(*paths) -> str:
-        return os.path.join(IonPath.get_base_path(), *paths)
+    @classmethod
+    def resource(cls, *paths) -> str:
+        return os.path.normpath(os.path.join(cls.get_base_path(), *paths))
+
+    # 🔥 Atalho para assets/icons
+    @classmethod
+    def icon(cls, nome: str) -> str:
+        return cls.resource("assets", "icons", f"{nome}.svg")
 
     # =====================================================
     # USER DIR (MULTIPLATAFORMA)
     # =====================================================
-    @staticmethod
-    def user_dir() -> str:
+    @classmethod
+    def user_dir(cls) -> str:
 
-        if "user_dir" in IonPath._cache:
-            return IonPath._cache["user_dir"]
+        if "user_dir" in cls._cache:
+            return cls._cache["user_dir"]
 
         system = platform.system()
 
@@ -61,87 +79,84 @@ class IonPath:
             else:
                 base = os.getenv("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
 
-            path = os.path.join(base, IonPath.APP_NAME)
-
+            path = os.path.join(base, cls.APP_NAME)
             os.makedirs(path, exist_ok=True)
-
-            IonPath._cache["user_dir"] = path
-            return path
 
         except Exception:
             logger.exception("Erro ao criar user_dir")
 
-            fallback = os.path.join(os.getcwd(), IonPath.APP_NAME)
-            os.makedirs(fallback, exist_ok=True)
+            path = os.path.join(os.getcwd(), cls.APP_NAME)
+            os.makedirs(path, exist_ok=True)
 
-            IonPath._cache["user_dir"] = fallback
-            return fallback
+        path = os.path.normpath(path)
+        cls._cache["user_dir"] = path
+        return path
 
     # =====================================================
     # DATABASE
     # =====================================================
-    @staticmethod
-    def database() -> str:
-        return os.path.join(IonPath.user_dir(), "financeiro.db")
+    @classmethod
+    def database(cls) -> str:
+        return os.path.join(cls.user_dir(), "financeiro.db")
 
     # =====================================================
     # BACKUP
     # =====================================================
-    @staticmethod
-    def backup_dir() -> str:
+    @classmethod
+    def backup_dir(cls) -> str:
 
-        if "backup_dir" in IonPath._cache:
-            return IonPath._cache["backup_dir"]
+        if "backup_dir" in cls._cache:
+            return cls._cache["backup_dir"]
 
-        path = os.path.join(IonPath.user_dir(), "backup")
-        os.makedirs(path, exist_ok=True)
+        path = os.path.join(cls.user_dir(), "backup")
+        cls.ensure_dir(path)
 
-        IonPath._cache["backup_dir"] = path
+        cls._cache["backup_dir"] = path
         return path
 
-    @staticmethod
-    def backup_file(nome: str) -> str:
-        return os.path.join(IonPath.backup_dir(), nome)
+    @classmethod
+    def backup_file(cls, nome: str) -> str:
+        return os.path.join(cls.backup_dir(), nome)
 
     # =====================================================
     # LOGS
     # =====================================================
-    @staticmethod
-    def log_dir() -> str:
+    @classmethod
+    def log_dir(cls) -> str:
 
-        if "log_dir" in IonPath._cache:
-            return IonPath._cache["log_dir"]
+        if "log_dir" in cls._cache:
+            return cls._cache["log_dir"]
 
-        path = os.path.join(IonPath.user_dir(), "logs")
-        os.makedirs(path, exist_ok=True)
+        path = os.path.join(cls.user_dir(), "logs")
+        cls.ensure_dir(path)
 
-        IonPath._cache["log_dir"] = path
+        cls._cache["log_dir"] = path
         return path
 
-    @staticmethod
-    def log_file(nome="app.log") -> str:
-        return os.path.join(IonPath.log_dir(), nome)
+    @classmethod
+    def log_file(cls, nome="app.log") -> str:
+        return os.path.join(cls.log_dir(), nome)
 
     # =====================================================
     # CONFIG
     # =====================================================
-    @staticmethod
-    def config_file() -> str:
-        return os.path.join(IonPath.user_dir(), "config.json")
+    @classmethod
+    def config_file(cls) -> str:
+        return os.path.join(cls.user_dir(), "config.json")
 
     # =====================================================
     # TEMP (IMPORTANTE PRA IMPORTAÇÃO)
     # =====================================================
-    @staticmethod
-    def temp_dir() -> str:
+    @classmethod
+    def temp_dir(cls) -> str:
 
-        if "temp_dir" in IonPath._cache:
-            return IonPath._cache["temp_dir"]
+        if "temp_dir" in cls._cache:
+            return cls._cache["temp_dir"]
 
-        path = os.path.join(IonPath.user_dir(), "temp")
-        os.makedirs(path, exist_ok=True)
+        path = os.path.join(cls.user_dir(), "temp")
+        cls.ensure_dir(path)
 
-        IonPath._cache["temp_dir"] = path
+        cls._cache["temp_dir"] = path
         return path
 
     # =====================================================
@@ -156,4 +171,20 @@ class IonPath:
 
     @staticmethod
     def join(*paths) -> str:
-        return os.path.join(*paths)
+        return os.path.normpath(os.path.join(*paths))
+
+    # =====================================================
+    # DEBUG
+    # =====================================================
+    @classmethod
+    def debug_info(cls) -> dict:
+        """
+        Retorna informações úteis para debug do ambiente
+        """
+        return {
+            "base_path": cls.get_base_path(),
+            "user_dir": cls.user_dir(),
+            "database": cls.database(),
+            "platform": platform.system(),
+            "frozen": getattr(sys, "frozen", False),
+        }

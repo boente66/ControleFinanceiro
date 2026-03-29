@@ -9,13 +9,12 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, pyqtSignal
 
 from core.session import Session
-from core.i18n import t
+from core.translator_app import TranslatorApp
 
 
 class PerfilView(QWidget):
     """
     Tela de perfil do usuário logado.
-    Exibe apenas informações da sessão atual.
     """
 
     logout_requested = pyqtSignal()
@@ -27,13 +26,7 @@ class PerfilView(QWidget):
         if not self.usuario:
             raise RuntimeError("Usuário não autenticado.")
 
-        # referências para retradução
-        self._labels = {}
-
         self._init_ui()
-
-        # reage à mudança de idioma
-        Session.on_idioma_change(self._retranslate)
 
     # --------------------------------------------------
     # UI
@@ -41,16 +34,19 @@ class PerfilView(QWidget):
     def _init_ui(self):
         self.layout = QVBoxLayout(self)
 
-        # Título
+        # TÍTULO
         self.titulo = QLabel()
         self.titulo.setAlignment(Qt.AlignCenter)
         self.titulo.setObjectName("pageTitle")
         self.layout.addWidget(self.titulo)
 
-        # Grupo de dados
+        TranslatorApp.text(self.titulo, "Perfil do Usuário")
+
+        # GRUPO
         self.grupo = QGroupBox()
         self.g_layout = QVBoxLayout(self.grupo)
 
+        # Labels dinâmicos
         self.lbl_nome = QLabel()
         self.lbl_login = QLabel()
         self.lbl_email = QLabel()
@@ -63,49 +59,51 @@ class PerfilView(QWidget):
 
         self.layout.addWidget(self.grupo)
 
-        # Botão logout
+        # 🔥 título do grupo traduzível
+        TranslatorApp._bind(lambda idioma: self.grupo.setTitle(
+            TranslatorApp.get("Dados da Conta")
+        ))
+
+        # 🔥 dados do usuário traduzíveis
+        TranslatorApp._bind(self._update_user_info)
+
+        # BOTÃO LOGOUT
         self.btn_logout = QPushButton()
         self.btn_logout.setObjectName("deleteButton")
         self.btn_logout.clicked.connect(self._confirmar_logout)
         self.layout.addWidget(self.btn_logout)
 
+        TranslatorApp.text(self.btn_logout, "Encerrar Sessão")
+
         self.layout.addStretch()
 
-        # texto inicial
-        self._retranslate(Session.get_config("idioma", "Português"))
-
     # --------------------------------------------------
-    # TRADUÇÃO DINÂMICA
+    # DADOS DINÂMICOS (REATIVO)
     # --------------------------------------------------
-    def _retranslate(self, idioma):
-        self.titulo.setText(t("Perfil do Usuário", idioma))
-        self.grupo.setTitle(t("Dados da Conta", idioma))
+    def _update_user_info(self, idioma):
 
         self.lbl_nome.setText(
-            f"{t('Nome', idioma)}: {self.usuario.get('Nome', '-')}"
+            f"{TranslatorApp.get('Nome')}: {self.usuario.get('Nome', '-')}"
         )
         self.lbl_login.setText(
-            f"{t('Login', idioma)}: {self.usuario.get('Login', '-')}"
+            f"{TranslatorApp.get('Login')}: {self.usuario.get('Login', '-')}"
         )
         self.lbl_email.setText(
-            f"{t('E-mail', idioma)}: {self.usuario.get('Email', '-')}"
+            f"{TranslatorApp.get('E-mail')}: {self.usuario.get('Email', '-')}"
         )
         self.lbl_nivel.setText(
-            f"{t('Nível de Acesso', idioma)}: {self.usuario.get('Nivel_Acesso', '-')}"
+            f"{TranslatorApp.get('Nível de Acesso')}: {self.usuario.get('Nivel_Acesso', '-')}"
         )
-
-        self.btn_logout.setText(t("Encerrar Sessão", idioma))
 
     # --------------------------------------------------
     # LOGOUT
     # --------------------------------------------------
     def _confirmar_logout(self):
-        idioma = Session.get_config("idioma", "Português")
 
         confirm = QMessageBox.question(
             self,
-            t("Encerrar Sessão", idioma),
-            t("Deseja realmente sair do sistema?", idioma),
+            TranslatorApp.get("Encerrar Sessão"),
+            TranslatorApp.get("Deseja realmente sair do sistema?"),
             QMessageBox.Yes | QMessageBox.No,
         )
 

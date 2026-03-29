@@ -1,4 +1,3 @@
-# relatorio_view.py
 import logging
 from datetime import datetime
 
@@ -14,45 +13,44 @@ from controllers.relatorio_controller import RelatorioController
 from utilitarios.makepdf import MakePDF
 from utilitarios.currency_formatter import CurrencyFormatter
 
+from core.translator_app import TranslatorApp
 
 logger = logging.getLogger(__name__)
 
 
 class RelatorioView(QWidget):
-    """
-    Visualização de relatórios financeiros.
-    """
 
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        
-        
-
         self.controller = RelatorioController()
-
-        self.setWindowTitle("Relatórios")
 
         main_layout = QHBoxLayout(self)
         main_layout.setContentsMargins(12, 12, 12, 12)
         main_layout.setSpacing(10)
 
-        # Sidebar
+        # ================= SIDEBAR =================
         sidebar = QFrame()
         sidebar.setObjectName("sidebar")
         sidebar_layout = QVBoxLayout(sidebar)
 
-        titulo = QLabel("RELATÓRIOS")
-        titulo.setAlignment(Qt.AlignCenter)
-        sidebar_layout.addWidget(titulo)
+        self.titulo = QLabel()
+        self.titulo.setAlignment(Qt.AlignCenter)
+        sidebar_layout.addWidget(self.titulo)
+
+        TranslatorApp.text(self.titulo, "Relatórios")
 
         self.sections = QListWidget()
-        self.sections.addItems([
-            "Relatório Diário",
-            "Relatório Anual",
-            "Informe de Rendimentos"
-        ])
         sidebar_layout.addWidget(self.sections)
+
+        TranslatorApp.list_widget(
+            self.sections,
+            [
+                "Relatório Diário",
+                "Relatório Anual",
+                "Informe de Rendimentos"
+            ]
+        )
 
         sidebar_layout.addSpacerItem(
             QSpacerItem(20, 20, QSizePolicy.Minimum, QSizePolicy.Expanding)
@@ -60,18 +58,19 @@ class RelatorioView(QWidget):
 
         main_layout.addWidget(sidebar, 0)
 
-        # Área principal
+        # ================= STACK =================
         self.stacked = QStackedWidget()
         self.stacked.addWidget(self._relatorio_diario_widget())
         self.stacked.addWidget(self._relatorio_anual_widget())
         self.stacked.addWidget(self._informe_relatorio_widget())
+
         main_layout.addWidget(self.stacked, 1)
 
         self.sections.currentRowChanged.connect(self.stacked.setCurrentIndex)
         self.sections.setCurrentRow(0)
 
     # ==================================================
-    # FORMATAÇÃO SEGURA
+    # UTIL
     # ==================================================
     def _format_currency(self, value):
         try:
@@ -86,16 +85,22 @@ class RelatorioView(QWidget):
         w = QWidget()
         layout = QVBoxLayout(w)
 
-        layout.addWidget(QLabel("Relatório Diário"))
+        titulo = QLabel()
+        TranslatorApp.text(titulo, "Relatório Diário")
+        layout.addWidget(titulo)
 
         ctrl = QHBoxLayout()
-        ctrl.addWidget(QLabel("Últimos (dias):"))
+
+        lbl = QLabel()
+        TranslatorApp.text(lbl, "Últimos (dias):")
+        ctrl.addWidget(lbl)
 
         self.input_days = QComboBox()
         self.input_days.addItems(["7", "15", "30", "90"])
         ctrl.addWidget(self.input_days)
 
-        btn = QPushButton("Atualizar")
+        btn = QPushButton()
+        TranslatorApp.text(btn, "Atualizar")
         btn.clicked.connect(self.load_relatorio_diario)
         ctrl.addWidget(btn)
 
@@ -104,12 +109,16 @@ class RelatorioView(QWidget):
 
         self.table_diario = QTableWidget()
         self.table_diario.setColumnCount(5)
-        self.table_diario.setHorizontalHeaderLabels(
+
+        TranslatorApp.table_headers(
+            self.table_diario,
             ["Data", "Categoria", "Receita", "Despesa", "Economia"]
         )
+
         layout.addWidget(self.table_diario, 1)
 
-        export_btn = QPushButton("Exportar CSV")
+        export_btn = QPushButton()
+        TranslatorApp.text(export_btn, "Exportar CSV")
         export_btn.clicked.connect(
             lambda: self.export_table_csv(self.table_diario, "relatorio_diario")
         )
@@ -130,10 +139,15 @@ class RelatorioView(QWidget):
         w = QWidget()
         layout = QVBoxLayout(w)
 
-        layout.addWidget(QLabel("Relatório Anual"))
+        titulo = QLabel()
+        TranslatorApp.text(titulo, "Relatório Anual")
+        layout.addWidget(titulo)
 
         ctrl = QHBoxLayout()
-        ctrl.addWidget(QLabel("Ano:"))
+
+        lbl = QLabel()
+        TranslatorApp.text(lbl, "Ano:")
+        ctrl.addWidget(lbl)
 
         self.combo_ano_anual = QComboBox()
         ano_atual = datetime.now().year
@@ -142,7 +156,8 @@ class RelatorioView(QWidget):
         )
         ctrl.addWidget(self.combo_ano_anual)
 
-        btn = QPushButton("Atualizar")
+        btn = QPushButton()
+        TranslatorApp.text(btn, "Atualizar")
         btn.clicked.connect(self.load_relatorio_anual)
         ctrl.addWidget(btn)
 
@@ -151,12 +166,16 @@ class RelatorioView(QWidget):
 
         self.table_anual = QTableWidget()
         self.table_anual.setColumnCount(5)
-        self.table_anual.setHorizontalHeaderLabels(
+
+        TranslatorApp.table_headers(
+            self.table_anual,
             ["Mês", "Categoria", "Receita", "Despesa", "Economia"]
         )
+
         layout.addWidget(self.table_anual, 1)
 
-        export_btn = QPushButton("Exportar CSV")
+        export_btn = QPushButton()
+        TranslatorApp.text(export_btn, "Exportar CSV")
         export_btn.clicked.connect(
             lambda: self.export_table_csv(self.table_anual, "relatorio_anual")
         )
@@ -177,10 +196,15 @@ class RelatorioView(QWidget):
         w = QWidget()
         layout = QVBoxLayout(w)
 
-        layout.addWidget(QLabel("Informe de Rendimentos (IRPF)"))
+        titulo = QLabel()
+        TranslatorApp.text(titulo, "Informe de Rendimentos (IRPF)")
+        layout.addWidget(titulo)
 
         ctrl = QHBoxLayout()
-        ctrl.addWidget(QLabel("Ano base:"))
+
+        lbl = QLabel()
+        TranslatorApp.text(lbl, "Ano base:")
+        ctrl.addWidget(lbl)
 
         self.year_combo = QComboBox()
         ano_atual = datetime.now().year
@@ -189,15 +213,18 @@ class RelatorioView(QWidget):
         )
         ctrl.addWidget(self.year_combo)
 
-        btn_preview = QPushButton("Visualizar")
+        btn_preview = QPushButton()
+        TranslatorApp.text(btn_preview, "Visualizar")
         btn_preview.clicked.connect(self.preview_informe)
         ctrl.addWidget(btn_preview)
 
-        btn_pdf = QPushButton("Exportar PDF")
+        btn_pdf = QPushButton()
+        TranslatorApp.text(btn_pdf, "Exportar PDF")
         btn_pdf.clicked.connect(self.gerar_e_exportar_pdf)
         ctrl.addWidget(btn_pdf)
 
-        btn_print = QPushButton("Imprimir")
+        btn_print = QPushButton()
+        TranslatorApp.text(btn_print, "Imprimir")
         btn_print.clicked.connect(self.imprimir_informe)
         ctrl.addWidget(btn_print)
 
@@ -212,7 +239,7 @@ class RelatorioView(QWidget):
 
     def preview_informe(self):
         ano = int(self.year_combo.currentText())
-        texto = self.controller.gerar_texto_informe( ano)
+        texto = self.controller.gerar_texto_informe(ano)
         self.pdf_view.setPlainText(texto)
 
     # ==================================================
@@ -220,6 +247,7 @@ class RelatorioView(QWidget):
     # ==================================================
     def _preencher_tabela(self, tabela, dados):
         tabela.setRowCount(0)
+
         if not dados:
             return
 
@@ -228,21 +256,35 @@ class RelatorioView(QWidget):
             for j, val in enumerate(row.values()):
                 if isinstance(val, (int, float)):
                     val = self._format_currency(val)
+
                 tabela.setItem(i, j, QTableWidgetItem(str(val)))
 
         tabela.resizeColumnsToContents()
 
     def gerar_e_exportar_pdf(self):
         texto = self.pdf_view.toPlainText()
+
         if not texto:
-            QMessageBox.warning(self, "Aviso", "Gere o informe antes.")
+            QMessageBox.warning(
+                self,
+                TranslatorApp.get("Aviso"),
+                TranslatorApp.get("Gere o informe antes")
+            )
             return
 
         caminho, _ = QFileDialog.getSaveFileName(
-            self, "Salvar PDF", "informe.pdf", "PDF Files (*.pdf)"
+            self,
+            TranslatorApp.get("Salvar PDF"),
+            "informe.pdf",
+            "PDF Files (*.pdf)"
         )
+
         if caminho:
-            MakePDF.gerar_pdf(caminho, "Informe de Rendimentos", texto)
+            MakePDF.gerar_pdf(
+                caminho,
+                TranslatorApp.get("Informe de Rendimentos"),
+                texto
+            )
 
     def imprimir_informe(self):
         printer = QPrinter()
@@ -252,11 +294,18 @@ class RelatorioView(QWidget):
 
     def export_table_csv(self, tabela, prefix):
         if tabela.rowCount() == 0:
-            QMessageBox.information(self, "Exportar CSV", "Tabela vazia.")
+            QMessageBox.information(
+                self,
+                TranslatorApp.get("Exportar CSV"),
+                TranslatorApp.get("Tabela vazia")
+            )
             return
 
         caminho, _ = QFileDialog.getSaveFileName(
-            self, "Salvar CSV", f"{prefix}.csv", "CSV Files (*.csv)"
+            self,
+            TranslatorApp.get("Salvar CSV"),
+            f"{prefix}.csv",
+            "CSV Files (*.csv)"
         )
 
         if not caminho:

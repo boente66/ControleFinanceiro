@@ -1,16 +1,15 @@
 import logging
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-    QPushButton, QScrollArea, QFrame, QProgressBar,
-    QMessageBox
+    QPushButton, QScrollArea, QFrame, QProgressBar
 )
 from PyQt5.QtCore import Qt
 
 from controllers.meta_controller import MetaController
-from views.meta_dialog import MetaDialog  # 🔥 IMPORT NECESSÁRIO
-from core.i18n import t
-from core.session import Session
+from views.meta_dialog import MetaDialog
+
 from utilitarios.currency_formatter import CurrencyFormatter
+from core.translator_app import TranslatorApp
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +24,6 @@ class MetaView(QWidget):
         self._init_ui()
         self.carregar_metas()
 
-        Session.on_idioma_change(self._retranslate)
-
     # ==================================================
     # UI
     # ==================================================
@@ -34,19 +31,21 @@ class MetaView(QWidget):
 
         self.layout_principal = QVBoxLayout(self)
 
-        self.titulo = QLabel("Metas Financeiras")
+        self.titulo = QLabel()
         self.titulo.setObjectName("pageTitle")
         self.titulo.setAlignment(Qt.AlignCenter)
+        TranslatorApp.text(self.titulo, "Metas Financeiras")
 
         self.layout_principal.addWidget(self.titulo)
 
-        self.btn_nova = QPushButton("Nova Meta")
+        self.btn_nova = QPushButton()
         self.btn_nova.setObjectName("addButton")
+        TranslatorApp.text(self.btn_nova, "Nova Meta")
         self.btn_nova.clicked.connect(self._nova_meta)
 
         self.layout_principal.addWidget(self.btn_nova)
 
-        # Área scroll
+        # Scroll
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
 
@@ -63,7 +62,6 @@ class MetaView(QWidget):
     # ==================================================
     def carregar_metas(self):
 
-        # Limpar layout
         for i in reversed(range(self.container_layout.count())):
             item = self.container_layout.itemAt(i)
             widget = item.widget()
@@ -74,7 +72,7 @@ class MetaView(QWidget):
 
         if not metas:
             self.container_layout.addWidget(
-                QLabel("Nenhuma meta cadastrada.")
+                QLabel(TranslatorApp.get("Nenhuma meta cadastrada"))
             )
             self.container_layout.addStretch()
             return
@@ -113,11 +111,12 @@ class MetaView(QWidget):
         layout.addWidget(progress_bar)
 
         restante = QLabel(
-            f"Restante: {CurrencyFormatter.format(progresso['restante'])}"
+            f"{TranslatorApp.get('Restante')}: "
+            f"{CurrencyFormatter.format(progresso['restante'])}"
         )
         layout.addWidget(restante)
 
-        # 🎯 Status visual
+        # STATUS VISUAL
         percentual = progresso["percentual"]
 
         if percentual >= 100:
@@ -130,16 +129,18 @@ class MetaView(QWidget):
         nome.style().unpolish(nome)
         nome.style().polish(nome)
 
-        # Botões
+        # BOTÕES
         botoes_layout = QHBoxLayout()
 
-        btn_concluir = QPushButton("Concluir")
+        btn_concluir = QPushButton()
+        TranslatorApp.text(btn_concluir, "Concluir")
         btn_concluir.clicked.connect(
             lambda: self._concluir(meta["ID_Meta"])
         )
 
-        btn_excluir = QPushButton("Excluir")
+        btn_excluir = QPushButton()
         btn_excluir.setObjectName("deleteButton")
+        TranslatorApp.text(btn_excluir, "Excluir")
         btn_excluir.clicked.connect(
             lambda: self._excluir(meta["ID_Meta"])
         )
@@ -162,20 +163,9 @@ class MetaView(QWidget):
             self.carregar_metas()
 
     def _concluir(self, id_meta):
-
         self.controller.concluir_meta(id_meta)
         self.carregar_metas()
 
     def _excluir(self, id_meta):
-
         self.controller.excluir_meta(id_meta)
-        self.carregar_metas()
-
-    # ==================================================
-    # TRADUÇÃO
-    # ==================================================
-    def _retranslate(self, idioma):
-
-        self.titulo.setText(t("Metas Financeiras", idioma))
-        self.btn_nova.setText(t("Nova Meta", idioma))
         self.carregar_metas()

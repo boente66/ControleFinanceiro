@@ -14,7 +14,7 @@ import logging
 
 from controllers.backup_controller import BackupController
 from core.session import Session
-from core.i18n import t
+from core.translator_app import TranslatorApp
 
 
 class BackupView(QWidget):
@@ -38,7 +38,6 @@ class BackupView(QWidget):
         self.setMinimumWidth(420)
 
         self._init_ui()
-        Session.on_idioma_change(self._retranslate)
 
     # -------------------------------------------------
     # UI
@@ -56,7 +55,6 @@ class BackupView(QWidget):
 
         self.senha_input = QLineEdit()
         self.senha_input.setEchoMode(QLineEdit.Password)
-        self.senha_input.setPlaceholderText("********")
 
         self.layout.addWidget(self.label_senha)
         self.layout.addWidget(self.senha_input)
@@ -77,23 +75,21 @@ class BackupView(QWidget):
         self.layout.addLayout(botoes)
         self.layout.addStretch()
 
-        self._retranslate(Session.get_config("idioma", "Português"))
-
-    # -------------------------------------------------
-    # TRADUÇÃO
-    # -------------------------------------------------
-    def _retranslate(self, idioma):
-        self.titulo.setText(t("Backup e Restauração", idioma))
-        self.label_senha.setText(t("Senha do Backup", idioma))
-        self.btn_backup.setText(t("Gerar Backup", idioma))
-        self.btn_restaurar.setText(t("Restaurar Backup", idioma))
+        # 🔥 TRADUÇÃO AUTOMÁTICA
+        TranslatorApp.text(self.titulo, "Backup e Restauração")
+        TranslatorApp.text(self.label_senha, "Senha do Backup")
+        TranslatorApp.placeholder(self.senha_input, "Digite a senha")
+        TranslatorApp.text(self.btn_backup, "Gerar Backup")
+        TranslatorApp.text(self.btn_restaurar, "Restaurar Backup")
 
     # -------------------------------------------------
     # UTIL
     # -------------------------------------------------
     def _bloquear_ui(self, estado=True):
         self.setEnabled(not estado)
-        QApplication.setOverrideCursor(Qt.WaitCursor if estado else Qt.ArrowCursor)
+        QApplication.setOverrideCursor(
+            Qt.WaitCursor if estado else Qt.ArrowCursor
+        )
 
     def _limpar_senha(self):
         self.senha_input.clear()
@@ -108,14 +104,14 @@ class BackupView(QWidget):
         if not senha:
             QMessageBox.warning(
                 self,
-                t("Aviso", idioma),
-                t("Informe uma senha para o backup.", idioma),
+                TranslatorApp.get("Aviso"),
+                TranslatorApp.get("Informe uma senha para o backup."),
             )
             return
 
         destino = QFileDialog.getExistingDirectory(
             self,
-            t("Selecionar pasta para salvar o backup", idioma),
+            TranslatorApp.get("Selecionar pasta para salvar o backup"),
         )
 
         if not destino:
@@ -128,13 +124,17 @@ class BackupView(QWidget):
 
             QMessageBox.information(
                 self,
-                t("Sucesso", idioma),
-                t("Backup gerado com sucesso", idioma) + f":\n{arquivo}",
+                TranslatorApp.get("Sucesso"),
+                TranslatorApp.get("Backup gerado com sucesso") + f":\n{arquivo}",
             )
 
         except Exception as e:
             self.logger.exception("Erro ao gerar backup")
-            QMessageBox.critical(self, t("Erro", idioma), str(e))
+            QMessageBox.critical(
+                self,
+                TranslatorApp.get("Erro"),
+                str(e)
+            )
 
         finally:
             self._bloquear_ui(False)
@@ -144,20 +144,19 @@ class BackupView(QWidget):
     # RESTAURAÇÃO
     # -------------------------------------------------
     def restaurar_backup(self):
-        idioma = Session.get_config("idioma", "Português")
         senha = self.senha_input.text().strip()
 
         if not senha:
             QMessageBox.warning(
                 self,
-                t("Aviso", idioma),
-                t("Informe a senha do backup.", idioma),
+                TranslatorApp.get("Aviso"),
+                TranslatorApp.get("Informe a senha do backup."),
             )
             return
 
         arquivo, _ = QFileDialog.getOpenFileName(
             self,
-            t("Selecionar arquivo de backup", idioma),
+            TranslatorApp.get("Selecionar arquivo de backup"),
             "",
             "Backup (*.kp);;Todos os arquivos (*)",
         )
@@ -167,10 +166,9 @@ class BackupView(QWidget):
 
         confirm = QMessageBox.question(
             self,
-            t("Confirmação", idioma),
-            t(
-                "Restaurar um backup irá substituir os dados atuais.\nDeseja continuar?",
-                idioma,
+            TranslatorApp.get("Confirmação"),
+            TranslatorApp.get(
+                "Restaurar um backup irá substituir os dados atuais.\nDeseja continuar?"
             ),
             QMessageBox.Yes | QMessageBox.No,
         )
@@ -185,13 +183,19 @@ class BackupView(QWidget):
 
             QMessageBox.information(
                 self,
-                t("Sucesso", idioma),
-                t("Backup restaurado com sucesso.\nReinicie o sistema.", idioma),
+                TranslatorApp.get("Sucesso"),
+                TranslatorApp.get(
+                    "Backup restaurado com sucesso.\nReinicie o sistema."
+                ),
             )
 
         except Exception as e:
             self.logger.exception("Erro ao restaurar backup")
-            QMessageBox.critical(self, t("Erro", idioma), str(e))
+            QMessageBox.critical(
+                self,
+                TranslatorApp.get("Erro"),
+                str(e)
+            )
 
         finally:
             self._bloquear_ui(False)

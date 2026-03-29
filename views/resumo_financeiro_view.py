@@ -17,27 +17,19 @@ from controllers.transaction_controller import TransactionController
 from controllers.fatura_controller import FaturaController
 from controllers.meta_controller import MetaController
 
-from core.session import Session
-from core.i18n import t
-
 from utilitarios.currency_formatter import CurrencyFormatter
 from utilitarios.date_formatter import DateFormatter
+
+from core.translator_app import TranslatorApp
 
 logger = logging.getLogger(__name__)
 
 
 class ResumoFinanceiroView(QWidget):
-    """
-    Painel de Resumo Financeiro
-    """
 
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        if not Session.get_usuario():
-            raise RuntimeError("Usuário não autenticado")
-
-        # Controllers
         self.account_controller = AccountController()
         self.schedule_controller = ScheduleController()
         self.transaction_controller = TransactionController()
@@ -46,8 +38,6 @@ class ResumoFinanceiroView(QWidget):
 
         self._init_ui()
         self.load_data()
-
-        Session.on_idioma_change(self._retranslate)
 
     # ==================================================
     # UTIL
@@ -78,21 +68,24 @@ class ResumoFinanceiroView(QWidget):
         self.title = QLabel()
         self.title.setAlignment(Qt.AlignCenter)
         self.title.setObjectName("pageTitle")
+        TranslatorApp.text(self.title, "Resumo Financeiro")
         self.main_layout.addWidget(self.title)
 
         # ---------- TOP ----------
         top_layout = QHBoxLayout()
-        top_layout.setSpacing(20)
 
         self.contas_group = QGroupBox()
+        TranslatorApp.group(self.contas_group, "Saldos das Contas")
         self.contas_layout = QVBoxLayout(self.contas_group)
         top_layout.addWidget(self.contas_group)
 
         self.cartoes_group = QGroupBox()
+        TranslatorApp.group(self.cartoes_group, "Cartões de Crédito")
         self.cartoes_layout = QVBoxLayout(self.cartoes_group)
         top_layout.addWidget(self.cartoes_group)
 
         self.lancamentos_group = QGroupBox()
+        TranslatorApp.group(self.lancamentos_group, "Próximos Lançamentos Agendados")
         self.lancamentos_layout = QVBoxLayout(self.lancamentos_group)
         top_layout.addWidget(self.lancamentos_group)
 
@@ -100,38 +93,23 @@ class ResumoFinanceiroView(QWidget):
 
         # ---------- BOTTOM ----------
         bottom_layout = QHBoxLayout()
-        bottom_layout.setSpacing(20)
 
         self.receitas_group = QGroupBox()
+        TranslatorApp.group(self.receitas_group, "Receitas e Despesas do Mês")
         self.receitas_layout = QVBoxLayout(self.receitas_group)
         bottom_layout.addWidget(self.receitas_group)
 
         self.analise_group = QGroupBox()
+        TranslatorApp.group(self.analise_group, "Análise do Mês")
         self.analise_layout = QVBoxLayout(self.analise_group)
         bottom_layout.addWidget(self.analise_group)
 
         self.metas_group = QGroupBox()
+        TranslatorApp.group(self.metas_group, "Metas Financeiras")
         self.metas_layout = QVBoxLayout(self.metas_group)
         bottom_layout.addWidget(self.metas_group)
 
         self.main_layout.addLayout(bottom_layout)
-
-        self._retranslate(Session.get_config("idioma", "Português"))
-
-    # ==================================================
-    # TRADUÇÃO
-    # ==================================================
-    def _retranslate(self, idioma):
-
-        self.title.setText(t("Resumo Financeiro", idioma))
-        self.contas_group.setTitle(t("Saldos das Contas", idioma))
-        self.cartoes_group.setTitle(t("Cartões de Crédito", idioma))
-        self.lancamentos_group.setTitle(t("Próximos Lançamentos Agendados", idioma))
-        self.receitas_group.setTitle(t("Receitas e Despesas do Mês", idioma))
-        self.analise_group.setTitle(t("Análise do Mês", idioma))
-        self.metas_group.setTitle(t("Metas Financeiras", idioma))
-
-        self.load_data()
 
     # ==================================================
     # LOAD DATA
@@ -143,7 +121,7 @@ class ResumoFinanceiroView(QWidget):
             self.load_scheduled_transactions()
             self.load_monthly_summary()
             self.load_monthly_analysis()
-            self.load_metas()  # ✅ agora corretamente chamado
+            self.load_metas()
         except Exception as e:
             logger.error(f"Erro ao carregar resumo financeiro: {e}")
             traceback.print_exc()
@@ -153,7 +131,6 @@ class ResumoFinanceiroView(QWidget):
     # ==================================================
     def load_accounts(self):
 
-        idioma = Session.get_config("idioma", "Português")
         self.clear_layout(self.contas_layout)
 
         try:
@@ -161,7 +138,7 @@ class ResumoFinanceiroView(QWidget):
 
             if not accounts:
                 self.contas_layout.addWidget(
-                    QLabel(t("Nenhuma conta encontrada.", idioma))
+                    QLabel(TranslatorApp.get("Nenhuma conta encontrada"))
                 )
                 return
 
@@ -173,12 +150,13 @@ class ResumoFinanceiroView(QWidget):
                 label = QLabel(
                     f"{nome} ({tipo})\n{self.format_currency(saldo)}"
                 )
+
                 label.setObjectName("negativo" if saldo < 0 else "positivo")
                 self.contas_layout.addWidget(label)
 
         except Exception:
             self.contas_layout.addWidget(
-                QLabel(t("Erro ao carregar contas.", idioma))
+                QLabel(TranslatorApp.get("Erro ao carregar contas"))
             )
 
     # ==================================================
@@ -186,7 +164,6 @@ class ResumoFinanceiroView(QWidget):
     # ==================================================
     def load_credit_cards(self):
 
-        idioma = Session.get_config("idioma", "Português")
         self.clear_layout(self.cartoes_layout)
 
         try:
@@ -194,7 +171,7 @@ class ResumoFinanceiroView(QWidget):
 
             if not cards:
                 self.cartoes_layout.addWidget(
-                    QLabel(t("Nenhum cartão encontrado.", idioma))
+                    QLabel(TranslatorApp.get("Nenhum cartão encontrado"))
                 )
                 return
 
@@ -205,6 +182,7 @@ class ResumoFinanceiroView(QWidget):
                 dia_vencimento = int(card.get("Dia_Vencimento", 1))
 
                 vencimento = datetime(hoje.year, hoje.month, dia_vencimento)
+
                 if vencimento < hoje:
                     if hoje.month == 12:
                         vencimento = datetime(hoje.year + 1, 1, dia_vencimento)
@@ -218,9 +196,9 @@ class ResumoFinanceiroView(QWidget):
 
                 texto = QLabel(
                     f"{nome}\n"
-                    f"{t('Fatura Atual', idioma)}: {self.format_currency(fatura)}\n"
-                    f"{t('Vencimento', idioma)}: {vencimento.strftime('%d/%m')}\n"
-                    f"{t('Disponível', idioma)}: {self.format_currency(disponivel)}"
+                    f"{TranslatorApp.get('Fatura Atual')}: {self.format_currency(fatura)}\n"
+                    f"{TranslatorApp.get('Vencimento')}: {vencimento.strftime('%d/%m')}\n"
+                    f"{TranslatorApp.get('Disponível')}: {self.format_currency(disponivel)}"
                 )
 
                 if dias_restantes <= 3:
@@ -234,7 +212,7 @@ class ResumoFinanceiroView(QWidget):
 
         except Exception:
             self.cartoes_layout.addWidget(
-                QLabel(t("Erro ao carregar cartões.", idioma))
+                QLabel(TranslatorApp.get("Erro ao carregar cartões"))
             )
 
     # ==================================================
@@ -242,7 +220,6 @@ class ResumoFinanceiroView(QWidget):
     # ==================================================
     def load_scheduled_transactions(self):
 
-        idioma = Session.get_config("idioma", "Português")
         self.clear_layout(self.lancamentos_layout)
 
         try:
@@ -250,7 +227,7 @@ class ResumoFinanceiroView(QWidget):
 
             if not scheduled:
                 self.lancamentos_layout.addWidget(
-                    QLabel(t("Nenhum lançamento agendado.", idioma))
+                    QLabel(TranslatorApp.get("Nenhum lançamento agendado"))
                 )
                 return
 
@@ -262,12 +239,13 @@ class ResumoFinanceiroView(QWidget):
                 label = QLabel(
                     f"{data} - {desc}\n{self.format_currency(valor)}"
                 )
+
                 label.setObjectName("negativo" if valor < 0 else "positivo")
                 self.lancamentos_layout.addWidget(label)
 
         except Exception:
             self.lancamentos_layout.addWidget(
-                QLabel(t("Erro ao carregar agendamentos.", idioma))
+                QLabel(TranslatorApp.get("Erro ao carregar agendamentos"))
             )
 
     # ==================================================
@@ -275,7 +253,6 @@ class ResumoFinanceiroView(QWidget):
     # ==================================================
     def load_monthly_summary(self):
 
-        idioma = Session.get_config("idioma", "Português")
         self.clear_layout(self.receitas_layout)
 
         try:
@@ -289,12 +266,15 @@ class ResumoFinanceiroView(QWidget):
             ax = fig.add_subplot(111)
 
             ax.bar(
-                [t("Receitas", idioma), t("Despesas", idioma)],
+                [
+                    TranslatorApp.get("Receitas"),
+                    TranslatorApp.get("Despesas")
+                ],
                 [receitas, despesas],
                 color=["#16a34a", "#dc2626"]
             )
 
-            ax.set_title(t("Resumo Mensal", idioma))
+            ax.set_title(TranslatorApp.get("Resumo Mensal"))
             ax.grid(axis="y", linestyle="--", alpha=0.3)
             fig.tight_layout()
 
@@ -302,7 +282,7 @@ class ResumoFinanceiroView(QWidget):
 
         except Exception:
             self.receitas_layout.addWidget(
-                QLabel(t("Erro ao gerar gráfico.", idioma))
+                QLabel(TranslatorApp.get("Erro ao gerar gráfico"))
             )
 
     # ==================================================
@@ -310,7 +290,6 @@ class ResumoFinanceiroView(QWidget):
     # ==================================================
     def load_monthly_analysis(self):
 
-        idioma = Session.get_config("idioma", "Português")
         self.clear_layout(self.analise_layout)
 
         try:
@@ -318,7 +297,7 @@ class ResumoFinanceiroView(QWidget):
 
             if not analise:
                 self.analise_layout.addWidget(
-                    QLabel(t("Sem análise disponível.", idioma))
+                    QLabel(TranslatorApp.get("Sem análise disponível"))
                 )
                 return
 
@@ -328,18 +307,20 @@ class ResumoFinanceiroView(QWidget):
             balanco = saldo_atual + receitas - despesas
 
             for texto, valor in [
-                (t("Saldo atual", idioma), saldo_atual),
-                (t("Receitas do mês", idioma), receitas),
-                (t("Despesas do mês", idioma), despesas),
-                (t("Balanço do mês", idioma), balanco),
+                ("Saldo atual", saldo_atual),
+                ("Receitas do mês", receitas),
+                ("Despesas do mês", despesas),
+                ("Balanço do mês", balanco),
             ]:
-                label = QLabel(f"{texto}\n{self.format_currency(valor)}")
+                label = QLabel(
+                    f"{TranslatorApp.get(texto)}\n{self.format_currency(valor)}"
+                )
                 label.setObjectName("positivo" if valor >= 0 else "negativo")
                 self.analise_layout.addWidget(label)
 
         except Exception:
             self.analise_layout.addWidget(
-                QLabel(t("Erro ao carregar análise mensal.", idioma))
+                QLabel(TranslatorApp.get("Erro ao carregar análise mensal"))
             )
 
     # ==================================================
@@ -347,7 +328,6 @@ class ResumoFinanceiroView(QWidget):
     # ==================================================
     def load_metas(self):
 
-        idioma = Session.get_config("idioma", "Português")
         self.clear_layout(self.metas_layout)
 
         try:
@@ -355,7 +335,7 @@ class ResumoFinanceiroView(QWidget):
 
             if not metas:
                 self.metas_layout.addWidget(
-                    QLabel(t("Nenhuma meta ativa.", idioma))
+                    QLabel(TranslatorApp.get("Nenhuma meta ativa"))
                 )
                 return
 
@@ -385,5 +365,5 @@ class ResumoFinanceiroView(QWidget):
 
         except Exception:
             self.metas_layout.addWidget(
-                QLabel(t("Erro ao carregar metas.", idioma))
+                QLabel(TranslatorApp.get("Erro ao carregar metas"))
             )

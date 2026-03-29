@@ -3,8 +3,12 @@ import traceback
 from datetime import datetime
 
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-    QGroupBox, QProgressBar
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QGroupBox,
+    QProgressBar,
 )
 from PyQt5.QtCore import Qt
 
@@ -40,7 +44,7 @@ class ResumoFinanceiroView(QWidget):
         self.load_data()
 
         # 🔥 CORREÇÃO: REATIVIDADE AO IDIOMA
-        TranslatorApp.bind(lambda _: self.load_data())
+        TranslatorApp.__bind(lambda _: self.load_data())
 
     # ==================================================
     # UTIL
@@ -150,9 +154,7 @@ class ResumoFinanceiroView(QWidget):
                 tipo = acc.get("Tipo", "")
                 saldo = float(acc.get("Saldo_Atual", 0))
 
-                label = QLabel(
-                    f"{nome} ({tipo})\n{self.format_currency(saldo)}"
-                )
+                label = QLabel(f"{nome} ({tipo})\n{self.format_currency(saldo)}")
 
                 label.setObjectName("negativo" if saldo < 0 else "positivo")
                 self.contas_layout.addWidget(label)
@@ -194,8 +196,12 @@ class ResumoFinanceiroView(QWidget):
 
                 dias_restantes = (vencimento - hoje).days
 
-                fatura = self.fatura_controller.obter_valor_fatura_atual(card["ID_Cartao"])
-                disponivel = self.fatura_controller.obter_limite_disponivel(card["ID_Cartao"])
+                fatura = self.fatura_controller.obter_valor_fatura_atual(
+                    card["ID_Cartao"]
+                )
+                disponivel = self.fatura_controller.obter_limite_disponivel(
+                    card["ID_Cartao"]
+                )
 
                 texto = QLabel(
                     f"{nome}\n"
@@ -239,9 +245,7 @@ class ResumoFinanceiroView(QWidget):
                 desc = item.get("Descricao", "")
                 valor = float(item.get("Valor", 0))
 
-                label = QLabel(
-                    f"{data} - {desc}\n{self.format_currency(valor)}"
-                )
+                label = QLabel(f"{data} - {desc}\n{self.format_currency(valor)}")
 
                 label.setObjectName("negativo" if valor < 0 else "positivo")
                 self.lancamentos_layout.addWidget(label)
@@ -269,12 +273,9 @@ class ResumoFinanceiroView(QWidget):
             ax = fig.add_subplot(111)
 
             ax.bar(
-                [
-                    TranslatorApp.get("Receitas"),
-                    TranslatorApp.get("Despesas")
-                ],
+                [TranslatorApp.get("Receitas"), TranslatorApp.get("Despesas")],
                 [receitas, despesas],
-                color=["#16a34a", "#dc2626"]
+                color=["#16a34a", "#dc2626"],
             )
 
             ax.set_title(TranslatorApp.get("Resumo Mensal"))

@@ -1,7 +1,15 @@
 from PyQt5.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-    QLineEdit, QPushButton, QMessageBox,
-    QComboBox, QFileDialog, QDateEdit, QSpinBox
+    QDialog,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QMessageBox,
+    QComboBox,
+    QFileDialog,
+    QDateEdit,
+    QSpinBox,
 )
 from PyQt5.QtCore import QDate
 
@@ -45,7 +53,7 @@ class TransactionDialog(QDialog):
         self._carregar_categorias()
 
         # 🔥 REATIVIDADE
-        TranslatorApp.bind(lambda _: self._retranslate())
+        TranslatorApp.__bind(lambda _: self._retranslate())
 
     # ======================================================
     # UI
@@ -166,7 +174,7 @@ class TransactionDialog(QDialog):
             self,
             TranslatorApp.get("Importar comprovante"),
             "",
-            "Arquivos (*.pdf *.csv *.xlsx)"
+            "Arquivos (*.pdf *.csv *.xlsx)",
         )
 
         if not caminho:
@@ -176,7 +184,7 @@ class TransactionDialog(QDialog):
             dados = self.import_controller.importar_comprovante_pdf(
                 caminho_pdf=caminho,
                 id_usuario=self.usuario_id,
-                id_conta=self.id_contexto if self.contexto == "conta" else None
+                id_conta=self.id_contexto if self.contexto == "conta" else None,
             )
 
             if not dados:
@@ -186,16 +194,10 @@ class TransactionDialog(QDialog):
             self.valor_edit.setText(str(dados.get("Valor", "")).replace(".", ","))
 
             if dados.get("Data"):
-                self.data_edit.setDate(
-                    QDate.fromString(dados["Data"], "yyyy-MM-dd")
-                )
+                self.data_edit.setDate(QDate.fromString(dados["Data"], "yyyy-MM-dd"))
 
         except Exception as e:
-            QMessageBox.critical(
-                self,
-                TranslatorApp.get("Erro"),
-                str(e)
-            )
+            QMessageBox.critical(self, TranslatorApp.get("Erro"), str(e))
 
     # ======================================================
     # SALVAR
@@ -242,22 +244,16 @@ class TransactionDialog(QDialog):
                     "Notas": None,
                 }
 
-                self.fatura_controller.registrar_despesa_cartao(
-                    dados, self.usuario_id
-                )
+                self.fatura_controller.registrar_despesa_cartao(dados, self.usuario_id)
 
                 self.accept()
 
         except ValueError as e:
-            QMessageBox.warning(
-                self,
-                TranslatorApp.get("Atenção"),
-                str(e)
-            )
+            QMessageBox.warning(self, TranslatorApp.get("Atenção"), str(e))
 
         except Exception:
             QMessageBox.critical(
                 self,
                 TranslatorApp.get("Erro"),
-                TranslatorApp.get("Erro ao salvar lançamento")
+                TranslatorApp.get("Erro ao salvar lançamento"),
             )

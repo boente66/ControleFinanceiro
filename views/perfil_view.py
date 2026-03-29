@@ -51,7 +51,7 @@ class PerfilView(QWidget):
 
         self.layout.addWidget(self.grupo)
 
-        # ✅ forma correta (sem usar _bind direto)
+        # ✅ forma correta (sem usar __bind direto)
         TranslatorApp.group(self.grupo, "Dados da Conta")
 
         # Labels dinâmicos
@@ -66,7 +66,7 @@ class PerfilView(QWidget):
         self.g_layout.addWidget(self.lbl_nivel)
 
         # 🔥 dados reativos (mantido, mas correto)
-        TranslatorApp.bind(self._update_user_info)
+        TranslatorApp.__bind(self._update_user_info)
 
         # BOTÃO LOGOUT
         self.btn_logout = QPushButton()

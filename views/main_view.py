@@ -54,7 +54,7 @@ class MainView(QMainWindow):
         self.setGeometry(100, 100, 1200, 800)
 
         # 🔥 título traduzível
-        TranslatorApp.text(self, "Controle Financeiro")
+        TranslatorApp.window_title(self, "Controle Financeiro")
 
         self._init_ui()
         self._criar_menu()
@@ -270,13 +270,10 @@ class MainView(QMainWindow):
             self._current_widget.deleteLater()
             self._current_widget = None
 
-        try:
-            view = view_cls(parent=self)
-        except TypeError:
-            view = view_cls(parent=self, usuario=self.usuario)
+        
+        view = view_cls(parent=self)
 
-        if hasattr(view, "logout_requested"):
-            view.logout_requested.connect(self._logout)
+           
 
         self.content_layout.addWidget(view)
 

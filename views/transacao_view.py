@@ -1,10 +1,16 @@
 import logging
 
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout,
-    QListWidget, QListWidgetItem,
-    QLabel, QPushButton, QMenu,
-    QMessageBox
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QListWidget,
+    QListWidgetItem,
+    QLabel,
+    QPushButton,
+    QMenu,
+    QMessageBox,
+    QApplication,
 )
 from PyQt5.QtCore import Qt
 
@@ -44,6 +50,16 @@ class TransacaoView(QWidget):
         self.carregar_contas()
         self.carregar_cartoes()
 
+        # 🔥 REATIVIDADE GLOBAL
+        TranslatorApp.__bind(lambda _: self._recarregar_ui())
+
+    # ==========================================================
+    # RELOAD (IDIOMA)
+    # ==========================================================
+    def _recarregar_ui(self):
+        self.carregar_contas()
+        self.carregar_cartoes()
+
     # ==========================================================
     # PAINEL ESQUERDO
     # ==========================================================
@@ -53,9 +69,7 @@ class TransacaoView(QWidget):
         self.left.setSpacing(10)
 
         contas_box, self.lista_contas = self._criar_lista_com_header(
-            "Contas e Poupanças",
-            self.criar_conta_dialog,
-            altura_max=220
+            "Contas e Poupanças", self.criar_conta_dialog, altura_max=220
         )
 
         self.lista_contas.itemClicked.connect(self.selecionar_conta)
@@ -70,9 +84,7 @@ class TransacaoView(QWidget):
         self.left.addLayout(contas_box)
 
         cartoes_box, self.lista_cartoes = self._criar_lista_com_header(
-            "Cartões de Crédito",
-            self.criar_cartao_dialog,
-            altura_max=160
+            "Cartões de Crédito", self.criar_cartao_dialog, altura_max=160
         )
 
         self.lista_cartoes.itemClicked.connect(self.selecionar_cartao)
@@ -106,15 +118,13 @@ class TransacaoView(QWidget):
 
         self.lista_cartoes.clearSelection()
 
-        conta = self.account_controller.get_account_by_id(
-            item.data(Qt.UserRole)
-        )
+        conta = self.account_controller.get_account_by_id(item.data(Qt.UserRole))
 
         if not conta:
             QMessageBox.warning(
                 self,
                 TranslatorApp.get("Erro"),
-                TranslatorApp.get("Conta não encontrada")
+                TranslatorApp.get("Conta não encontrada"),
             )
             return
 
@@ -126,15 +136,13 @@ class TransacaoView(QWidget):
 
         self.lista_contas.clearSelection()
 
-        cartao = self.fatura_controller.buscar_cartao_por_id(
-            item.data(Qt.UserRole)
-        )
+        cartao = self.fatura_controller.buscar_cartao_por_id(item.data(Qt.UserRole))
 
         if not cartao:
             QMessageBox.warning(
                 self,
                 TranslatorApp.get("Erro"),
-                TranslatorApp.get("Cartão não encontrado")
+                TranslatorApp.get("Cartão não encontrado"),
             )
             return
 
@@ -253,6 +261,16 @@ class TransacaoView(QWidget):
             if dlg.exec_():
                 self.carregar_cartoes()
 
+    def _copiar_conta(self):
+        item = self.lista_contas.currentItem()
+        if item:
+            QApplication.clipboard().setText(item.text())
+
+    def _copiar_cartao(self):
+        item = self.lista_cartoes.currentItem()
+        if item:
+            QApplication.clipboard().setText(item.text())
+
     def _excluir_conta(self):
 
         item = self.lista_contas.currentItem()
@@ -263,7 +281,7 @@ class TransacaoView(QWidget):
             self,
             TranslatorApp.get("Excluir"),
             TranslatorApp.get("Deseja realmente excluir esta conta"),
-            QMessageBox.Yes | QMessageBox.No
+            QMessageBox.Yes | QMessageBox.No,
         )
 
         if confirm == QMessageBox.Yes:
@@ -281,7 +299,7 @@ class TransacaoView(QWidget):
             self,
             TranslatorApp.get("Excluir"),
             TranslatorApp.get("Deseja realmente excluir este cartão"),
-            QMessageBox.Yes | QMessageBox.No
+            QMessageBox.Yes | QMessageBox.No,
         )
 
         if confirm == QMessageBox.Yes:
@@ -305,7 +323,9 @@ class TransacaoView(QWidget):
     # ==========================================================
     # UTIL
     # ==========================================================
-    def _criar_lista_com_header(self, titulo, callback_novo, largura=220, altura_max=200):
+    def _criar_lista_com_header(
+        self, titulo, callback_novo, largura=220, altura_max=200
+    ):
 
         container = QVBoxLayout()
 

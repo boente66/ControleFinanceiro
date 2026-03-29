@@ -21,6 +21,9 @@ class MetaView(QWidget):
 
         self.controller = MetaController()
 
+        # ✅ título da janela traduzível
+        TranslatorApp.window_title(self, "Metas Financeiras")
+
         self._init_ui()
         self.carregar_metas()
 
@@ -31,6 +34,7 @@ class MetaView(QWidget):
 
         self.layout_principal = QVBoxLayout(self)
 
+        # TÍTULO
         self.titulo = QLabel()
         self.titulo.setObjectName("pageTitle")
         self.titulo.setAlignment(Qt.AlignCenter)
@@ -38,6 +42,7 @@ class MetaView(QWidget):
 
         self.layout_principal.addWidget(self.titulo)
 
+        # BOTÃO NOVA META
         self.btn_nova = QPushButton()
         self.btn_nova.setObjectName("addButton")
         TranslatorApp.text(self.btn_nova, "Nova Meta")
@@ -45,7 +50,7 @@ class MetaView(QWidget):
 
         self.layout_principal.addWidget(self.btn_nova)
 
-        # Scroll
+        # SCROLL
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
 
@@ -62,6 +67,7 @@ class MetaView(QWidget):
     # ==================================================
     def carregar_metas(self):
 
+        # limpar layout
         for i in reversed(range(self.container_layout.count())):
             item = self.container_layout.itemAt(i)
             widget = item.widget()
@@ -71,9 +77,9 @@ class MetaView(QWidget):
         metas = self.controller.listar_metas_ativas()
 
         if not metas:
-            self.container_layout.addWidget(
-                QLabel(TranslatorApp.get("Nenhuma meta cadastrada"))
-            )
+            label = QLabel()
+            TranslatorApp.text(label, "Nenhuma meta cadastrada")
+            self.container_layout.addWidget(label)
             self.container_layout.addStretch()
             return
 
@@ -94,24 +100,30 @@ class MetaView(QWidget):
 
         layout = QVBoxLayout(frame)
 
+        # NOME
         nome = QLabel(meta["Nome"])
         nome.setObjectName("title")
         layout.addWidget(nome)
 
         progresso = meta["Progresso"]
 
+        # VALOR
         valor_texto = QLabel(
             f"{CurrencyFormatter.format(progresso['valor_atual'])} / "
             f"{CurrencyFormatter.format(progresso['valor_alvo'])}"
         )
         layout.addWidget(valor_texto)
 
+        # BARRA
         progress_bar = QProgressBar()
         progress_bar.setValue(min(int(progresso["percentual"]), 100))
         layout.addWidget(progress_bar)
 
-        restante = QLabel(
-            f"{TranslatorApp.get('Restante')}: "
+        # RESTANTE (⚠️ corrigido pra reatividade)
+        restante = QLabel()
+        TranslatorApp.text(restante, "Restante")
+        restante.setText(
+            f"{restante.text()}: "
             f"{CurrencyFormatter.format(progresso['restante'])}"
         )
         layout.addWidget(restante)

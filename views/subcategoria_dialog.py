@@ -3,14 +3,14 @@ from PyQt5.QtWidgets import (
     QLineEdit, QComboBox,
     QDialogButtonBox, QMessageBox
 )
-
+from core.translator_app import TranslatorApp
 
 class SubcategoriaDialog(QDialog):
 
     def __init__(self, parent=None, controller=None, categoria_pai_id=None):
         super().__init__(parent)
 
-        self.setWindowTitle("Nova Subcategoria")
+        TranslatorApp.window_title(self, "Nova Subcategoria")
         self.setMinimumWidth(300)
 
         if controller is None:

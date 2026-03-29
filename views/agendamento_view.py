@@ -34,6 +34,9 @@ class AgendamentoView(QWidget):
 
         self._icon_cache = {}
 
+        # ✅ título da janela
+        TranslatorApp.window_title(self, "Agendamentos")
+
         self._init_ui()
         self.load_agendamentos()
 
@@ -66,10 +69,12 @@ class AgendamentoView(QWidget):
     # SIDEBAR
     # ==================================================
     def _create_sidebar(self):
-        group = QGroupBox()
-        group.setObjectName("sidebar")
+        self.sidebar_group = QGroupBox()
+        self.sidebar_group.setObjectName("sidebar")
 
-        layout = QVBoxLayout(group)
+        TranslatorApp.group(self.sidebar_group, "Agendamentos")
+
+        layout = QVBoxLayout(self.sidebar_group)
 
         self.btn_receber = QPushButton()
         self.btn_pagar = QPushButton()
@@ -92,7 +97,7 @@ class AgendamentoView(QWidget):
             btn.setCursor(Qt.PointingHandCursor)
             layout.addWidget(btn)
 
-        # Texto traduzido
+        # Tradução
         TranslatorApp.text(self.btn_receber, "Contas a Receber")
         TranslatorApp.text(self.btn_pagar, "Contas a Pagar")
         TranslatorApp.text(self.btn_transfer, "Transferências")
@@ -104,7 +109,7 @@ class AgendamentoView(QWidget):
         self.btn_todos.clicked.connect(lambda: self.apply_quick_filter(None))
 
         layout.addStretch()
-        return group
+        return self.sidebar_group
 
     # ==================================================
     # MAIN PANEL
@@ -186,7 +191,7 @@ class AgendamentoView(QWidget):
 
         layout.addWidget(self.table)
 
-        # -------- RESUMO --------
+        # -------- RESUMO (🔥 CORRIGIDO PRA SER REATIVO) --------
         resumo = QVBoxLayout()
 
         self.lbl_total_pagar = QLabel()
@@ -246,7 +251,7 @@ class AgendamentoView(QWidget):
                     elif tipo_ag == "Contas a Receber":
                         total_receber += valor
 
-            # Totais
+            # 🔥 REATIVO CORRETO
             self.lbl_total_pagar.setText(
                 f"{TranslatorApp.get('Total a pagar')}: {CurrencyFormatter.format(total_pagar)}"
             )
@@ -283,10 +288,10 @@ class AgendamentoView(QWidget):
     # FILTROS
     # ==================================================
     def apply_filter(self):
-        tipo = self.filter_combo.currentText()
+        tipo = self.filter_combo.currentData()
         termo = self.search_input.text().strip()
 
-        if tipo == TranslatorApp.get("Todos"):
+        if tipo == "Todos":
             tipo = None
 
         self.load_agendamentos(tipo, termo)

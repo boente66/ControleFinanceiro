@@ -10,8 +10,9 @@ from controllers.schedule_controller import ScheduleController
 from controllers.account_controller import AccountController
 from controllers.category_controller import CategoryController
 from controllers.favorecido_controller import FavorecidoController
+
 from core.session import Session
-from core.i18n import t
+from core.translator_app import TranslatorApp
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +24,6 @@ class AgendamentoDialog(QDialog):
 
     def __init__(self, parent=None, agendamento_id=None):
         super().__init__(parent)
-
-        
-
 
         self.agendamento_id = agendamento_id
 
@@ -40,8 +38,11 @@ class AgendamentoDialog(QDialog):
         if self.agendamento_id:
             self._carregar_para_edicao()
 
-        Session.on_idioma_change(self._retranslate)
-        self._retranslate(Session.get_config("idioma", "Português"))
+        # 🔥 REATIVIDADE REAL
+        TranslatorApp.bind(lambda _: self._apply_translation())
+
+        # tradução inicial
+        self._apply_translation()
 
     # ==================================================
     # UI
@@ -134,30 +135,37 @@ class AgendamentoDialog(QDialog):
     # ==================================================
     # TRADUÇÃO
     # ==================================================
-    def _retranslate(self, idioma):
+    def _apply_translation(self):
 
+        # título
         self.setWindowTitle(
-            t("Adicionar Agendamento", idioma)
+            TranslatorApp.get("Adicionar Agendamento")
             if self.agendamento_id is None
-            else t("Editar Agendamento", idioma)
+            else TranslatorApp.get("Editar Agendamento")
         )
 
-        self.tipo_label.setText(t("Tipo:", idioma))
-        self.desc_label.setText(t("Descrição:", idioma))
-        self.conta_label.setText(t("Conta:", idioma))
-        self.fav_label.setText(t("Favorecido:", idioma))
-        self.cat_label.setText(t("Categoria:", idioma))
-        self.valor_label.setText(t("Valor:", idioma))
-        self.data_label.setText(t("Vencimento:", idioma))
+        # labels
+        self.tipo_label.setText(TranslatorApp.get("Tipo") + ":")
+        self.desc_label.setText(TranslatorApp.get("Descrição") + ":")
+        self.conta_label.setText(TranslatorApp.get("Conta") + ":")
+        self.fav_label.setText(TranslatorApp.get("Favorecido") + ":")
+        self.cat_label.setText(TranslatorApp.get("Categoria") + ":")
+        self.valor_label.setText(TranslatorApp.get("Valor") + ":")
+        self.data_label.setText(TranslatorApp.get("Vencimento") + ":")
 
-        self.recorrente_label.setText(t("Recorrente:", idioma))
-        self.periodicidade_label.setText(t("Periodicidade:", idioma))
+        self.recorrente_label.setText(TranslatorApp.get("Recorrente") + ":")
+        self.periodicidade_label.setText(TranslatorApp.get("Periodicidade") + ":")
 
+        # combos traduzidos
+        TranslatorApp.combo(self.tipo_combo, self.TIPOS)
+        TranslatorApp.combo(self.periodicidade_combo, self.PERIODICIDADES)
+
+        # botões
         self.button_box.button(QDialogButtonBox.Save).setText(
-            t("Salvar", idioma)
+            TranslatorApp.get("Salvar")
         )
         self.button_box.button(QDialogButtonBox.Cancel).setText(
-            t("Cancelar", idioma)
+            TranslatorApp.get("Cancelar")
         )
 
     # ==================================================
@@ -190,7 +198,11 @@ class AgendamentoDialog(QDialog):
         )
 
         if not dados:
-            QMessageBox.warning(self, "Aviso", "Agendamento não encontrado.")
+            QMessageBox.warning(
+                self,
+                TranslatorApp.get("Aviso"),
+                TranslatorApp.get("Agendamento não encontrado")
+            )
             self.reject()
             return
 
@@ -202,7 +214,6 @@ class AgendamentoDialog(QDialog):
         if data.isValid():
             self.data_vencimento.setDate(data)
 
-        # Recorrência
         recorrente = bool(dados.get("Recorrente", 0))
         self.recorrente_check.setChecked(recorrente)
         self.periodicidade_combo.setEnabled(recorrente)
@@ -218,13 +229,11 @@ class AgendamentoDialog(QDialog):
     # ==================================================
     def save_agendamento(self):
 
-        idioma = Session.get_config("idioma", "Português")
-
         if not self.descricao_input.text().strip():
             QMessageBox.warning(
                 self,
-                t("Atenção", idioma),
-                t("Descrição obrigatória.", idioma)
+                TranslatorApp.get("Atenção"),
+                TranslatorApp.get("Descrição obrigatória.")
             )
             return
 
@@ -259,6 +268,6 @@ class AgendamentoDialog(QDialog):
             logger.exception("Erro ao salvar agendamento")
             QMessageBox.critical(
                 self,
-                t("Erro", idioma),
-                f"{t('Erro ao salvar:', idioma)}\n{e}"
+                TranslatorApp.get("Erro"),
+                f"{TranslatorApp.get('Erro ao salvar')}:\n{e}"
             )

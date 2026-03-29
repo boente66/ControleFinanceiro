@@ -3,7 +3,8 @@ from PyQt5.QtWidgets import (
     QPushButton, QMessageBox
 )
 from controllers.account_controller import AccountController
-from core.session import Session
+from core.translator_app import TranslatorApp
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -22,11 +23,12 @@ class AjustarSaldoDialog(QDialog):
             raise ValueError("Conta não informada para ajuste de saldo.")
 
         self.conta = conta
-        self.usuario = Session.get_usuario()
         self.controller = AccountController()
 
-        self.setWindowTitle("Ajustar Saldo da Conta")
         self.setMinimumWidth(300)
+
+        # 🔥 título traduzível
+        TranslatorApp.window_title(self, "Ajustar Saldo da Conta")
 
         self._init_ui()
 
@@ -36,20 +38,41 @@ class AjustarSaldoDialog(QDialog):
     def _init_ui(self):
         layout = QVBoxLayout(self)
 
-        layout.addWidget(QLabel(f"Conta: {self.conta.get('Nome_Conta', '')}"))
+        # Conta
+        self.lbl_conta = QLabel()
+        layout.addWidget(self.lbl_conta)
 
-        layout.addWidget(QLabel("Novo saldo:"))
+        TranslatorApp._bind(self._update_conta_label)
+
+        # Label saldo
+        self.lbl_saldo = QLabel()
+        layout.addWidget(self.lbl_saldo)
+        TranslatorApp.text(self.lbl_saldo, "Novo saldo:")
+
+        # Input
         self.saldo_edit = QLineEdit()
-        self.saldo_edit.setPlaceholderText("Ex: 1500,00")
+        TranslatorApp.placeholder(self.saldo_edit, "Ex: 1500,00")
         layout.addWidget(self.saldo_edit)
 
-        salvar_btn = QPushButton("Salvar Ajuste")
-        salvar_btn.clicked.connect(self.salvar)
-        layout.addWidget(salvar_btn)
+        # Botão salvar
+        self.btn_salvar = QPushButton()
+        self.btn_salvar.clicked.connect(self.salvar)
+        layout.addWidget(self.btn_salvar)
+        TranslatorApp.text(self.btn_salvar, "Salvar Ajuste")
 
-        cancelar_btn = QPushButton("Cancelar")
-        cancelar_btn.clicked.connect(self.reject)
-        layout.addWidget(cancelar_btn)
+        # Botão cancelar
+        self.btn_cancelar = QPushButton()
+        self.btn_cancelar.clicked.connect(self.reject)
+        layout.addWidget(self.btn_cancelar)
+        TranslatorApp.text(self.btn_cancelar, "Cancelar")
+
+    # --------------------------------------------------
+    # TEXTO DINÂMICO
+    # --------------------------------------------------
+    def _update_conta_label(self, idioma):
+        self.lbl_conta.setText(
+            f"{TranslatorApp.get('Conta')}: {self.conta.get('Nome_Conta', '')}"
+        )
 
     # --------------------------------------------------
     # AÇÃO
@@ -60,21 +83,31 @@ class AjustarSaldoDialog(QDialog):
         try:
             novo_saldo = float(texto)
         except ValueError:
-            QMessageBox.warning(self, "Erro", "Saldo inválido.")
+            QMessageBox.warning(
+                self,
+                TranslatorApp.get("Erro"),
+                TranslatorApp.get("Saldo inválido.")
+            )
             return
 
         try:
+            # 🔥 SEM ID_USUARIO → controller resolve
             self.controller.ajustar_saldo(
                 id_conta=self.conta["ID_Conta"],
-                novo_saldo=novo_saldo,
-                id_usuario=self.usuario["ID_Usuario"]
+                novo_saldo=novo_saldo
             )
 
             QMessageBox.information(
-                self, "Sucesso", "Saldo ajustado com sucesso."
+                self,
+                TranslatorApp.get("Sucesso"),
+                TranslatorApp.get("Saldo ajustado com sucesso.")
             )
             self.accept()
 
         except Exception as e:
             logger.exception("Erro ao ajustar saldo")
-            QMessageBox.critical(self, "Erro", str(e))
+            QMessageBox.critical(
+                self,
+                TranslatorApp.get("Erro"),
+                str(e)
+            )

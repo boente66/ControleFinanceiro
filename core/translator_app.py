@@ -16,7 +16,7 @@ class TranslatorApp:
     # BASE
     # ==================================================
     @classmethod
-    def _bind(cls, widget, callback):
+    def __bind(cls, widget, callback):
         """
         Registra callback ligado ao ciclo de vida do widget
         """
@@ -48,47 +48,37 @@ class TranslatorApp:
     # ==================================================
     @classmethod
     def text(cls, widget, chave):
-        cls._bind(
-            widget,
-            lambda w, idioma: w.setText(t(chave, idioma))
-        )
+        if not hasattr(widget, "setText"):
+            return
+        cls.__bind(widget, lambda w, idioma: w.setText(t(chave, idioma)))
 
     # ==================================================
     # PLACEHOLDER (QLineEdit)
     # ==================================================
     @classmethod
     def placeholder(cls, widget, chave):
-        cls._bind(
-            widget,
-            lambda w, idioma: w.setPlaceholderText(t(chave, idioma))
-        )
+        cls.__bind(widget, lambda w, idioma: w.setPlaceholderText(t(chave, idioma)))
 
     # ==================================================
     # TOOLTIP
     # ==================================================
     @classmethod
     def tooltip(cls, widget, chave):
-        cls._bind(
-            widget,
-            lambda w, idioma: w.setToolTip(t(chave, idioma))
-        )
+        cls.__bind(widget, lambda w, idioma: w.setToolTip(t(chave, idioma)))
 
     # ==================================================
     # GROUPBOX
     # ==================================================
     @classmethod
     def group(cls, widget, chave):
-        cls._bind(
-            widget,
-            lambda w, idioma: w.setTitle(t(chave, idioma))
-        )
+        cls.__bind(widget, lambda w, idioma: w.setTitle(t(chave, idioma)))
 
     # ==================================================
     # COMBOBOX (lista fixa)
     # ==================================================
     @classmethod
     def combo(cls, combo, chaves):
-        cls._bind(combo, cls._update_combo(chaves))
+        cls.__bind(combo, cls._update_combo(chaves))
 
     @staticmethod
     def _update_combo(chaves):
@@ -119,11 +109,11 @@ class TranslatorApp:
     # ==================================================
     @classmethod
     def table_headers(cls, table, chaves):
-        cls._bind(
+        cls.__bind(
             table,
             lambda w, idioma: w.setHorizontalHeaderLabels(
                 [t(c, idioma) for c in chaves]
-            )
+            ),
         )
 
     # ==================================================
@@ -146,3 +136,13 @@ class TranslatorApp:
                 callback(idioma)
             except Exception:
                 continue
+
+        def update_widgets(idioma):
+            for widget in cls._widgets:
+                widget.update(idioma)
+
+        cls._listeners.append(update_widgets)
+
+    @classmethod
+    def window_title(cls, window, chave):
+        cls.__bind(window, lambda w, idioma: w.setWindowTitle(t(chave, idioma)))

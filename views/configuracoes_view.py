@@ -20,6 +20,9 @@ class ConfiguracoesView(QWidget):
 
         self.controller = UserController()
 
+        # ✅ título da janela
+        TranslatorApp.window_title(self, "Configurações")
+
         self._init_ui()
         self._load_config()
 
@@ -45,6 +48,7 @@ class ConfiguracoesView(QWidget):
         self.idioma_combo = QComboBox()
         self.layout.addWidget(self.idioma_combo)
 
+        # ⚠️ IMPORTANTE: usar DATA (não texto)
         TranslatorApp.combo(
             self.idioma_combo,
             ["Português", "Inglês"]
@@ -98,18 +102,28 @@ class ConfiguracoesView(QWidget):
         tema = ThemeManager.tema_atual()
         moeda = Session.get_config("moeda", "BRL")
 
-        self.idioma_combo.setCurrentText(idioma)
+        # ⚠️ USAR DATA (ESSENCIAL PRA MULTIIDIOMA)
+        self._set_combo_by_data(self.idioma_combo, idioma)
         self.tema_combo.setCurrentText(tema)
-        self.moeda_combo.setCurrentText(moeda)
+        self._set_combo_by_data(self.moeda_combo, moeda)
+
+    # ==================================================
+    # UTIL (CRÍTICO)
+    # ==================================================
+    def _set_combo_by_data(self, combo, value):
+        index = combo.findData(value)
+        if index >= 0:
+            combo.setCurrentIndex(index)
 
     # ==================================================
     # SALVAR
     # ==================================================
     def salvar_configuracoes(self):
 
-        idioma = self.idioma_combo.currentText()
+        # ⚠️ USAR DATA (NÃO TEXTO!)
+        idioma = self.idioma_combo.currentData()
         tema = self.tema_combo.currentText()
-        moeda = self.moeda_combo.currentText()
+        moeda = self.moeda_combo.currentData()
 
         try:
             # sessão

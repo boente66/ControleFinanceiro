@@ -22,6 +22,10 @@ class ListaCategoriasView(QWidget):
         super().__init__(parent)
 
         self.controller = CategoryController()
+
+        # ✅ título da janela
+        TranslatorApp.window_title(self, "Listas e Categorias")
+
         self.resize(600, 400)
 
         layout = QVBoxLayout(self)
@@ -74,6 +78,9 @@ class ListaCategoriasView(QWidget):
         layout.addWidget(self.table)
 
         self.load_categorias()
+
+        # 🔥 REATIVIDADE (IMPORTANTE)
+        TranslatorApp.bind(lambda _: self.load_categorias())
 
     # ==================================================
     # CARREGAR

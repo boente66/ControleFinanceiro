@@ -39,6 +39,9 @@ class ResumoFinanceiroView(QWidget):
         self._init_ui()
         self.load_data()
 
+        # 🔥 CORREÇÃO: REATIVIDADE AO IDIOMA
+        TranslatorApp.bind(lambda _: self.load_data())
+
     # ==================================================
     # UTIL
     # ==================================================

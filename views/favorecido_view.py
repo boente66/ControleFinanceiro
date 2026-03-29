@@ -12,6 +12,8 @@ from views.FavorecidoDialog import FavorecidoDialog
 from controllers.favorecido_controller import FavorecidoController
 from utilitarios.ion_path import IonPath
 
+from core.translator_app import TranslatorApp
+
 
 class FavorecidoView(QWidget):
 
@@ -20,35 +22,41 @@ class FavorecidoView(QWidget):
 
         self.controller = FavorecidoController()
 
-        self.setWindowTitle("Favorecidos")
         self.setMinimumSize(820, 600)
+
+        # ✅ título traduzível
+        TranslatorApp.window_title(self, "Favorecidos")
 
         # ================= LAYOUT PRINCIPAL =================
         main_layout = QVBoxLayout(self)
 
         # ---------- TÍTULO ----------
-        title_label = QLabel("Favorecidos")
-        title_label.setStyleSheet(
+        self.title_label = QLabel()
+        self.title_label.setStyleSheet(
             "font-size: 22px; font-weight: bold; margin-bottom: 8px;"
         )
-        main_layout.addWidget(title_label)
+        TranslatorApp.text(self.title_label, "Favorecidos")
+        main_layout.addWidget(self.title_label)
 
         # ---------- BOTÕES ----------
         button_layout = QHBoxLayout()
 
-        self.add_btn = QPushButton("Adicionar")
+        self.add_btn = QPushButton()
         self.add_btn.setObjectName("primaryButton")
         self.add_btn.setIcon(self._icon("add"))
+        TranslatorApp.text(self.add_btn, "Adicionar")
         self.add_btn.clicked.connect(self.open_add_favorecido_dialog)
 
-        self.edit_btn = QPushButton("Editar")
+        self.edit_btn = QPushButton()
         self.edit_btn.setObjectName("primaryButton")
         self.edit_btn.setIcon(self._icon("edit"))
+        TranslatorApp.text(self.edit_btn, "Editar")
         self.edit_btn.clicked.connect(self.edit_favorecido)
 
-        self.delete_btn = QPushButton("Excluir")
+        self.delete_btn = QPushButton()
         self.delete_btn.setObjectName("deleteButton")
         self.delete_btn.setIcon(self._icon("delete"))
+        TranslatorApp.text(self.delete_btn, "Excluir")
         self.delete_btn.clicked.connect(self.delete_favorecido)
 
         for btn in (self.add_btn, self.edit_btn, self.delete_btn):
@@ -60,14 +68,17 @@ class FavorecidoView(QWidget):
         # ---------- BUSCA ----------
         search_layout = QHBoxLayout()
 
-        search_label = QLabel("Buscar:")
+        self.search_label = QLabel()
+        TranslatorApp.text(self.search_label, "Buscar:")
+
         self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText(
+        TranslatorApp.placeholder(
+            self.search_input,
             "Nome, tipo, CPF/CNPJ, contato..."
         )
         self.search_input.textChanged.connect(self.apply_filter)
 
-        search_layout.addWidget(search_label)
+        search_layout.addWidget(self.search_label)
         search_layout.addWidget(self.search_input)
 
         main_layout.addLayout(search_layout)
@@ -75,9 +86,11 @@ class FavorecidoView(QWidget):
         # ---------- TABELA ----------
         self.table = QTableWidget()
         self.table.setColumnCount(4)
-        self.table.setHorizontalHeaderLabels(
+        TranslatorApp.table_headers(
+            self.table,
             ["Nome", "Tipo", "CPF/CNPJ", "Contato"]
         )
+
         self.table.horizontalHeader().setStretchLastSection(True)
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -91,10 +104,6 @@ class FavorecidoView(QWidget):
     # ICON UTIL
     # =====================================================
     def _icon(self, nome: str):
-        """
-        Retorna um QIcon baseado no nome do ícone.
-        Ex: self._icon("add") -> assets/icons/add.svg
-        """
         caminho = IonPath.resource("assets", "icons", f"{nome}.svg")
         return QIcon(caminho)
 
@@ -145,8 +154,8 @@ class FavorecidoView(QWidget):
         if row < 0:
             QMessageBox.warning(
                 self,
-                "Aviso",
-                "Nenhum favorecido selecionado."
+                TranslatorApp.get("Aviso"),
+                TranslatorApp.get("Nenhum favorecido selecionado.")
             )
             return None
 
@@ -235,8 +244,8 @@ class FavorecidoView(QWidget):
 
         confirm = QMessageBox.question(
             self,
-            "Confirmar Exclusão",
-            f"Deseja realmente excluir '{selecionado['Nome']}'?",
+            TranslatorApp.get("Confirmar Exclusão"),
+            f"{TranslatorApp.get('Deseja realmente excluir')} '{selecionado['Nome']}'?",
             QMessageBox.Yes | QMessageBox.No
         )
 
@@ -251,6 +260,6 @@ class FavorecidoView(QWidget):
             else:
                 QMessageBox.warning(
                     self,
-                    "Erro",
-                    "Não foi possível excluir o favorecido."
+                    TranslatorApp.get("Erro"),
+                    TranslatorApp.get("Não foi possível excluir o favorecido.")
                 )

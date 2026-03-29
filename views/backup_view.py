@@ -37,6 +37,9 @@ class BackupView(QWidget):
 
         self.setMinimumWidth(420)
 
+        # ✅ título da janela
+        TranslatorApp.window_title(self, "Backup e Restauração")
+
         self._init_ui()
 
     # -------------------------------------------------
@@ -75,7 +78,7 @@ class BackupView(QWidget):
         self.layout.addLayout(botoes)
         self.layout.addStretch()
 
-        # 🔥 TRADUÇÃO AUTOMÁTICA
+        # 🔥 TRADUÇÃO REATIVA
         TranslatorApp.text(self.titulo, "Backup e Restauração")
         TranslatorApp.text(self.label_senha, "Senha do Backup")
         TranslatorApp.placeholder(self.senha_input, "Digite a senha")
@@ -98,7 +101,7 @@ class BackupView(QWidget):
     # BACKUP
     # -------------------------------------------------
     def gerar_backup(self):
-        idioma = Session.get_config("idioma", "Português")
+
         senha = self.senha_input.text().strip()
 
         if not senha:
@@ -125,7 +128,7 @@ class BackupView(QWidget):
             QMessageBox.information(
                 self,
                 TranslatorApp.get("Sucesso"),
-                TranslatorApp.get("Backup gerado com sucesso") + f":\n{arquivo}",
+                f"{TranslatorApp.get('Backup gerado com sucesso')}:\n{arquivo}",
             )
 
         except Exception as e:
@@ -144,6 +147,7 @@ class BackupView(QWidget):
     # RESTAURAÇÃO
     # -------------------------------------------------
     def restaurar_backup(self):
+
         senha = self.senha_input.text().strip()
 
         if not senha:

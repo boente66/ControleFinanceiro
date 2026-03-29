@@ -14,6 +14,9 @@ class GerenciamentoUsuariosView(QtWidgets.QWidget):
 
         self.usuario_controller = UserController()
 
+        # ✅ título da janela
+        TranslatorApp.window_title(self, "Gerenciamento de Usuários")
+
         self._init_ui()
 
         self.lista_completa = []
@@ -194,6 +197,7 @@ class GerenciamentoUsuariosView(QtWidgets.QWidget):
 
         user_id = int(self.table.item(row, 0).text())
 
+        # ⚠️ REGRA DE NEGÓCIO (mantida)
         if not self.usuario_controller.delete_user(user_id):
             QtWidgets.QMessageBox.critical(
                 self,

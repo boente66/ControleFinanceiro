@@ -43,6 +43,9 @@ class PainelFatura(QWidget):
         self.mes_atual = hoje.month
         self.ano_atual = hoje.year
 
+        # ✅ título da janela
+        TranslatorApp.window_title(self, "Fatura")
+
         self._init_ui()
 
     # ======================================================
@@ -86,8 +89,10 @@ class PainelFatura(QWidget):
         TranslatorApp.text(self.label_status, "Status:")
 
         self.filtro_combo = QComboBox()
+
+        # ⚠️ CRÍTICO: usar DATA
         TranslatorApp.combo(self.filtro_combo, ["Todos", "Abertos", "Pagos"])
-        self.filtro_combo.currentTextChanged.connect(self._on_filtro_changed)
+        self.filtro_combo.currentIndexChanged.connect(self._on_filtro_changed)
 
         toolbar.addWidget(self.label_status)
         toolbar.addWidget(self.filtro_combo)
@@ -126,6 +131,7 @@ class PainelFatura(QWidget):
 
         # TABELA
         self.table = QTableWidget(0, 5)
+
         TranslatorApp.table_headers(
             self.table,
             ["Data", "Descrição", "Categoria", "Valor", "Status"]
@@ -170,8 +176,8 @@ class PainelFatura(QWidget):
         self.page = 0
         self._carregar()
 
-    def _on_filtro_changed(self, texto):
-        self.filtro_status = texto
+    def _on_filtro_changed(self):
+        self.filtro_status = self.filtro_combo.currentData()
         self._reset_paginacao()
 
     def _next_page(self):

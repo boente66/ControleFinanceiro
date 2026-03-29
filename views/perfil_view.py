@@ -26,6 +26,9 @@ class PerfilView(QWidget):
         if not self.usuario:
             raise RuntimeError("Usuário não autenticado.")
 
+        # ✅ título da janela
+        TranslatorApp.window_title(self, "Perfil do Usuário")
+
         self._init_ui()
 
     # --------------------------------------------------
@@ -46,6 +49,11 @@ class PerfilView(QWidget):
         self.grupo = QGroupBox()
         self.g_layout = QVBoxLayout(self.grupo)
 
+        self.layout.addWidget(self.grupo)
+
+        # ✅ forma correta (sem usar _bind direto)
+        TranslatorApp.group(self.grupo, "Dados da Conta")
+
         # Labels dinâmicos
         self.lbl_nome = QLabel()
         self.lbl_login = QLabel()
@@ -57,15 +65,8 @@ class PerfilView(QWidget):
         self.g_layout.addWidget(self.lbl_email)
         self.g_layout.addWidget(self.lbl_nivel)
 
-        self.layout.addWidget(self.grupo)
-
-        # 🔥 título do grupo traduzível
-        TranslatorApp._bind(lambda idioma: self.grupo.setTitle(
-            TranslatorApp.get("Dados da Conta")
-        ))
-
-        # 🔥 dados do usuário traduzíveis
-        TranslatorApp._bind(self._update_user_info)
+        # 🔥 dados reativos (mantido, mas correto)
+        TranslatorApp.bind(self._update_user_info)
 
         # BOTÃO LOGOUT
         self.btn_logout = QPushButton()
@@ -78,7 +79,7 @@ class PerfilView(QWidget):
         self.layout.addStretch()
 
     # --------------------------------------------------
-    # DADOS DINÂMICOS (REATIVO)
+    # DADOS DINÂMICOS
     # --------------------------------------------------
     def _update_user_info(self, idioma):
 

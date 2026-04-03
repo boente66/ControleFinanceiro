@@ -14,7 +14,6 @@ from controllers.user_controller import UserController
 from utilitarios.ion_path import IonPath
 from core.translator_app import TranslatorApp
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -23,7 +22,6 @@ class LoginDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        # 🔥 título traduzível
         TranslatorApp.window_title(self, "Login")
 
         self.setMinimumSize(360, 300)
@@ -41,7 +39,6 @@ class LoginDialog(QDialog):
     # =====================================================
     # ICON
     # =====================================================
-
     def _icon(self, nome):
         if nome in self._icon_cache:
             return self._icon_cache[nome]
@@ -49,11 +46,7 @@ class LoginDialog(QDialog):
         try:
             path = IonPath.resource("assets", "icons", f"{nome}.svg")
 
-            if not os.path.exists(path):
-                logger.warning(f"[Ícone não encontrado] {path}")
-                icon = QIcon()
-            else:
-                icon = QIcon(path)
+            icon = QIcon(path) if os.path.exists(path) else QIcon()
 
             self._icon_cache[nome] = icon
             return icon
@@ -65,16 +58,12 @@ class LoginDialog(QDialog):
     # =====================================================
     # UI
     # =====================================================
-
     def _build_ui(self):
 
         layout = QVBoxLayout(self)
         layout.setSpacing(10)
 
-        # -------------------------
         # LOGIN
-        # -------------------------
-
         self.lbl_login = QLabel()
         TranslatorApp.text(self.lbl_login, "Usuário ou e-mail:")
         layout.addWidget(self.lbl_login)
@@ -92,13 +81,9 @@ class LoginDialog(QDialog):
 
         login_layout.addWidget(icon_user)
         login_layout.addWidget(self.login_input)
-
         layout.addWidget(container_login)
 
-        # -------------------------
         # SENHA
-        # -------------------------
-
         self.lbl_senha = QLabel()
         TranslatorApp.text(self.lbl_senha, "Senha:")
         layout.addWidget(self.lbl_senha)
@@ -112,6 +97,7 @@ class LoginDialog(QDialog):
 
         self.senha_input = QLineEdit()
         self.senha_input.setEchoMode(QLineEdit.Password)
+        TranslatorApp.placeholder(self.senha_input, "Digite sua senha")
         self.senha_input.returnPressed.connect(self._autenticar)
 
         self.btn_toggle = QToolButton()
@@ -127,10 +113,7 @@ class LoginDialog(QDialog):
 
         layout.addWidget(container_senha)
 
-        # -------------------------
         # BOTÕES
-        # -------------------------
-
         self.btn_login = QPushButton()
         self.btn_login.setObjectName("primaryButton")
         self.btn_login.setIcon(self._icon("login"))
@@ -152,7 +135,6 @@ class LoginDialog(QDialog):
         TranslatorApp.text(self.btn_recuperar, "Esqueci minha senha")
         layout.addWidget(self.btn_recuperar)
 
-        # conexões
         self.btn_login.clicked.connect(self._autenticar)
         self.btn_cadastrar.clicked.connect(self._abrir_cadastro)
         self.btn_recuperar.clicked.connect(self._recuperar_senha)
@@ -160,7 +142,6 @@ class LoginDialog(QDialog):
     # =====================================================
     # TOGGLE PASSWORD
     # =====================================================
-
     def _toggle_password(self):
         if self.senha_input.echoMode() == QLineEdit.Password:
             self.senha_input.setEchoMode(QLineEdit.Normal)
@@ -172,7 +153,6 @@ class LoginDialog(QDialog):
     # =====================================================
     # AUTENTICAÇÃO
     # =====================================================
-
     @pyqtSlot()
     def _autenticar(self):
 
@@ -211,7 +191,6 @@ class LoginDialog(QDialog):
     # =====================================================
     # CADASTRO
     # =====================================================
-
     def _abrir_cadastro(self):
         dialog = CadastroUsuarioDialog(self)
         if dialog.exec_() == QDialog.Accepted:
@@ -221,7 +200,6 @@ class LoginDialog(QDialog):
     # =====================================================
     # RECUPERAÇÃO
     # =====================================================
-
     def _recuperar_senha(self):
 
         login_or_email, ok = QInputDialog.getText(

@@ -6,7 +6,8 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
     QToolButton, QLabel, QMessageBox,
     QFileDialog, QAbstractItemView,
-    QInputDialog, QProgressDialog
+    QInputDialog, QProgressDialog,
+    QComboBox, QLineEdit
 )
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QColor, QFont, QIcon
@@ -26,13 +27,19 @@ from utilitarios.date_formatter import DateFormatter
 from utilitarios.ion_path import IonPath
 
 from core.theme_manager import ThemeManager
-from core.session import Session
 from core.translator_app import TranslatorApp
 
 logger = logging.getLogger(__name__)
 
 
 class PainelAccount(QWidget):
+
+    FILTROS = [
+        ("MES", "Mês Atual"),
+        ("3M", "Últimos 3 Meses"),
+        ("ANO", "Ano Atual"),
+        ("ALL", "Todos")
+    ]
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -50,17 +57,27 @@ class PainelAccount(QWidget):
         self.itens_por_pagina = 50
         self.texto_busca = ""
 
-        self.progress_bar = QProgressDialog(
-            TranslatorApp.get("Importando extrato"),
-            TranslatorApp.get("Cancelar"),
-            0, 100, self
-        )
+        self.progress_bar = QProgressDialog(self)
         self.progress_bar.setWindowModality(Qt.WindowModal)
         self.progress_bar.close()
 
         self._icon_cache = {}
 
         self._montar_ui()
+
+        # 🔥 REATIVIDADE GLOBAL
+        TranslatorApp.bind(self._on_translate)
+
+    # ==================================================
+    # REATIVIDADE
+    # ==================================================
+    def _on_translate(self, *_):
+        self._update_progress_text()
+        self._aplicar()
+
+    def _update_progress_text(self):
+        self.progress_bar.setLabelText(TranslatorApp.get("Importando extrato"))
+        self.progress_bar.setCancelButtonText(TranslatorApp.get("Cancelar"))
 
     # ==================================================
     # ÍCONES
@@ -70,7 +87,6 @@ class PainelAccount(QWidget):
             return self._icon_cache[nome]
 
         path = IonPath.resource("assets", "icons", f"{nome}.svg")
-
         icon = QIcon(path) if os.path.exists(path) else QIcon()
 
         self._icon_cache[nome] = icon
@@ -104,11 +120,11 @@ class PainelAccount(QWidget):
         toolbar.addStretch()
 
         self.combo_filtro = QComboBox()
-        TranslatorApp.combo(
-            self.combo_filtro,
-            ["Mês Atual", "Últimos 3 Meses", "Ano Atual", "Todos"]
-        )
-        self.combo_filtro.currentTextChanged.connect(self.carregar_historico)
+        for key, label in self.FILTROS:
+            self.combo_filtro.addItem(label, key)
+
+        TranslatorApp.combo(self.combo_filtro, [l for _, l in self.FILTROS])
+        self.combo_filtro.currentIndexChanged.connect(self.carregar_historico)
 
         self.lbl_periodo = QLabel()
         TranslatorApp.text(self.lbl_periodo, "Período:")
@@ -143,9 +159,6 @@ class PainelAccount(QWidget):
         )
 
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.table.setAlternatingRowColors(True)
-        self.table.setSortingEnabled(False)
-
         layout.addWidget(self.table)
 
         # PAGINAÇÃO
@@ -168,7 +181,6 @@ class PainelAccount(QWidget):
 
         layout.addLayout(pag)
 
-        # RESUMO
         self.resumo = QLabel()
         layout.addWidget(self.resumo)
 
@@ -198,20 +210,23 @@ class PainelAccount(QWidget):
 
         self._aplicar()
 
+    # ==================================================
+    # PERÍODO (CORRETO)
+    # ==================================================
     def _obter_periodo(self):
         hoje = datetime.today()
-        filtro = self.combo_filtro.currentText()
+        filtro = self.combo_filtro.currentData()
 
-        if filtro == TranslatorApp.get("Mês Atual"):
+        if filtro == "MES":
             inicio = datetime(hoje.year, hoje.month, 1)
-        elif filtro == TranslatorApp.get("Últimos 3 Meses"):
+        elif filtro == "3M":
             mes = hoje.month - 2
             ano = hoje.year
             if mes <= 0:
                 mes += 12
                 ano -= 1
             inicio = datetime(ano, mes, 1)
-        elif filtro == TranslatorApp.get("Ano Atual"):
+        elif filtro == "ANO":
             inicio = datetime(hoje.year, 1, 1)
         else:
             inicio = datetime(2000, 1, 1)
@@ -219,7 +234,7 @@ class PainelAccount(QWidget):
         return inicio.strftime("%Y-%m-%d"), hoje.strftime("%Y-%m-%d")
 
     # ==================================================
-    # FILTRO
+    # FILTRO / PAGINAÇÃO
     # ==================================================
     def _filtrar(self):
         self.texto_busca = self.input_busca.text().lower()
@@ -305,11 +320,22 @@ class PainelAccount(QWidget):
             f"{TranslatorApp.get('Saldo')}: {CurrencyFormatter.format(saldo)}"
         )
 
+
+
+     # 🔽 ADICIONE ISSO NO FINAL DA CLASSE (complemento do código anterior)
+
     # ==================================================
     # AÇÕES
     # ==================================================
     def add_transaction(self):
-        dlg = TransactionDialog(self, contexto="conta", id_contexto=self.conta["ID_Conta"])
+        if not self.conta:
+            return
+
+        dlg = TransactionDialog(
+            self,
+            contexto="conta",
+            id_contexto=self.conta["ID_Conta"]
+        )
         if dlg.exec_():
             self.carregar_historico()
 
@@ -330,9 +356,13 @@ class PainelAccount(QWidget):
             return
 
         id_transacao = int(self.table.item(row, 1).text())
-        transacao = self.transaction_controller.get_transaction_by_id(id_transacao)
+
+        transacao = self.transaction_controller.get_transaction_by_id(
+            id_transacao
+        )
 
         dlg = EditTransactionDialog(transacao, self)
+
         if dlg.exec_():
             self.carregar_historico()
 
@@ -395,6 +425,7 @@ class PainelAccount(QWidget):
 
         try:
             self.progress_bar.setValue(0)
+            self._update_progress_text()
             self.progress_bar.show()
 
             self.ia_import_controller.importar_arquivo(

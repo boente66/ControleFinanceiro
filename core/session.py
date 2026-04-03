@@ -16,7 +16,7 @@ class Session:
     usuario = None
 
     _config_padrao = {
-        "idioma": "Português",
+        "idioma": "pt",     # 🔥 PADRÃO CORRETO
         "tema": "Claro",
         "moeda": "BRL"
     }
@@ -28,21 +28,35 @@ class Session:
     _tema_listeners = []
 
     # ---------------------------------------
+    # NORMALIZAÇÃO 🔥 (NOVA)
+    # ---------------------------------------
+    _idioma_map = {
+        "Português": "pt",
+        "Inglês": "en",
+        "Espanhol": "es",
+        "pt": "pt",
+        "en": "en",
+        "es": "es"
+    }
+
+    @classmethod
+    def _normalize_idioma(cls, valor):
+        return cls._idioma_map.get(valor, "pt")
+
+    # ---------------------------------------
     # USUÁRIO
     # ---------------------------------------
     @classmethod
     def set_usuario(cls, usuario: dict | None):
-        """
-        Define usuário logado e aplica preferências, se existirem.
-        """
         cls.usuario = usuario
 
         if not usuario:
             return
 
-        # aplica preferências do banco, sem notificar (startup)
+        # 🔥 normaliza antes de aplicar
         if "Idioma" in usuario:
-            cls.set_config("idioma", usuario["Idioma"], notify=False)
+            idioma = cls._normalize_idioma(usuario["Idioma"])
+            cls.set_config("idioma", idioma, notify=False)
 
         if "Tema" in usuario:
             cls.set_config("tema", usuario["Tema"], notify=False)
@@ -56,12 +70,13 @@ class Session:
     # ---------------------------------------
     @classmethod
     def set_config(cls, chave: str, valor, notify: bool = True):
-        """
-        Atualiza configuração global.
-        notify=True dispara eventos visuais.
-        """
+
         if chave not in cls._config_padrao:
-            return  # ignora chaves inválidas
+            return
+
+        # 🔥 NORMALIZA IDIOMA
+        if chave == "idioma":
+            valor = cls._normalize_idioma(valor)
 
         cls.configuracoes[chave] = valor
 
@@ -76,12 +91,12 @@ class Session:
 
     @classmethod
     def load_config(cls, config: dict):
-        """
-        Carrega configurações persistidas (JSON / DB).
-        Não dispara eventos.
-        """
         for chave, valor in config.items():
             if chave in cls._config_padrao:
+
+                if chave == "idioma":
+                    valor = cls._normalize_idioma(valor)
+
                 cls.configuracoes[chave] = valor
 
     @classmethod
@@ -90,9 +105,6 @@ class Session:
 
     @classmethod
     def reset_config(cls):
-        """
-        Restaura configurações padrão.
-        """
         cls.configuracoes = cls._config_padrao.copy()
 
     # ---------------------------------------
@@ -100,10 +112,6 @@ class Session:
     # ---------------------------------------
     @classmethod
     def on_idioma_change(cls, callback):
-        """
-        Registra callback para mudança de idioma.
-        callback(idioma)
-        """
         if callback not in cls._idioma_listeners:
             cls._idioma_listeners.append(callback)
 
@@ -120,10 +128,6 @@ class Session:
     # ---------------------------------------
     @classmethod
     def on_tema_change(cls, callback):
-        """
-        Registra callback para mudança de tema.
-        callback(tema)
-        """
         if callback not in cls._tema_listeners:
             cls._tema_listeners.append(callback)
 

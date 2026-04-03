@@ -33,7 +33,7 @@ class FaturaService:
         self._cache_fatura.clear()
 
     # ============================================================
-    # CARTÃO (CRUD COMPLETO)
+    # CARTÕES
     # ============================================================
     def criar_cartao(self, dados: dict, id_usuario: int):
         dados["ID_Usuario"] = id_usuario
@@ -43,14 +43,12 @@ class FaturaService:
         cartao = self.credito_model.get_cartao_by_id(id_cartao, id_usuario)
         if not cartao:
             raise ValueError("Cartão não encontrado.")
-
         return self.credito_model.update_cartao(id_cartao, dados, id_usuario)
 
     def excluir_cartao(self, id_cartao: int, id_usuario: int):
         cartao = self.credito_model.get_cartao_by_id(id_cartao, id_usuario)
         if not cartao:
             raise ValueError("Cartão não encontrado.")
-
         return self.credito_model.delete_cartao(id_cartao, id_usuario)
 
     def listar_cartoes(self, id_usuario: int):
@@ -60,12 +58,15 @@ class FaturaService:
         return self.credito_model.get_cartao_by_id(id_cartao, id_usuario)
 
     # ============================================================
-    # REGRA DE COMPETÊNCIA
+    # COMPETÊNCIA
     # ============================================================
     def aplicar_fatura(self, data_compra, dia_fechamento):
 
         if isinstance(data_compra, str):
-            data_compra = datetime.fromisoformat(data_compra).date()
+            data_compra = datetime.fromisoformat(data_compra)
+
+        if isinstance(data_compra, datetime):
+            data_compra = data_compra.date()
 
         if data_compra.day > dia_fechamento:
             data_compra += relativedelta(months=1)
@@ -73,7 +74,7 @@ class FaturaService:
         return data_compra.month, data_compra.year
 
     # ============================================================
-    # FATURA (CACHE)
+    # FATURA
     # ============================================================
     def obter_fatura(self, id_cartao, mes, ano, id_usuario):
 
@@ -83,38 +84,20 @@ class FaturaService:
         if cached:
             return cached
 
-        cartao = self.buscar_cartao_por_id(id_cartao, id_usuario)
-        if not cartao:
-            return []
-
-        dia_fechamento = cartao.get("Dia_Fechamento") or cartao.get("dia_fechamento")
-
         lancamentos = self.lancamento_model.get_lancamentos_por_fatura(
-            id_cartao, mes, ano
+            id_cartao, mes, ano, id_usuario
         )
 
-        fatura = []
-        for l in lancamentos:
-            mes_f, ano_f = self.aplicar_fatura(l["Data"], dia_fechamento)
-            if mes_f == mes and ano_f == ano:
-                fatura.append(l)
+        self._set_cache(cache_key, lancamentos)
+        return lancamentos
 
-        self._set_cache(cache_key, fatura)
-        return fatura
-
-    # ============================================================
-    # PAGINAÇÃO
-    # ============================================================
     def obter_fatura_paginada(self, id_cartao, mes, ano, id_usuario, limit=50, offset=0):
 
         fatura = self.obter_fatura(id_cartao, mes, ano, id_usuario)
 
-        total = len(fatura)
-        dados = fatura[offset: offset + limit]
-
         return {
-            "dados": dados,
-            "total": total
+            "dados": fatura[offset: offset + limit],
+            "total": len(fatura)
         }
 
     # ============================================================
@@ -124,20 +107,21 @@ class FaturaService:
 
         fatura = self.obter_fatura(id_cartao, mes, ano, id_usuario)
 
-        return sum(
-            float(l["Valor"])
-            for l in fatura
-            if not l.get("Paga")
-        )
+        return sum(float(l["Valor"]) for l in fatura if not l.get("Paga"))
 
     # ============================================================
-    # LIMITE DISPONÍVEL
+    # LIMITE
     # ============================================================
     def calcular_limite_disponivel(self, id_cartao, id_usuario):
 
+        resumo = self.get_resumo_cartao(id_cartao, id_usuario)
+        return resumo.get("disponivel", 0.0)
+
+    def get_resumo_cartao(self, id_cartao, id_usuario):
+
         cartao = self.buscar_cartao_por_id(id_cartao, id_usuario)
         if not cartao:
-            return 0.0
+            return {}
 
         limite = float(cartao["Limite"])
 
@@ -147,56 +131,130 @@ class FaturaService:
 
         usado = sum(float(l["Valor"]) for l in lancamentos)
 
-        return limite - usado
+        return {
+            "limite": limite,
+            "usado": usado,
+            "disponivel": limite - usado
+        }
+
+    def verificar_limite(self, id_cartao, id_usuario):
+
+        resumo = self.get_resumo_cartao(id_cartao, id_usuario)
+
+        if not resumo:
+            return "OK"
+
+        if resumo["disponivel"] < 0:
+            return "ESTOUROU"
+
+        if resumo["disponivel"] < resumo["limite"] * 0.2:
+            return "ALERTA"
+
+        return "OK"
 
     # ============================================================
-    # REGISTRAR DESPESA
+    # DESPESA PARCELADA
     # ============================================================
     def registrar_despesa_cartao(self, data, id_usuario):
 
         valor_total = float(data["Valor"])
         parcelas = int(data.get("Parcelas", 1)) or 1
 
-        base = round(valor_total / parcelas, 2)
-        restante = round(valor_total - base * (parcelas - 1), 2)
+        valor_parcela = round(valor_total / parcelas, 2)
+
+        cartao = self.buscar_cartao_por_id(data["ID_Cartao"], id_usuario)
+        dia_fechamento = cartao["Dia_Fechamento"]
+
+        data_base = datetime.fromisoformat(data["Data"])
 
         for i in range(parcelas):
 
-            valor = restante if i == parcelas - 1 else base
+            data_parcela = data_base + relativedelta(months=i)
+
+            mes, ano = self.aplicar_fatura(data_parcela, dia_fechamento)
 
             self.lancamento_model.add_lancamento({
                 "Descricao": data["Descricao"],
-                "Valor": valor,
-                "Data": data["Data"],
+                "Valor": valor_parcela,
+                "Data": data_parcela.strftime("%Y-%m-%d"),
                 "ID_Cartao": data["ID_Cartao"],
                 "ID_Usuario": id_usuario,
-                "Paga": 0,
+                "Competencia_Mes": mes,
+                "Competencia_Ano": ano,
                 "Parcela_Atual": i + 1,
                 "Num_Parcelas": parcelas,
+                "Paga": 0,
+                "Previsto": 0,
+                "ID_Categoria": data.get("ID_Categoria")
             })
 
         self._clear_cache()
 
     # ============================================================
-    # PAGAR FATURA
+    # PREVISÃO
+    # ============================================================
+    def registrar_previsto_cartao(self, dados: dict, id_usuario: int):
+
+        cartao = self.buscar_cartao_por_id(dados["ID_Cartao"], id_usuario)
+        if not cartao:
+            return
+
+        mes, ano = self.aplicar_fatura(
+            dados["Data"],
+            cartao["Dia_Fechamento"]
+        )
+
+        existe = self.lancamento_model.existe_previsto(
+            dados["ID_Cartao"],
+            dados["Descricao"],
+            mes,
+            ano,
+            id_usuario
+        )
+
+        if existe:
+            return
+
+        self.lancamento_model.add_lancamento({
+            "Descricao": dados["Descricao"],
+            "Valor": dados["Valor"],
+            "Data": dados["Data"],
+            "ID_Cartao": dados["ID_Cartao"],
+            "ID_Usuario": id_usuario,
+            "Competencia_Mes": mes,
+            "Competencia_Ano": ano,
+            "Previsto": 1,
+            "Paga": 0,
+            "ID_Categoria": dados.get("ID_Categoria")
+        })
+
+        self._clear_cache()
+
+    def prever_faturas_futuras(self, id_cartao, id_usuario):
+
+        lancamentos = self.lancamento_model.get_lancamentos_nao_pagos(
+            id_cartao, id_usuario
+        )
+
+        previsao = {}
+
+        for l in lancamentos:
+            chave = f"{l['Competencia_Mes']:02d}/{l['Competencia_Ano']}"
+            previsao.setdefault(chave, 0)
+            previsao[chave] += float(l["Valor"])
+
+        return dict(sorted(previsao.items()))
+
+    # ============================================================
+    # PAGAMENTO
     # ============================================================
     def pagar_fatura(self, id_cartao, mes, ano, id_conta, id_usuario):
 
         fatura = self.obter_fatura(id_cartao, mes, ano, id_usuario)
 
-        if not fatura:
-            raise ValueError("Nenhum lançamento encontrado.")
-
-        total = sum(
-            float(l["Valor"])
-            for l in fatura
-            if not l.get("Paga")
-        )
+        total = sum(float(l["Valor"]) for l in fatura if not l.get("Paga"))
 
         conta = self.transaction_model.get_account_by_id(id_conta, id_usuario)
-
-        if not conta:
-            raise ValueError("Conta não encontrada.")
 
         if float(conta["Saldo_Atual"]) < total:
             raise ValueError("Saldo insuficiente.")
@@ -224,7 +282,7 @@ class FaturaService:
         return True
 
     # ============================================================
-    # CATEGORIA AUTOMÁTICA
+    # CATEGORIA
     # ============================================================
     def _get_categoria_pagamento_fatura(self, id_usuario):
 

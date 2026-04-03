@@ -24,6 +24,19 @@ class RelatorioView(QWidget):
         super().__init__(parent)
 
         self.controller = RelatorioController()
+        self._is_bound = False
+
+        self._init_ui()
+        self._apply_translation()
+
+        if not self._is_bound:
+            TranslatorApp.bind(self._on_translate)
+            self._is_bound = True
+
+    # ==================================================
+    # UI
+    # ==================================================
+    def _init_ui(self):
 
         main_layout = QHBoxLayout(self)
         main_layout.setContentsMargins(12, 12, 12, 12)
@@ -38,10 +51,40 @@ class RelatorioView(QWidget):
         self.titulo.setAlignment(Qt.AlignCenter)
         sidebar_layout.addWidget(self.titulo)
 
-        TranslatorApp.text(self.titulo, "Relatórios")
-
         self.sections = QListWidget()
         sidebar_layout.addWidget(self.sections)
+
+        sidebar_layout.addSpacerItem(
+            QSpacerItem(20, 20, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        )
+
+        main_layout.addWidget(sidebar, 0)
+
+        # ================= STACK =================
+        self.stacked = QStackedWidget()
+
+        self.w_diario = self._relatorio_diario_widget()
+        self.w_anual = self._relatorio_anual_widget()
+        self.w_informe = self._informe_relatorio_widget()
+
+        self.stacked.addWidget(self.w_diario)
+        self.stacked.addWidget(self.w_anual)
+        self.stacked.addWidget(self.w_informe)
+
+        main_layout.addWidget(self.stacked, 1)
+
+        self.sections.currentRowChanged.connect(self.stacked.setCurrentIndex)
+        self.sections.setCurrentRow(0)
+
+    # ==================================================
+    # TRADUÇÃO
+    # ==================================================
+    def _on_translate(self, *_):
+        self._apply_translation()
+
+    def _apply_translation(self):
+
+        TranslatorApp.text(self.titulo, "Relatórios")
 
         TranslatorApp.list_widget(
             self.sections,
@@ -52,22 +95,16 @@ class RelatorioView(QWidget):
             ]
         )
 
-        sidebar_layout.addSpacerItem(
-            QSpacerItem(20, 20, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        # tabelas
+        TranslatorApp.table_headers(
+            self.table_diario,
+            ["Data", "Categoria", "Receita", "Despesa", "Economia"]
         )
 
-        main_layout.addWidget(sidebar, 0)
-
-        # ================= STACK =================
-        self.stacked = QStackedWidget()
-        self.stacked.addWidget(self._relatorio_diario_widget())
-        self.stacked.addWidget(self._relatorio_anual_widget())
-        self.stacked.addWidget(self._informe_relatorio_widget())
-
-        main_layout.addWidget(self.stacked, 1)
-
-        self.sections.currentRowChanged.connect(self.stacked.setCurrentIndex)
-        self.sections.setCurrentRow(0)
+        TranslatorApp.table_headers(
+            self.table_anual,
+            ["Mês", "Categoria", "Receita", "Despesa", "Economia"]
+        )
 
     # ==================================================
     # UTIL
@@ -85,44 +122,34 @@ class RelatorioView(QWidget):
         w = QWidget()
         layout = QVBoxLayout(w)
 
-        titulo = QLabel()
-        TranslatorApp.text(titulo, "Relatório Diário")
-        layout.addWidget(titulo)
+        self.lbl_diario = QLabel()
+        layout.addWidget(self.lbl_diario)
 
         ctrl = QHBoxLayout()
 
-        lbl = QLabel()
-        TranslatorApp.text(lbl, "Últimos (dias):")
-        ctrl.addWidget(lbl)
+        self.lbl_dias = QLabel()
+        ctrl.addWidget(self.lbl_dias)
 
         self.input_days = QComboBox()
         self.input_days.addItems(["7", "15", "30", "90"])
         ctrl.addWidget(self.input_days)
 
-        btn = QPushButton()
-        TranslatorApp.text(btn, "Atualizar")
-        btn.clicked.connect(self.load_relatorio_diario)
-        ctrl.addWidget(btn)
+        self.btn_diario = QPushButton()
+        self.btn_diario.clicked.connect(self.load_relatorio_diario)
+        ctrl.addWidget(self.btn_diario)
 
         ctrl.addStretch()
         layout.addLayout(ctrl)
 
         self.table_diario = QTableWidget()
         self.table_diario.setColumnCount(5)
-
-        TranslatorApp.table_headers(
-            self.table_diario,
-            ["Data", "Categoria", "Receita", "Despesa", "Economia"]
-        )
-
         layout.addWidget(self.table_diario, 1)
 
-        export_btn = QPushButton()
-        TranslatorApp.text(export_btn, "Exportar CSV")
-        export_btn.clicked.connect(
+        self.btn_export_diario = QPushButton()
+        self.btn_export_diario.clicked.connect(
             lambda: self.export_table_csv(self.table_diario, "relatorio_diario")
         )
-        layout.addWidget(export_btn)
+        layout.addWidget(self.btn_export_diario)
 
         self.load_relatorio_diario()
         return w
@@ -139,15 +166,13 @@ class RelatorioView(QWidget):
         w = QWidget()
         layout = QVBoxLayout(w)
 
-        titulo = QLabel()
-        TranslatorApp.text(titulo, "Relatório Anual")
-        layout.addWidget(titulo)
+        self.lbl_anual = QLabel()
+        layout.addWidget(self.lbl_anual)
 
         ctrl = QHBoxLayout()
 
-        lbl = QLabel()
-        TranslatorApp.text(lbl, "Ano:")
-        ctrl.addWidget(lbl)
+        self.lbl_ano = QLabel()
+        ctrl.addWidget(self.lbl_ano)
 
         self.combo_ano_anual = QComboBox()
         ano_atual = datetime.now().year
@@ -156,30 +181,22 @@ class RelatorioView(QWidget):
         )
         ctrl.addWidget(self.combo_ano_anual)
 
-        btn = QPushButton()
-        TranslatorApp.text(btn, "Atualizar")
-        btn.clicked.connect(self.load_relatorio_anual)
-        ctrl.addWidget(btn)
+        self.btn_anual = QPushButton()
+        self.btn_anual.clicked.connect(self.load_relatorio_anual)
+        ctrl.addWidget(self.btn_anual)
 
         ctrl.addStretch()
         layout.addLayout(ctrl)
 
         self.table_anual = QTableWidget()
         self.table_anual.setColumnCount(5)
-
-        TranslatorApp.table_headers(
-            self.table_anual,
-            ["Mês", "Categoria", "Receita", "Despesa", "Economia"]
-        )
-
         layout.addWidget(self.table_anual, 1)
 
-        export_btn = QPushButton()
-        TranslatorApp.text(export_btn, "Exportar CSV")
-        export_btn.clicked.connect(
+        self.btn_export_anual = QPushButton()
+        self.btn_export_anual.clicked.connect(
             lambda: self.export_table_csv(self.table_anual, "relatorio_anual")
         )
-        layout.addWidget(export_btn)
+        layout.addWidget(self.btn_export_anual)
 
         self.load_relatorio_anual()
         return w
@@ -196,15 +213,13 @@ class RelatorioView(QWidget):
         w = QWidget()
         layout = QVBoxLayout(w)
 
-        titulo = QLabel()
-        TranslatorApp.text(titulo, "Informe de Rendimentos (IRPF)")
-        layout.addWidget(titulo)
+        self.lbl_informe = QLabel()
+        layout.addWidget(self.lbl_informe)
 
         ctrl = QHBoxLayout()
 
-        lbl = QLabel()
-        TranslatorApp.text(lbl, "Ano base:")
-        ctrl.addWidget(lbl)
+        self.lbl_base = QLabel()
+        ctrl.addWidget(self.lbl_base)
 
         self.year_combo = QComboBox()
         ano_atual = datetime.now().year
@@ -213,20 +228,17 @@ class RelatorioView(QWidget):
         )
         ctrl.addWidget(self.year_combo)
 
-        btn_preview = QPushButton()
-        TranslatorApp.text(btn_preview, "Visualizar")
-        btn_preview.clicked.connect(self.preview_informe)
-        ctrl.addWidget(btn_preview)
+        self.btn_preview = QPushButton()
+        self.btn_preview.clicked.connect(self.preview_informe)
+        ctrl.addWidget(self.btn_preview)
 
-        btn_pdf = QPushButton()
-        TranslatorApp.text(btn_pdf, "Exportar PDF")
-        btn_pdf.clicked.connect(self.gerar_e_exportar_pdf)
-        ctrl.addWidget(btn_pdf)
+        self.btn_pdf = QPushButton()
+        self.btn_pdf.clicked.connect(self.gerar_e_exportar_pdf)
+        ctrl.addWidget(self.btn_pdf)
 
-        btn_print = QPushButton()
-        TranslatorApp.text(btn_print, "Imprimir")
-        btn_print.clicked.connect(self.imprimir_informe)
-        ctrl.addWidget(btn_print)
+        self.btn_print = QPushButton()
+        self.btn_print.clicked.connect(self.imprimir_informe)
+        ctrl.addWidget(self.btn_print)
 
         ctrl.addStretch()
         layout.addLayout(ctrl)

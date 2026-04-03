@@ -1,6 +1,7 @@
 import logging
 from services.schedule_service import ScheduleService
 from core.session import Session
+from core.translator_app import TranslatorApp
 
 logger = logging.getLogger(__name__)
 
@@ -8,113 +9,116 @@ logger = logging.getLogger(__name__)
 class ScheduleController:
     """
     Controller de Agendamentos.
-    Responsável apenas por:
+
+    Responsável por:
     - Validar sessão
     - Encaminhar dados ao Service
+    - Padronizar erros
     """
 
     def __init__(self):
         self.schedule_service = ScheduleService()
 
     # ============================================================
+    # 🔥 UTIL
+    # ============================================================
+    def _get_usuario_id(self) -> int:
+        usuario = Session.get_usuario()
+
+        if not usuario:
+            raise PermissionError(
+                TranslatorApp.get("Usuário não autenticado")
+            )
+
+        return usuario["ID_Usuario"]
+
+    # ============================================================
     # CRIAR AGENDAMENTO
     # ============================================================
     def add_schedule(self, schedule_data: dict) -> bool:
-        """
-        Cria um novo agendamento para o usuário logado.
-        A decisão de recorrência acontece na criação.
-        """
-        usuario = Session.get_usuario()
-        if not usuario:
-            raise PermissionError("Usuário não autenticado.")
+        try:
+            user_id = self._get_usuario_id()
 
-        schedule_data["ID_Usuario"] = usuario["ID_Usuario"]
+            schedule_data["ID_Usuario"] = user_id
 
-        return self.schedule_service.add_schedule(schedule_data)
+            return self.schedule_service.add_schedule(schedule_data)
+
+        except Exception:
+            logger.exception("Erro ao criar agendamento")
+            raise
 
     # ============================================================
     # PRÓXIMOS AGENDAMENTOS
     # ============================================================
     def get_upcoming_schedules(self) -> list:
-        """
-        Retorna os próximos agendamentos ativos do usuário logado.
-        Usado em dashboards / sidebar.
-        """
-        usuario = Session.get_usuario()
-        if not usuario:
-            raise PermissionError("Usuário não autenticado.")
+        try:
+            user_id = self._get_usuario_id()
 
-        return self.schedule_service.get_upcoming_schedules(
-            usuario["ID_Usuario"]
-        )
+            return self.schedule_service.get_upcoming_schedules(user_id)
+
+        except Exception:
+            logger.exception("Erro ao buscar próximos agendamentos")
+            return []
 
     # ============================================================
-    # ATUALIZAR AGENDAMENTO
+    # ATUALIZAR
     # ============================================================
     def update_schedule(self, schedule_id: int, schedule_data: dict) -> bool:
-        """
-        Atualiza um agendamento do usuário logado.
+        try:
+            user_id = self._get_usuario_id()
 
-        IMPORTANTE:
-        - Se NÃO recorrente → edita normalmente
-        - Se recorrente → Service versiona automaticamente
-        """
-        usuario = Session.get_usuario()
-        if not usuario:
-            raise PermissionError("Usuário não autenticado.")
+            schedule_data["ID_Usuario"] = user_id
 
-        schedule_data["ID_Usuario"] = usuario["ID_Usuario"]
+            return self.schedule_service.update_schedule(
+                schedule_id,
+                schedule_data
+            )
 
-        return self.schedule_service.update_schedule(
-            schedule_id,
-            schedule_data
-        )
+        except Exception:
+            logger.exception("Erro ao atualizar agendamento")
+            return False
 
     # ============================================================
-    # BUSCAR AGENDAMENTO POR ID
+    # BUSCAR POR ID
     # ============================================================
     def get_schedule_by_id(self, schedule_id: int):
-        """
-        Retorna um agendamento específico do usuário logado.
-        """
-        usuario = Session.get_usuario()
-        if not usuario:
-            raise PermissionError("Usuário não autenticado.")
+        try:
+            user_id = self._get_usuario_id()
 
-        return self.schedule_service.get_schedule_by_id(
-            schedule_id,
-            usuario["ID_Usuario"]
-        )
+            return self.schedule_service.get_schedule_by_id(
+                schedule_id,
+                user_id
+            )
+
+        except Exception:
+            logger.exception("Erro ao buscar agendamento")
+            return None
 
     # ============================================================
-    # BUSCAR TODOS OS AGENDAMENTOS
+    # BUSCAR TODOS
     # ============================================================
     def get_all_schedules(self) -> list:
-        """
-        Retorna todos os agendamentos do usuário logado.
-        Inclui ativos, inativos e históricos.
-        """
-        usuario = Session.get_usuario()
-        if not usuario:
-            raise PermissionError("Usuário não autenticado.")
+        try:
+            user_id = self._get_usuario_id()
 
-        return self.schedule_service.get_all_schedules(
-            usuario["ID_Usuario"]
-        )
+            return self.schedule_service.get_all_schedules(user_id)
+
+        except Exception:
+            logger.exception("Erro ao listar agendamentos")
+            return []
 
     # ============================================================
-    # CANCELAR AGENDAMENTO
+    # CANCELAR
     # ============================================================
     def cancel_schedule(self, schedule_id: int) -> bool:
-        """
-        Cancela (encerra) um agendamento do usuário logado.
-        Não remove histórico.
-        """
-        usuario = Session.get_usuario()
-        if not usuario:
-            raise PermissionError("Usuário não autenticado.")
+        try:
+            user_id = self._get_usuario_id()
 
-        return self.schedule_service.cancel_schedule(
-            schedule_id,
-            usuario["ID_Usuario"]
-        )
+            return self.schedule_service.cancel_schedule(
+                schedule_id,
+                user_id
+            )
+
+        except Exception:
+            logger.exception("Erro ao cancelar agendamento")
+            return False

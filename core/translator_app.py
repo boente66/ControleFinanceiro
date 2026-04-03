@@ -1,148 +1,259 @@
 from core.session import Session
 from core.i18n import t
 import weakref
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class TranslatorApp:
-    """
-    Sistema central de tradução reativa da aplicação.
-    Substitui uso manual de t() e _retranslate_ui.
-    """
 
-    # armazena callbacks sem impedir GC
-    _listeners = []
+    _registry = []
+    _bound_widgets = weakref.WeakSet()
 
     # ==================================================
-    # BASE
+    # CORE
     # ==================================================
     @classmethod
-    def __bind(cls, widget, callback):
-        """
-        Registra callback ligado ao ciclo de vida do widget
-        """
-        ref = weakref.ref(widget)
+    def set_language(cls, idioma):
+        Session.set_config("idioma", idioma)
+        cls.refresh()
 
-        def safe_callback(idioma):
-            obj = ref()
-            if obj is None:
-                return  # widget já destruído
-
-            try:
-                callback(obj, idioma)
-            except RuntimeError:
-                # PyQt: objeto deletado
-                return
-
-        # executa imediatamente
-        idioma = Session.get_config("idioma", "Português")
-        safe_callback(idioma)
-
-        # registra listener global
-        cls._listeners.append(safe_callback)
-
-        # conecta ao evento global
-        Session.on_idioma_change(safe_callback)
+    @classmethod
+    def current(cls):
+        return Session.get_config("idioma", "Português")
 
     # ==================================================
-    # LABEL / BOTÃO
+    # 🔥 TRADUÇÃO CENTRAL (INTEGRADA)
     # ==================================================
     @classmethod
-    def text(cls, widget, chave):
-        if not hasattr(widget, "setText"):
-            return
-        cls.__bind(widget, lambda w, idioma: w.setText(t(chave, idioma)))
+    def _translate(cls, texto, idioma):
+
+        # 1️⃣ tenta tradução local
+        try:
+            traduzido = t(texto, idioma)
+            if traduzido != texto:
+                return traduzido
+        except Exception:
+            pass
+
+        # 2️⃣ fallback Argos
+        try:
+            from services.argos_service import ArgosService
+
+            origem = "pt"
+            destino = cls._map_language(idioma)
+
+            return ArgosService.traduzir(texto, origem, destino)
+
+        except Exception:
+            return texto
 
     # ==================================================
-    # PLACEHOLDER (QLineEdit)
-    # ==================================================
-    @classmethod
-    def placeholder(cls, widget, chave):
-        cls.__bind(widget, lambda w, idioma: w.setPlaceholderText(t(chave, idioma)))
-
-    # ==================================================
-    # TOOLTIP
-    # ==================================================
-    @classmethod
-    def tooltip(cls, widget, chave):
-        cls.__bind(widget, lambda w, idioma: w.setToolTip(t(chave, idioma)))
-
-    # ==================================================
-    # GROUPBOX
-    # ==================================================
-    @classmethod
-    def group(cls, widget, chave):
-        cls.__bind(widget, lambda w, idioma: w.setTitle(t(chave, idioma)))
-
-    # ==================================================
-    # COMBOBOX (lista fixa)
-    # ==================================================
-    @classmethod
-    def combo(cls, combo, chaves):
-        cls.__bind(combo, cls._update_combo(chaves))
-
-    @staticmethod
-    def _update_combo(chaves):
-        def update(combo, idioma):
-            try:
-                valor_atual = combo.currentData() or combo.currentText()
-
-                combo.blockSignals(True)
-                combo.clear()
-
-                for chave in chaves:
-                    combo.addItem(t(chave, idioma), chave)
-
-                # restaura seleção
-                index = combo.findData(valor_atual)
-                if index >= 0:
-                    combo.setCurrentIndex(index)
-
-                combo.blockSignals(False)
-
-            except RuntimeError:
-                pass
-
-        return update
-
-    # ==================================================
-    # TABELA HEADER
-    # ==================================================
-    @classmethod
-    def table_headers(cls, table, chaves):
-        cls.__bind(
-            table,
-            lambda w, idioma: w.setHorizontalHeaderLabels(
-                [t(c, idioma) for c in chaves]
-            ),
-        )
-
-    # ==================================================
-    # TEXTO DIRETO (quando não é widget)
+    # MAPEAR IDIOMA
     # ==================================================
     @staticmethod
-    def get(chave):
-        idioma = Session.get_config("idioma", "Português")
-        return t(chave, idioma)
+    def _map_language(idioma):
+        mapa = {
+            "Português": "pt",
+            "Inglês": "en",
+            "Espanhol": "es"
+        }
+        return mapa.get(idioma, "en")
 
     # ==================================================
-    # FORÇAR UPDATE GLOBAL (caso precise)
+    # REFRESH GLOBAL
     # ==================================================
     @classmethod
     def refresh(cls):
-        idioma = Session.get_config("idioma", "Português")
-
-        for callback in list(cls._listeners):
+        for callback in list(cls._registry):
             try:
-                callback(idioma)
+                callback(cls.current())
             except Exception:
-                continue
+                logger.exception("[Translator] erro no refresh")
 
-        def update_widgets(idioma):
-            for widget in cls._widgets:
-                widget.update(idioma)
+    # ==================================================
+    # REGISTRO AUTOMÁTICO
+    # ==================================================
+    @classmethod
+    def _auto_bind(cls, widget, updater):
 
-        cls._listeners.append(update_widgets)
+        if widget not in cls._bound_widgets:
+            cls._bound_widgets.add(widget)
+
+        ref = weakref.ref(widget)
+
+        def callback(idioma):
+            obj = ref()
+            if obj is None:
+                return
+
+            try:
+                updater(obj, idioma)
+            except RuntimeError:
+                pass
+            except Exception:
+                logger.exception("[Translator] erro ao atualizar widget")
+
+        callback(cls.current())
+
+        cls._registry.append(callback)
+        Session.on_idioma_change(callback)
+
+    # ==================================================
+    # UI BINDINGS (AGORA USANDO _translate)
+    # ==================================================
+    @classmethod
+    def text(cls, widget, chave):
+        cls._auto_bind(widget, lambda w, i: w.setText(cls._translate(chave, i)))
 
     @classmethod
-    def window_title(cls, window, chave):
-        cls.__bind(window, lambda w, idioma: w.setWindowTitle(t(chave, idioma)))
+    def group(cls, widget, chave):
+        cls._auto_bind(widget, lambda w, i: w.setTitle(cls._translate(chave, i)))
+
+    @classmethod
+    def window_title(cls, widget, chave):
+        cls._auto_bind(widget, lambda w, i: w.setWindowTitle(cls._translate(chave, i)))
+
+    @classmethod
+    def placeholder(cls, widget, chave):
+        cls._auto_bind(widget, lambda w, i: w.setPlaceholderText(cls._translate(chave, i)))
+
+    @classmethod
+    def tooltip(cls, widget, chave):
+        cls._auto_bind(widget, lambda w, i: w.setToolTip(cls._translate(chave, i)))
+
+    @classmethod
+    def combo(cls, combo, chaves):
+
+        def update(c, idioma):
+            try:
+                valor = c.currentData() or c.currentText()
+
+                c.blockSignals(True)
+                c.clear()
+
+                for chave in chaves:
+                    c.addItem(cls._translate(chave, idioma), chave)
+
+                index = c.findData(valor)
+                if index >= 0:
+                    c.setCurrentIndex(index)
+
+                c.blockSignals(False)
+
+            except Exception:
+                logger.exception("[Translator] erro combo")
+
+        cls._auto_bind(combo, update)
+
+    @classmethod
+    def table_headers(cls, table, chaves):
+        cls._auto_bind(
+            table,
+            lambda w, i: w.setHorizontalHeaderLabels(
+                [cls._translate(c, i) for c in chaves]
+            )
+        )
+
+    # ==================================================
+    # TEXTO DINÂMICO
+    # ==================================================
+    @classmethod
+    def auto(cls, widget, func):
+
+        ref = weakref.ref(widget)
+
+        def update(_=None):
+            obj = ref()
+            if obj is None:
+                return
+
+            try:
+                obj.setText(func())
+            except RuntimeError:
+                pass
+            except Exception:
+                logger.exception("[Translator] erro auto")
+
+        update()
+        Session.on_idioma_change(lambda _: update())
+
+    # ==================================================
+    # GET SIMPLES (INTEGRADO)
+    # ==================================================
+    @classmethod
+    def get(cls, chave):
+        idioma = cls.current()
+        return cls._translate(chave, idioma)
+
+
+    @classmethod
+    def current(cls):
+        return cls._current_idioma
+    
+
+    @classmethod
+    def bind(cls, widget, *args):
+        """
+        Two modes:
+        - bind(widget, chave, setter)  where setter is a callable (widget, text) or a method name string
+        - bind(widget)  infers chave from widget.tr_key or widget.objectName() and picks a sensible setter
+        """
+        # determine chave and setter
+        if len(args) == 0:
+            chave = getattr(widget, "tr_key", None)
+            if not chave:
+                objname = getattr(widget, "objectName", None)
+                chave = objname() if callable(objname) else None
+
+            if not chave:
+                logger.warning("[Translator] bind: chave não encontrada para widget %r", widget)
+                return
+
+            # pick a reasonable default setter
+            if hasattr(widget, "setText"):
+                setter = lambda w, txt: w.setText(txt)
+            elif hasattr(widget, "setPlaceholderText"):
+                setter = lambda w, txt: w.setPlaceholderText(txt)
+            elif hasattr(widget, "setTitle"):
+                setter = lambda w, txt: w.setTitle(txt)
+            elif hasattr(widget, "setWindowTitle"):
+                setter = lambda w, txt: w.setWindowTitle(txt)
+            else:
+                logger.warning("[Translator] bind: nenhum setter conhecido para widget %r", widget)
+                return
+
+        elif len(args) == 2:
+            chave, setter = args
+            # if setter is a method name, resolve it to a callable
+            if isinstance(setter, str):
+                method = getattr(widget, setter, None)
+                if callable(method):
+                    setter = lambda w, txt, _m=method: _m(txt)
+                else:
+                    logger.warning("[Translator] bind: método %r não encontrado em %r", setter, widget)
+                    return
+            elif not callable(setter):
+                logger.warning("[Translator] bind: setter inválido para %r", widget)
+                return
+
+        else:
+            raise TypeError("bind() accepts either (widget) or (widget, chave, setter)")
+
+        # keep a weak reference record of the widget
+        try:
+            if widget not in cls._bound_widgets:
+                cls._bound_widgets.add(widget)
+        except Exception:
+            pass
+
+        def update(idioma):
+            try:
+                texto = cls._translate(chave, idioma)
+                setter(widget, texto)
+            except Exception:
+                logger.exception("[Translator] erro bind")
+
+        update(cls.current())
+        Session.on_idioma_change(update)

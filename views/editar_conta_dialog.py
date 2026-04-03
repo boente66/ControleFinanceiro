@@ -2,11 +2,14 @@ from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QLabel, QLineEdit,
     QComboBox, QPushButton, QMessageBox, QHBoxLayout
 )
+
 from controllers.account_controller import AccountController
 from core.session import Session
+from core.translator_app import TranslatorApp
 
 
 class EditarContaDialog(QDialog):
+
     def __init__(self, parent=None, conta=None):
         super().__init__(parent)
 
@@ -19,48 +22,79 @@ class EditarContaDialog(QDialog):
 
         self.controller = AccountController()
 
-        self.setWindowTitle("Editar Conta")
+        # 🔥 título reativo
+        TranslatorApp.window_title(self, "Editar Conta")
+
         self.setMinimumWidth(400)
 
+        self._init_ui()
+
+    # --------------------------------------------------
+    # UI
+    # --------------------------------------------------
+    def _init_ui(self):
         layout = QVBoxLayout(self)
 
         # Nome
-        layout.addWidget(QLabel("Nome da Conta:"))
-        self.nome_edit = QLineEdit(conta.get("Nome_Conta", ""))
+        self.lbl_nome = QLabel()
+        TranslatorApp.text(self.lbl_nome, "Nome da Conta")
+        layout.addWidget(self.lbl_nome)
+
+        self.nome_edit = QLineEdit(self.conta.get("Nome_Conta", ""))
         layout.addWidget(self.nome_edit)
 
         # Instituição
-        layout.addWidget(QLabel("Instituição:"))
-        self.inst_edit = QLineEdit(conta.get("Instituicao", ""))
+        self.lbl_inst = QLabel()
+        TranslatorApp.text(self.lbl_inst, "Instituição")
+        layout.addWidget(self.lbl_inst)
+
+        self.inst_edit = QLineEdit(self.conta.get("Instituicao", ""))
         layout.addWidget(self.inst_edit)
 
         # Tipo
-        layout.addWidget(QLabel("Tipo da Conta:"))
+        self.lbl_tipo = QLabel()
+        TranslatorApp.text(self.lbl_tipo, "Tipo da Conta")
+        layout.addWidget(self.lbl_tipo)
+
         self.tipo_combo = QComboBox()
-        self.tipo_combo.addItems(["Corrente", "Poupança", "Investimento"])
-        self.tipo_combo.setCurrentText(conta.get("Tipo", "Corrente"))
+        TranslatorApp.combo(
+            self.tipo_combo,
+            ["Corrente", "Poupança", "Investimento"]
+        )
+        self.tipo_combo.setCurrentText(self.conta.get("Tipo", "Corrente"))
         layout.addWidget(self.tipo_combo)
 
         # Botões
         botoes = QHBoxLayout()
-        salvar_btn = QPushButton("Salvar")
-        cancelar_btn = QPushButton("Cancelar")
 
-        salvar_btn.clicked.connect(self.salvar)
-        cancelar_btn.clicked.connect(self.reject)
+        self.salvar_btn = QPushButton()
+        TranslatorApp.text(self.salvar_btn, "Salvar")
 
-        botoes.addWidget(salvar_btn)
-        botoes.addWidget(cancelar_btn)
+        self.cancelar_btn = QPushButton()
+        TranslatorApp.text(self.cancelar_btn, "Cancelar")
+
+        self.salvar_btn.clicked.connect(self.salvar)
+        self.cancelar_btn.clicked.connect(self.reject)
+
+        botoes.addWidget(self.salvar_btn)
+        botoes.addWidget(self.cancelar_btn)
 
         layout.addLayout(botoes)
 
+    # --------------------------------------------------
+    # SALVAR
+    # --------------------------------------------------
     def salvar(self):
         nome = self.nome_edit.text().strip()
         instituicao = self.inst_edit.text().strip()
         tipo = self.tipo_combo.currentText()
 
         if not nome:
-            QMessageBox.warning(self, "Erro", "O nome da conta é obrigatório.")
+            QMessageBox.warning(
+                self,
+                TranslatorApp.get("Erro"),
+                TranslatorApp.get("O nome da conta é obrigatório.")
+            )
             return
 
         try:
@@ -71,8 +105,17 @@ class EditarContaDialog(QDialog):
                 tipo=tipo,
                 id_usuario=self.id_usuario
             )
-            QMessageBox.information(self, "Sucesso", "Conta atualizada com sucesso.")
+
+            QMessageBox.information(
+                self,
+                TranslatorApp.get("Sucesso"),
+                TranslatorApp.get("Conta atualizada com sucesso.")
+            )
             self.accept()
 
         except Exception as e:
-            QMessageBox.critical(self, "Erro", str(e))
+            QMessageBox.critical(
+                self,
+                TranslatorApp.get("Erro"),
+                str(e)
+            )

@@ -1,7 +1,12 @@
 # =========================================================
-# SISTEMA DE TEMAS PROFISSIONAL — VERSÃO FINAL CORRIGIDA
+# SISTEMA DE TEMAS PROFISSIONAL (SIMPLIFICADO + UX)
 # =========================================================
 
+from core.session import Session
+
+# =========================================================
+# BASE
+# =========================================================
 BASE = """
 QWidget {
     font-family: "Segoe UI", Arial, sans-serif;
@@ -17,7 +22,7 @@ QToolTip {
 """
 
 # =========================================================
-# TOKENS GLOBAIS
+# TOKENS
 # =========================================================
 V = {
     "bg_light": "#f4f6f9",
@@ -29,295 +34,230 @@ V = {
     "card_light": "#fbfdff",
     "card_dark": "#151515",
 
-    "sidebar_light": "#111827",
-    "sidebar_dark": "#1f2330",
+    "sidebar_dark_green": "#14532d",
 
     "border_light": "#e6e9ee",
     "border_dark": "#2a2f3a",
 
     "text_light": "#111827",
     "text_dark": "#e6eef8",
-    "muted_light": "#6b7280",
-    "muted_dark": "#9aa4b2",
 
-    "primary_light": "#2563eb",
+    "primary_blue": "#2563eb",
     "primary_dark": "#3aa0ff",
-    "accent_green": "#16a34a",
-    "accent_orange": "#f59e0b",
 
-    "success_light": "#16a34a",
-    "success_dark": "#22c55e",
-    "danger_light": "#dc2626",
-    "danger_dark": "#ef4444",
-    "warning_light": "#d97706",
-    "warning_dark": "#f59e0b",
+    "green": "#16a34a",
+    "green_hover": "#15803d",
+
+    "success": "#16a34a",
+    "danger": "#dc2626",
 
     "highlight_light": "#f3f4f6",
     "highlight_dark": "#222831",
-
-    "menu_active_light": "#10b981",
-    "menu_active_dark": "#0ea5e9",
 }
 
 # =========================================================
 # HELPERS
 # =========================================================
-def _common_table_styles(tokens):
+def _table(tokens):
     return f"""
-QTableWidget, QTreeView {{
+QTableWidget {{
     background-color: {tokens['card']};
-    gridline-color: {tokens['border']};
     color: {tokens['text']};
     border-radius: 8px;
 }}
 
 QHeaderView::section {{
     background-color: {tokens['highlight']};
-    color: {tokens['text']};
     padding: 6px;
-    border: 1px solid {tokens['border']};
 }}
 
-QTableWidget::item:selected, QTreeView::item:selected {{
+QTableWidget::item:selected {{
     background-color: {tokens['primary']};
     color: #fff;
 }}
 """
 
 # =========================================================
-# TEMAS
+# 🎨 TEMA CLARO
 # =========================================================
-
-ORGANIZZE_LIGHT = BASE + f"""
+def tema_claro():
+    return BASE + f"""
 QWidget {{
     background-color: {V['bg_light']};
     color: {V['text_light']};
 }}
 
 QWidget#sidebar {{
-    background-color: {V['sidebar_light']};
-    border-right: 3px solid {V['accent_green']};
+    background-color: #111827;
 }}
 
 QPushButton {{
-    background-color: {V['primary_light']};
-    color: #fff;
-    padding: 8px 12px;
-    border-radius: 8px;
-    border: 1px solid rgba(0,0,0,0.06);
-}}
-
-QPushButton:hover {{ background-color: #1d4ed8; }}
-
-QPushButton:disabled {{
-    background-color: #cbd5e1;
-    color: #93a3be;
-}}
-
-QPushButton#danger {{ background-color: {V['danger_light']}; }}
-
-QLineEdit, QComboBox, QDateEdit {{
-    background-color: {V['panel_light']};
-    border: 1px solid {V['border_light']};
-    border-radius: 8px;
+    background-color: {V['primary_blue']};
+    color: white;
     padding: 8px;
-    color: {V['text_light']};
-}}
-
-QLineEdit:focus {{ border: 1px solid {V['primary_light']}; }}
-
-QProgressBar {{
-    background-color: {V['highlight_light']};
     border-radius: 8px;
-    height: 12px;
 }}
 
-QProgressBar::chunk {{ background-color: {V['accent_green']}; }}
+QPushButton:hover {{
+    background-color: #1d4ed8;
+}}
 
-QMenu {{
-    background-color: {V['panel_light']};
+QLineEdit, QComboBox {{
+    background: {V['panel_light']};
     border: 1px solid {V['border_light']};
+    padding: 6px;
 }}
 
-QTabBar::tab {{
-    background: transparent;
-    padding: 8px 12px;
-    border-radius: 6px;
+QProgressBar::chunk {{
+    background-color: {V['green']};
 }}
 
-QTabBar::tab:selected {{
-    background: {V['highlight_light']};
-    font-weight: 600;
-}}
+{_table({
+    "card": V['card_light'],
+    "text": V['text_light'],
+    "highlight": V['highlight_light'],
+    "primary": V['primary_blue']
+})}
 
-QScrollBar:vertical {{
-    background: transparent;
-    width: 10px;
-}}
-
-QScrollBar::handle:vertical {{
-    background: {V['border_light']};
-    border-radius: 5px;
-}}
-
-{_common_table_styles({'card': V['card_light'], 'border': V['border_light'], 'highlight': V['highlight_light'], 'primary': V['primary_light'], 'text': V['text_light']})}
-
-QLabel#positivo {{ color: {V['success_light']}; font-weight: bold; }}
-QLabel#negativo {{ color: {V['danger_light']}; font-weight: bold; }}
-QLabel#muted {{ color: {V['muted_light']}; }}
+QLabel#positivo {{ color: {V['success']}; font-weight: bold; }}
+QLabel#negativo {{ color: {V['danger']}; font-weight: bold; }}
 """
 
-ORGANIZZE_DARK = BASE + f"""
+# =========================================================
+# 🌙 TEMA ESCURO
+# =========================================================
+def tema_escuro():
+    return BASE + f"""
 QWidget {{
     background-color: {V['bg_dark']};
     color: {V['text_dark']};
 }}
 
 QWidget#sidebar {{
-    background-color: {V['sidebar_dark']};
-    border-right: 2px solid {V['menu_active_dark']};
+    background-color: #1f2330;
 }}
 
 QPushButton {{
     background-color: {V['primary_dark']};
-    color: #fff;
-    padding: 8px 12px;
-    border-radius: 8px;
-}}
-
-QPushButton:hover {{ background-color: #2a6ef6; }}
-
-QPushButton:disabled {{
-    background-color: #3b4250;
-    color: #7b8492;
-}}
-
-QLineEdit, QComboBox, QDateEdit {{
-    background-color: {V['panel_dark']};
-    border: 1px solid {V['border_dark']};
-    border-radius: 8px;
+    color: white;
     padding: 8px;
-    color: {V['text_dark']};
-}}
-
-QLineEdit:focus {{ border: 1px solid {V['primary_dark']}; }}
-
-QProgressBar {{
-    background-color: {V['highlight_dark']};
     border-radius: 8px;
-    height: 12px;
 }}
 
-QProgressBar::chunk {{ background-color: {V['menu_active_dark']}; }}
+QPushButton:hover {{
+    background-color: #2a6ef6;
+}}
 
-QMenu {{
-    background-color: {V['panel_dark']};
+QLineEdit, QComboBox {{
+    background: {V['panel_dark']};
     border: 1px solid {V['border_dark']};
+    padding: 6px;
 }}
 
-QTabBar::tab {{
-    background: transparent;
-    padding: 8px 12px;
-    border-radius: 6px;
+QProgressBar::chunk {{
+    background-color: #0ea5e9;
 }}
 
-QTabBar::tab:selected {{
-    background: {V['highlight_dark']};
-    font-weight: 600;
-}}
+{_table({
+    "card": V['card_dark'],
+    "text": V['text_dark'],
+    "highlight": V['highlight_dark'],
+    "primary": V['primary_dark']
+})}
 
-QScrollBar:vertical {{
-    background: transparent;
-    width: 10px;
-}}
-
-QScrollBar::handle:vertical {{
-    background: {V['border_dark']};
-    border-radius: 5px;
-}}
-
-{_common_table_styles({'card': V['card_dark'], 'border': V['border_dark'], 'highlight': V['highlight_dark'], 'primary': V['primary_dark'], 'text': V['text_dark']})}
-
-QLabel#positivo {{ color: {V['success_dark']}; font-weight: bold; }}
-QLabel#negativo {{ color: {V['danger_dark']}; font-weight: bold; }}
-QLabel#muted {{ color: {V['muted_dark']}; }}
+QLabel#positivo {{ color: #22c55e; font-weight: bold; }}
+QLabel#negativo {{ color: #ef4444; font-weight: bold; }}
 """
 
-VSCODE = BASE + f"""
+# =========================================================
+# 💚 TEMA VERDE (SEU DIFERENCIAL)
+# =========================================================
+def tema_verde():
+    return BASE + f"""
 QWidget {{
-    background-color: #1e1e1e;
-    color: #d4d4d4;
+    background-color: {V['bg_light']};
+    color: {V['text_light']};
 }}
 
 QWidget#sidebar {{
-    background-color: #252526;
-    border-right: 1px solid #2a2d2f;
+    background-color: {V['sidebar_dark_green']};
+    border-right: 3px solid {V['green']};
 }}
 
 QPushButton {{
-    background-color: {V['primary_dark']};
-    color: #fff;
-    border-radius: 6px;
-    padding: 6px 10px;
+    background-color: {V['green']};
+    color: white;
+    padding: 8px;
+    border-radius: 8px;
 }}
 
-QPushButton:hover {{ background-color: #006bdd; }}
+QPushButton:hover {{
+    background-color: {V['green_hover']};
+}}
 
-QLineEdit, QComboBox, QDateEdit {{
-    background-color: #1e1e1e;
-    border: 1px solid #2a2a2a;
-    border-radius: 6px;
+QLineEdit, QComboBox {{
+    background: white;
+    border: 1px solid {V['green']};
     padding: 6px;
-    color: #d4d4d4;
 }}
 
-{_common_table_styles({'card': '#1f2328', 'border': '#2a2d31', 'highlight': '#2a2d31', 'primary': '#007acc', 'text': '#d4d4d4'})}
+QProgressBar::chunk {{
+    background-color: {V['green']};
+}}
+
+{_table({
+    "card": V['card_light'],
+    "text": V['text_light'],
+    "highlight": V['highlight_light'],
+    "primary": V['green']
+})}
+
+QLabel#positivo {{ color: {V['green']}; font-weight: bold; }}
+QLabel#negativo {{ color: {V['danger']}; font-weight: bold; }}
 """
 
 # =========================================================
-# TEMAS + ALIASES
+# REGISTRO (UX SIMPLES)
 # =========================================================
-
 THEMES = {
-    "Organizze Claro": ORGANIZZE_LIGHT,
-    "Organizze Escuro": ORGANIZZE_DARK,
-    "VSCode": VSCODE,
+    "Claro": tema_claro,
+    "Escuro": tema_escuro,
+    "Verde": tema_verde,
 }
 
-ALIASES = {
-    "Claro": "Organizze Claro",
-    "Escuro": "Organizze Escuro",
-    "Verde": "Organizze Claro",
-}
+DEFAULT_THEME = "Claro"
 
 # =========================================================
-# FUNÇÕES PÚBLICAS
+# CORE
 # =========================================================
-
-def get_theme(nome: str) -> str:
-    if not isinstance(nome, str):
-        return ORGANIZZE_LIGHT
-
-    nome = nome.strip()
-
-    # 🔥 resolve alias
-    nome = ALIASES.get(nome, nome)
-
-    return THEMES.get(nome, ORGANIZZE_LIGHT)
+def get_theme(nome: str = None) -> str:
+    nome = nome or Session.get_config("tema", DEFAULT_THEME)
+    builder = THEMES.get(nome, tema_claro)
+    return builder()
 
 
-def available_themes() -> list:
-    """Somente temas reais (sem alias)."""
-    return sorted(THEMES.keys())
+def apply_theme(app, nome: str = None):
+    """
+    Aplica tema no app inteiro (QApplication)
+    """
+    nome = nome or DEFAULT_THEME
+
+    Session.set_config("tema", nome)
+
+    css = get_theme(nome)
+    app.setStyleSheet(css)
 
 
-def register_theme(nome: str, stylesheet: str) -> None:
-    """Registra tema dinamicamente."""
-    if not isinstance(nome, str) or not isinstance(stylesheet, str):
+def current_theme():
+    return Session.get_config("tema", DEFAULT_THEME)
+
+
+def available_themes():
+    return list(THEMES.keys())
+
+
+def register_theme(nome: str, builder):
+    if not nome or not callable(builder):
         return
 
-    nome = nome.strip()
-    if not nome:
-        return
-
-    THEMES[nome] = stylesheet
+    THEMES[nome] = builder

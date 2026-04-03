@@ -24,17 +24,22 @@ class FavorecidoView(QWidget):
 
         self.setMinimumSize(820, 600)
 
-        # ✅ título traduzível
+        # 🔥 título reativo
         TranslatorApp.window_title(self, "Favorecidos")
 
-        # ================= LAYOUT PRINCIPAL =================
+        self._init_ui()
+        self.load_favorecidos()
+
+    # =====================================================
+    # UI
+    # =====================================================
+    def _init_ui(self):
+
         main_layout = QVBoxLayout(self)
 
         # ---------- TÍTULO ----------
         self.title_label = QLabel()
-        self.title_label.setStyleSheet(
-            "font-size: 22px; font-weight: bold; margin-bottom: 8px;"
-        )
+        self.title_label.setObjectName("pageTitle")
         TranslatorApp.text(self.title_label, "Favorecidos")
         main_layout.addWidget(self.title_label)
 
@@ -86,6 +91,7 @@ class FavorecidoView(QWidget):
         # ---------- TABELA ----------
         self.table = QTableWidget()
         self.table.setColumnCount(4)
+
         TranslatorApp.table_headers(
             self.table,
             ["Nome", "Tipo", "CPF/CNPJ", "Contato"]
@@ -97,8 +103,6 @@ class FavorecidoView(QWidget):
         self.table.doubleClicked.connect(self.edit_favorecido)
 
         main_layout.addWidget(self.table)
-
-        self.load_favorecidos()
 
     # =====================================================
     # ICON UTIL
@@ -117,8 +121,7 @@ class FavorecidoView(QWidget):
         text = str(text).lower().strip()
         text = unicodedata.normalize("NFD", text)
         text = "".join(
-            c for c in text
-            if unicodedata.category(c) != "Mn"
+            c for c in text if unicodedata.category(c) != "Mn"
         )
         return text.replace(" ", "")
 
@@ -159,8 +162,8 @@ class FavorecidoView(QWidget):
             )
             return None
 
-        id_item = self.table.item(row, 0)
-        id_fav = id_item.data(Qt.UserRole) if id_item else None
+        item = self.table.item(row, 0)
+        id_fav = item.data(Qt.UserRole) if item else None
 
         return {
             "Nome": self.table.item(row, 0).text() if self.table.item(row, 0) else "",
@@ -180,6 +183,14 @@ class FavorecidoView(QWidget):
         favorecidos = self.controller.listar_favorecidos()
 
         if not favorecidos:
+            # opcional UX
+            self.table.setRowCount(1)
+            self.table.setItem(
+                0,
+                0,
+                QTableWidgetItem(TranslatorApp.get("Nenhum registro encontrado"))
+            )
+            self.table.setSpan(0, 0, 1, 4)
             return
 
         for row, fav in enumerate(favorecidos):
@@ -188,25 +199,15 @@ class FavorecidoView(QWidget):
 
             nome_item = QTableWidgetItem(fav.get("Nome", ""))
             nome_item.setData(Qt.UserRole, fav.get("ID_Favorecido"))
+
             self.table.setItem(row, 0, nome_item)
-
+            self.table.setItem(row, 1, QTableWidgetItem(fav.get("Tipo", "")))
             self.table.setItem(
-                row,
-                1,
-                QTableWidgetItem(fav.get("Tipo", ""))
+                row, 2,
+                QTableWidgetItem(fav.get("CPF") or fav.get("CNPJ") or "")
             )
-
             self.table.setItem(
-                row,
-                2,
-                QTableWidgetItem(
-                    fav.get("CPF") or fav.get("CNPJ") or ""
-                )
-            )
-
-            self.table.setItem(
-                row,
-                3,
+                row, 3,
                 QTableWidgetItem(
                     fav.get("Telefone_PF") or fav.get("Telefone_PJ") or ""
                 )

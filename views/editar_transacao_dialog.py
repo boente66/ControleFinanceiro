@@ -1,8 +1,16 @@
 from PyQt5.QtWidgets import (
-    QDialog, QVBoxLayout, QFormLayout,
-    QComboBox, QDoubleSpinBox, QDateEdit, QTextEdit,
-    QDialogButtonBox, QLineEdit,
-    QMessageBox, QCheckBox, QLabel
+    QDialog,
+    QVBoxLayout,
+    QFormLayout,
+    QComboBox,
+    QDoubleSpinBox,
+    QDateEdit,
+    QTextEdit,
+    QDialogButtonBox,
+    QLineEdit,
+    QMessageBox,
+    QCheckBox,
+    QLabel,
 )
 from PyQt5.QtCore import QDate
 
@@ -35,11 +43,11 @@ class EditTransactionDialog(QDialog):
 
         self.setMinimumSize(520, 420)
 
+        # 🔥 título reativo
+        TranslatorApp.window_title(self, "Editar Transação")
+
         self._build_ui()
         self._preencher_campos()
-
-        # 🔥 título dinâmico
-        TranslatorApp.window_title(self, "Editar Transação")
 
     # ======================================================
     # UI
@@ -74,14 +82,13 @@ class EditTransactionDialog(QDialog):
         self.contas = self.account_controller.get_all_accounts() or []
         for conta in self.contas:
             self.conta_origem_combo.addItem(
-                conta.get("Nome_Conta", ""),
-                conta.get("ID_Conta")
+                conta.get("Nome_Conta", ""), conta.get("ID_Conta")
             )
         self.form.addRow(self.lbl_conta, self.conta_origem_combo)
 
-        # Tipo
+        # Tipo (🔥 corrigido)
         self.tipo_combo = QComboBox()
-        self.tipo_combo.addItems(["Despesa", "Receita"])
+        TranslatorApp.combo(self.tipo_combo, ["Despesa", "Receita"])
         self.form.addRow(self.lbl_tipo, self.tipo_combo)
 
         # Descrição
@@ -100,10 +107,7 @@ class EditTransactionDialog(QDialog):
         self.categoria_combo = QComboBox()
         categorias = self.category_controller.get_all_categories() or []
         for cat in categorias:
-            self.categoria_combo.addItem(
-                cat.get("Nome", ""),
-                cat.get("ID_Categoria")
-            )
+            self.categoria_combo.addItem(cat.get("Nome", ""), cat.get("ID_Categoria"))
         self.form.addRow(self.lbl_categoria, self.categoria_combo)
 
         # Favorecido
@@ -131,8 +135,7 @@ class EditTransactionDialog(QDialog):
         self.conta_destino_combo = QComboBox()
         for conta in self.contas:
             self.conta_destino_combo.addItem(
-                conta.get("Nome_Conta", ""),
-                conta.get("ID_Conta")
+                conta.get("Nome_Conta", ""), conta.get("ID_Conta")
             )
         self.conta_destino_combo.setVisible(False)
         self.form.addRow(self.lbl_destino, self.conta_destino_combo)
@@ -146,14 +149,13 @@ class EditTransactionDialog(QDialog):
 
         layout.addWidget(self.button_box)
 
-        # 🔥 tradução dos botões
-        TranslatorApp._bind(lambda _: self.button_box.button(
-            QDialogButtonBox.Save
-        ).setText(TranslatorApp.get("Salvar")))
-
-        TranslatorApp._bind(lambda _: self.button_box.button(
-            QDialogButtonBox.Cancel
-        ).setText(TranslatorApp.get("Cancelar")))
+        # 🔥 padrão correto (sem bind)
+        self.button_box.button(QDialogButtonBox.Save).setText(
+            TranslatorApp.get("Salvar")
+        )
+        self.button_box.button(QDialogButtonBox.Cancel).setText(
+            TranslatorApp.get("Cancelar")
+        )
 
         self.button_box.accepted.connect(self.salvar)
         self.button_box.rejected.connect(self.reject)
@@ -170,21 +172,15 @@ class EditTransactionDialog(QDialog):
         tipo = self.transacao.get("Tipo", "Despesa")
         self.tipo_combo.setCurrentText(tipo)
 
-        idx_conta = self.conta_origem_combo.findData(
-            self.transacao.get("ID_Conta")
-        )
+        idx_conta = self.conta_origem_combo.findData(self.transacao.get("ID_Conta"))
         if idx_conta >= 0:
             self.conta_origem_combo.setCurrentIndex(idx_conta)
 
-        idx_cat = self.categoria_combo.findData(
-            self.transacao.get("ID_Categoria")
-        )
+        idx_cat = self.categoria_combo.findData(self.transacao.get("ID_Categoria"))
         if idx_cat >= 0:
             self.categoria_combo.setCurrentIndex(idx_cat)
 
-        idx_fav = self.favorecido_combo.findData(
-            self.transacao.get("ID_Favorecido")
-        )
+        idx_fav = self.favorecido_combo.findData(self.transacao.get("ID_Favorecido"))
         if idx_fav >= 0:
             self.favorecido_combo.setCurrentIndex(idx_fav)
 
@@ -200,14 +196,11 @@ class EditTransactionDialog(QDialog):
 
         for fav in favorecidos:
             self.favorecido_combo.addItem(
-                fav.get("Nome", ""),
-                fav.get("ID_Favorecido")
+                fav.get("Nome", ""), fav.get("ID_Favorecido")
             )
 
     def _toggle_transferencia(self):
-        self.conta_destino_combo.setVisible(
-            self.transfer_checkbox.isChecked()
-        )
+        self.conta_destino_combo.setVisible(self.transfer_checkbox.isChecked())
 
     # ======================================================
     # SALVAR
@@ -230,7 +223,7 @@ class EditTransactionDialog(QDialog):
                 "ID_Favorecido": self.favorecido_combo.currentData(),
                 "Data": self.data_edit.date().toString("yyyy-MM-dd"),
                 "Notas": self.notas_edit.toPlainText(),
-                "ID_Transacao": self.transacao.get("ID_Transacao")
+                "ID_Transacao": self.transacao.get("ID_Transacao"),
             }
 
             if self.modo_temporario:
@@ -243,7 +236,7 @@ class EditTransactionDialog(QDialog):
             QMessageBox.information(
                 self,
                 TranslatorApp.get("Sucesso"),
-                TranslatorApp.get("Transação atualizada com sucesso.")
+                TranslatorApp.get("Transação atualizada com sucesso."),
             )
 
             self.accept()

@@ -59,9 +59,10 @@ class LancamentoModel(Database):
                 Notas,
                 ID_Usuario,
                 ID_Conta,
-                ID_Transacao
+                ID_Transacao,
+                Previsto
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
 
         params = (
@@ -80,6 +81,7 @@ class LancamentoModel(Database):
             dados["ID_Usuario"],
             dados.get("ID_Conta"),
             dados.get("ID_Transacao"),
+            int(dados.get("Previsto", 0))  # 🔥 SUPORTE A PREVISÃO
         )
 
         self.execute_query(sql, params)
@@ -139,7 +141,8 @@ class LancamentoModel(Database):
                 Parcelado = ?,
                 Num_Parcelas = ?,
                 Parcela_Atual = ?,
-                Notas = ?
+                Notas = ?,
+                Previsto = ?
             WHERE ID_Lancamento = ?
               AND ID_Usuario = ?
         """
@@ -155,6 +158,7 @@ class LancamentoModel(Database):
             int(dados.get("Num_Parcelas", 1)),
             int(dados.get("Parcela_Atual", 1)),
             dados.get("Notas"),
+            int(dados.get("Previsto", 0)),  # 🔥 UPDATE PREVISTO
             id_lancamento,
             id_usuario
         ))
@@ -162,7 +166,7 @@ class LancamentoModel(Database):
         return True
 
     # ============================================================
-    # FATURA (SQL LIMPO E RÁPIDO)
+    # FATURA (RÁPIDA)
     # ============================================================
     def get_lancamentos_por_fatura(self, id_cartao, mes, ano, id_usuario):
 
@@ -173,6 +177,48 @@ class LancamentoModel(Database):
               AND ID_Usuario = ?
               AND Competencia_Mes = ?
               AND Competencia_Ano = ?
+            ORDER BY Data
+        """
+
+        return self.fetch_all(
+            sql,
+            (id_cartao, id_usuario, int(mes), int(ano))
+        )
+
+    # ============================================================
+    # SOMENTE PREVISTOS
+    # ============================================================
+    def get_lancamentos_previstos(self, id_cartao, mes, ano, id_usuario):
+
+        sql = """
+            SELECT *
+            FROM lancamentos
+            WHERE ID_Cartao = ?
+              AND ID_Usuario = ?
+              AND Competencia_Mes = ?
+              AND Competencia_Ano = ?
+              AND Previsto = 1
+            ORDER BY Data
+        """
+
+        return self.fetch_all(
+            sql,
+            (id_cartao, id_usuario, int(mes), int(ano))
+        )
+
+    # ============================================================
+    # SOMENTE REAIS
+    # ============================================================
+    def get_lancamentos_reais(self, id_cartao, mes, ano, id_usuario):
+
+        sql = """
+            SELECT *
+            FROM lancamentos
+            WHERE ID_Cartao = ?
+              AND ID_Usuario = ?
+              AND Competencia_Mes = ?
+              AND Competencia_Ano = ?
+              AND Previsto = 0
             ORDER BY Data
         """
 
@@ -204,11 +250,34 @@ class LancamentoModel(Database):
         sql = """
             UPDATE lancamentos
             SET Paga = 1,
-                ID_Transacao = ?
+                ID_Transacao = ?,
+                Previsto = 0  -- 🔥 vira real automaticamente
             WHERE ID_Lancamento = ?
         """
 
         self.execute_query(sql, (id_transacao, id_lancamento))
+        return True
+
+    # ============================================================
+    # CONFIRMAR PREVISTOS (EM LOTE)
+    # ============================================================
+    def confirmar_previstos(self, id_cartao, mes, ano, id_usuario):
+
+        sql = """
+            UPDATE lancamentos
+            SET Previsto = 0
+            WHERE ID_Cartao = ?
+              AND ID_Usuario = ?
+              AND Competencia_Mes = ?
+              AND Competencia_Ano = ?
+              AND Previsto = 1
+        """
+
+        self.execute_query(
+            sql,
+            (id_cartao, id_usuario, int(mes), int(ano))
+        )
+
         return True
 
     # ============================================================
@@ -224,3 +293,22 @@ class LancamentoModel(Database):
 
         self.execute_query(sql, (id_lancamento, id_usuario))
         return True
+
+
+   def existe_previsto(self, id_cartao, descricao, mes, ano, id_usuario):
+
+    sql = """
+        SELECT 1
+        FROM lancamentos
+        WHERE ID_Cartao = ?
+          AND Descricao = ?
+          AND Competencia_Mes = ?
+          AND Competencia_Ano = ?
+          AND ID_Usuario = ?
+          AND Previsto = 1
+        LIMIT 1
+    """
+
+    return self.fetch_one(sql, (
+        id_cartao, descricao, mes, ano, id_usuario
+    )) is not None

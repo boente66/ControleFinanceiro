@@ -33,8 +33,6 @@ class PainelFatura(QWidget):
         self.account_controller = AccountController()
 
         self.cartao = None
-        self.resumo = {}
-
         self.page = 0
         self.limit = 50
         self.filtro_status = "Todos"
@@ -43,10 +41,17 @@ class PainelFatura(QWidget):
         self.mes_atual = hoje.month
         self.ano_atual = hoje.year
 
-        # ✅ título da janela
+        self._is_bound = False
+
         TranslatorApp.window_title(self, "Fatura")
 
         self._init_ui()
+        self._apply_translation()
+
+        # 🔥 bind correto
+        if not self._is_bound:
+            TranslatorApp.bind(self._on_translate)
+            self._is_bound = True
 
     # ======================================================
     # UI
@@ -71,10 +76,6 @@ class PainelFatura(QWidget):
         self.btn_pagar = QToolButton()
         self.btn_exportar = QToolButton()
 
-        TranslatorApp.text(self.btn_lancar, "Lançar")
-        TranslatorApp.text(self.btn_pagar, "Pagar")
-        TranslatorApp.text(self.btn_exportar, "PDF")
-
         self.btn_lancar.clicked.connect(self.add_transaction)
         self.btn_pagar.clicked.connect(self.pagar_fatura)
         self.btn_exportar.clicked.connect(self.exportar_pdf)
@@ -86,12 +87,7 @@ class PainelFatura(QWidget):
         toolbar.addStretch()
 
         self.label_status = QLabel()
-        TranslatorApp.text(self.label_status, "Status:")
-
         self.filtro_combo = QComboBox()
-
-        # ⚠️ CRÍTICO: usar DATA
-        TranslatorApp.combo(self.filtro_combo, ["Todos", "Abertos", "Pagos"])
         self.filtro_combo.currentIndexChanged.connect(self._on_filtro_changed)
 
         toolbar.addWidget(self.label_status)
@@ -103,16 +99,12 @@ class PainelFatura(QWidget):
         filtros = QHBoxLayout()
 
         self.label_mes = QLabel()
-        TranslatorApp.text(self.label_mes, "Mês:")
-
         self.mes_combo = QComboBox()
         self.mes_combo.addItems([str(i) for i in range(1, 13)])
         self.mes_combo.setCurrentIndex(self.mes_atual - 1)
         self.mes_combo.currentIndexChanged.connect(self._reset_paginacao)
 
         self.label_ano = QLabel()
-        TranslatorApp.text(self.label_ano, "Ano:")
-
         self.ano_combo = QComboBox()
         self.ano_combo.addItems([
             str(self.ano_atual - 1),
@@ -131,12 +123,6 @@ class PainelFatura(QWidget):
 
         # TABELA
         self.table = QTableWidget(0, 5)
-
-        TranslatorApp.table_headers(
-            self.table,
-            ["Data", "Descrição", "Categoria", "Valor", "Status"]
-        )
-
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setSortingEnabled(True)
@@ -148,7 +134,6 @@ class PainelFatura(QWidget):
 
         self.btn_prev = QPushButton("◀")
         self.btn_next = QPushButton("▶")
-
         self.label_page = QLabel()
 
         self.btn_prev.clicked.connect(self._prev_page)
@@ -163,6 +148,34 @@ class PainelFatura(QWidget):
         # RESUMO
         self.resumo_label = QLabel()
         layout.addWidget(self.resumo_label)
+
+    # ======================================================
+    # TRADUÇÃO
+    # ======================================================
+    def _on_translate(self, *_):
+        self._apply_translation()
+        self._carregar()
+
+    def _apply_translation(self):
+
+        TranslatorApp.text(self.btn_lancar, "Lançar")
+        TranslatorApp.text(self.btn_pagar, "Pagar")
+        TranslatorApp.text(self.btn_exportar, "PDF")
+
+        TranslatorApp.text(self.label_status, "Status:")
+        TranslatorApp.text(self.label_mes, "Mês:")
+        TranslatorApp.text(self.label_ano, "Ano:")
+
+        # 🔥 combo com DATA correta
+        self.filtro_combo.clear()
+        self.filtro_combo.addItem(TranslatorApp.get("Todos"), "Todos")
+        self.filtro_combo.addItem(TranslatorApp.get("Abertos"), "Abertos")
+        self.filtro_combo.addItem(TranslatorApp.get("Pagos"), "Pagos")
+
+        TranslatorApp.table_headers(
+            self.table,
+            ["Data", "Descrição", "Categoria", "Valor", "Status"]
+        )
 
     # ======================================================
     # CONTROLE
@@ -219,7 +232,10 @@ class PainelFatura(QWidget):
         self._preencher_tabela(dados)
         self._atualizar_resumo(total)
 
-        self.label_page.setText(f"{TranslatorApp.get('Página')} {self.page + 1}")
+        self.label_page.setText(
+            f"{TranslatorApp.get('Página')} {self.page + 1}"
+        )
+
         self.nome_cartao_label.setText(self.cartao.get("Nome", ""))
 
     # ======================================================
@@ -261,11 +277,10 @@ class PainelFatura(QWidget):
     # RESUMO
     # ======================================================
     def _atualizar_resumo(self, total_registros):
-        texto = (
+        self.resumo_label.setText(
             f"{TranslatorApp.get('Lançamentos')}: {total_registros} | "
             f"{TranslatorApp.get('Página')}: {self.page + 1}"
         )
-        self.resumo_label.setText(texto)
 
     # ======================================================
     # AÇÕES
@@ -309,6 +324,7 @@ class PainelFatura(QWidget):
                 TranslatorApp.get("Sucesso"),
                 TranslatorApp.get("Fatura paga com sucesso")
             )
+
             self._carregar()
 
         except Exception as e:

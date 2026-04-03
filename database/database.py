@@ -412,6 +412,7 @@ CREATE TABLE IF NOT EXISTS lancamentos (
 
     ID_Conta INTEGER,
     ID_Transacao INTEGER,
+    Previsto INTEGER DEFAULT 0,
 
     FOREIGN KEY (ID_Cartao)
     REFERENCES credito(ID_Cartao)
@@ -429,6 +430,7 @@ CREATE TABLE IF NOT EXISTS lancamentos (
 
     FOREIGN KEY (ID_Transacao)
     REFERENCES transacoes(ID_Transacao)
+    
 );
 
 

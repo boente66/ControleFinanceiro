@@ -10,6 +10,8 @@ from utilitarios.date_formatter import DateFormatter
 from views.editar_transacao_dialog import EditTransactionDialog
 from controllers.category_controller import CategoryController
 
+from core.translator_app import TranslatorApp
+
 
 class ImportacaoTemporariaDialog(QDialog):
     """
@@ -21,59 +23,85 @@ class ImportacaoTemporariaDialog(QDialog):
     def __init__(self, lancamentos, parent=None):
         super().__init__(parent)
 
-        self.setWindowTitle("Revisar Lançamentos Importados")
-        self.resize(1000, 500)
-
         self.lancamentos = lancamentos or []
         self.category_controller = CategoryController()
 
-        # 🔥 Cache simples para evitar várias consultas repetidas
         self._categoria_cache = {}
+        self._is_bound = False
+
+        TranslatorApp.window_title(self, "Revisar Lançamentos Importados")
+
+        self.resize(1000, 500)
+
+        self._init_ui()
+        self._apply_translation()
+
+        # 🔥 bind correto
+        if not self._is_bound:
+            TranslatorApp.bind(self._on_translate)
+            self._is_bound = True
+
+    # ======================================================
+    # UI
+    # ======================================================
+    def _init_ui(self):
 
         layout = QVBoxLayout(self)
 
-        # ======================================================
         # TABELA
-        # ======================================================
         self.table = QTableWidget(len(self.lancamentos), 7)
-        self.table.setHorizontalHeaderLabels([
-            "Importar",
-            "Data",
-            "Descrição",
-            "Categoria",
-            "Confiança",
-            "Valor",
-            "Tipo"
-        ])
 
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
         self._popular_tabela()
-
         layout.addWidget(self.table)
 
-        # ======================================================
         # BOTÕES
-        # ======================================================
         btns = QHBoxLayout()
 
-        btn_editar = QPushButton("Editar selecionado")
-        btn_editar.clicked.connect(self.editar_selecionado)
+        self.btn_editar = QPushButton()
+        self.btn_editar.clicked.connect(self.editar_selecionado)
 
-        btn_confirmar = QPushButton("Confirmar importação")
-        btn_confirmar.clicked.connect(self.confirmar)
+        self.btn_confirmar = QPushButton()
+        self.btn_confirmar.setObjectName("addButton")
+        self.btn_confirmar.clicked.connect(self.confirmar)
 
-        btn_cancelar = QPushButton("Cancelar")
-        btn_cancelar.clicked.connect(self.reject)
+        self.btn_cancelar = QPushButton()
+        self.btn_cancelar.clicked.connect(self.reject)
 
-        btns.addWidget(btn_editar)
+        btns.addWidget(self.btn_editar)
         btns.addStretch()
-        btns.addWidget(btn_confirmar)
-        btns.addWidget(btn_cancelar)
+        btns.addWidget(self.btn_confirmar)
+        btns.addWidget(self.btn_cancelar)
 
         layout.addLayout(btns)
+
+    # ======================================================
+    # TRADUÇÃO
+    # ======================================================
+    def _on_translate(self, *_):
+        self._apply_translation()
+
+    def _apply_translation(self):
+
+        TranslatorApp.table_headers(
+            self.table,
+            [
+                "Importar",
+                "Data",
+                "Descrição",
+                "Categoria",
+                "Confiança",
+                "Valor",
+                "Tipo"
+            ]
+        )
+
+        TranslatorApp.text(self.btn_editar, "Editar selecionado")
+        TranslatorApp.text(self.btn_confirmar, "Confirmar importação")
+        TranslatorApp.text(self.btn_cancelar, "Cancelar")
 
     # ======================================================
     # POPULAR TABELA
@@ -82,48 +110,37 @@ class ImportacaoTemporariaDialog(QDialog):
 
         for row, lanc in enumerate(self.lancamentos):
 
-            # Checkbox
             chk = QCheckBox()
             chk.setChecked(True)
             self.table.setCellWidget(row, 0, chk)
 
-            # Data
             data_iso = lanc.get("Data", "")
             data_formatada = DateFormatter.iso_to_br(data_iso) if data_iso else ""
             self.table.setItem(row, 1, QTableWidgetItem(data_formatada))
 
-            # Descrição
             self.table.setItem(
-                row,
-                2,
+                row, 2,
                 QTableWidgetItem(str(lanc.get("Descricao", "")))
             )
 
-            # Categoria
             id_categoria = lanc.get("ID_Categoria")
             nome_categoria = self._get_nome_categoria(id_categoria)
             self.table.setItem(row, 3, QTableWidgetItem(nome_categoria))
 
-            # Confiança
-            confianca = float(lanc.get("ConfiancaIA", 0))
+            confianca = float(lanc.get("ConfiancaIA", 0) or 0)
             self.table.setItem(
-                row,
-                4,
+                row, 4,
                 QTableWidgetItem(f"{confianca * 100:.0f}%")
             )
 
-            # Valor
-            valor = float(lanc.get("Valor", 0))
+            valor = float(lanc.get("Valor", 0) or 0)
             self.table.setItem(
-                row,
-                5,
+                row, 5,
                 QTableWidgetItem(CurrencyFormatter.format(valor))
             )
 
-            # Tipo
             self.table.setItem(
-                row,
-                6,
+                row, 6,
                 QTableWidgetItem(str(lanc.get("Tipo", "")))
             )
 
@@ -168,32 +185,22 @@ class ImportacaoTemporariaDialog(QDialog):
 
             self.lancamentos[row].update(dados)
 
-            # Atualiza visual
-
-            # Data
+            # Atualiza UI
             data_iso = dados.get("Data", "")
             data_formatada = DateFormatter.iso_to_br(data_iso) if data_iso else ""
             self.table.item(row, 1).setText(data_formatada)
 
-            # Descrição
-            self.table.item(row, 2).setText(
-                dados.get("Descricao", "")
-            )
+            self.table.item(row, 2).setText(dados.get("Descricao", ""))
 
-            # Categoria
             id_categoria = dados.get("ID_Categoria")
             nome_categoria = self._get_nome_categoria(id_categoria)
             self.table.item(row, 3).setText(nome_categoria)
 
-            # Valor
             self.table.item(row, 5).setText(
                 CurrencyFormatter.format(dados.get("Valor", 0))
             )
 
-            # Tipo
-            self.table.item(row, 6).setText(
-                dados.get("Tipo", "")
-            )
+            self.table.item(row, 6).setText(dados.get("Tipo", ""))
 
     # ======================================================
     # CONFIRMAR
@@ -210,8 +217,8 @@ class ImportacaoTemporariaDialog(QDialog):
         if not selecionados:
             QMessageBox.warning(
                 self,
-                "Aviso",
-                "Nenhum lançamento selecionado."
+                TranslatorApp.get("Aviso"),
+                TranslatorApp.get("Nenhum lançamento selecionado.")
             )
             return
 

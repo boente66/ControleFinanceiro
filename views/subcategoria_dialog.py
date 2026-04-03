@@ -3,15 +3,14 @@ from PyQt5.QtWidgets import (
     QLineEdit, QComboBox,
     QDialogButtonBox, QMessageBox
 )
+
 from core.translator_app import TranslatorApp
+
 
 class SubcategoriaDialog(QDialog):
 
     def __init__(self, parent=None, controller=None, categoria_pai_id=None):
         super().__init__(parent)
-
-        TranslatorApp.window_title(self, "Nova Subcategoria")
-        self.setMinimumWidth(300)
 
         if controller is None:
             raise RuntimeError("Controller não informado.")
@@ -19,9 +18,17 @@ class SubcategoriaDialog(QDialog):
         self.controller = controller
         self.categoria_pai_id = categoria_pai_id
 
+        self.setMinimumWidth(300)
+
         self._montar_ui()
         self._carregar_categorias_pai()
         self._selecionar_categoria_pai()
+
+        # 🔥 TRADUÇÃO INICIAL
+        self._apply_translation()
+
+        # 🔥 REATIVIDADE
+        TranslatorApp.bind(self._apply_translation)
 
     # ==================================================
     # UI
@@ -29,35 +36,57 @@ class SubcategoriaDialog(QDialog):
     def _montar_ui(self):
 
         layout = QVBoxLayout(self)
-        form = QFormLayout()
+        self.form = QFormLayout()
 
         # Nome
         self.nome_input = QLineEdit()
-        form.addRow("Nome:", self.nome_input)
+        self.form.addRow("", self.nome_input)
 
         # Categoria Pai
         self.categoria_pai_combo = QComboBox()
-        form.addRow("Categoria Pai:", self.categoria_pai_combo)
+        self.form.addRow("", self.categoria_pai_combo)
 
-        layout.addLayout(form)
+        layout.addLayout(self.form)
 
         # Botões
-        buttons = QDialogButtonBox(
+        self.buttons = QDialogButtonBox(
             QDialogButtonBox.Ok | QDialogButtonBox.Cancel
         )
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
 
-        layout.addWidget(buttons)
+        self.buttons.accepted.connect(self.accept)
+        self.buttons.rejected.connect(self.reject)
+
+        layout.addWidget(self.buttons)
+
+    # ==================================================
+    # TRADUÇÃO
+    # ==================================================
+    def _apply_translation(self, *_):
+
+        TranslatorApp.window_title(self, "Nova Subcategoria")
+
+        # Labels
+        self.form.labelForField(self.nome_input).setText(
+            TranslatorApp.get("Nome") + ":"
+        )
+
+        self.form.labelForField(self.categoria_pai_combo).setText(
+            TranslatorApp.get("Categoria Pai") + ":"
+        )
+
+        # Botões
+        self.buttons.button(QDialogButtonBox.Ok).setText(
+            TranslatorApp.get("OK")
+        )
+
+        self.buttons.button(QDialogButtonBox.Cancel).setText(
+            TranslatorApp.get("Cancelar")
+        )
 
     # ==================================================
     # CARREGAR CATEGORIAS PAI
     # ==================================================
     def _carregar_categorias_pai(self):
-        """
-        Carrega apenas categorias principais
-        (ID_Categoria_Pai IS NULL)
-        """
 
         try:
             categorias = self.controller.get_all_categories()
@@ -66,7 +95,6 @@ class SubcategoriaDialog(QDialog):
 
             for cat in categorias:
                 if cat["ID_Categoria_Pai"] is None:
-                    # Guarda ID no userData (forma correta)
                     self.categoria_pai_combo.addItem(
                         cat["Nome"],
                         cat["ID_Categoria"]
@@ -75,8 +103,8 @@ class SubcategoriaDialog(QDialog):
         except Exception as e:
             QMessageBox.critical(
                 self,
-                "Erro",
-                f"Erro ao carregar categorias: {e}"
+                TranslatorApp.get("Erro"),
+                f"{TranslatorApp.get('Erro ao carregar categorias')}: {e}"
             )
 
     # ==================================================
@@ -102,8 +130,8 @@ class SubcategoriaDialog(QDialog):
         if not nome:
             QMessageBox.warning(
                 self,
-                "Atenção",
-                "O nome da subcategoria não pode estar vazio."
+                TranslatorApp.get("Atenção"),
+                TranslatorApp.get("O nome da subcategoria não pode estar vazio.")
             )
             return None
 
@@ -112,8 +140,8 @@ class SubcategoriaDialog(QDialog):
         if not id_categoria_pai:
             QMessageBox.warning(
                 self,
-                "Atenção",
-                "Selecione uma categoria pai."
+                TranslatorApp.get("Atenção"),
+                TranslatorApp.get("Selecione uma categoria pai.")
             )
             return None
 

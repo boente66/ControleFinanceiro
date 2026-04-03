@@ -41,21 +41,34 @@ class TransacaoView(QWidget):
         self.fatura_controller = FaturaController()
 
         self.painel_ativo = None
+        self._is_bound = False
 
         self.main_layout = QHBoxLayout(self)
 
         self._montar_painel_esquerdo()
         self._montar_area_painel()
 
+        self._apply_translation()
+
         self.carregar_contas()
         self.carregar_cartoes()
 
-        # 🔥 REATIVIDADE GLOBAL
-        TranslatorApp.__bind(lambda _: self._recarregar_ui())
+        # 🔥 BIND SEGURO
+        if not self._is_bound:
+            TranslatorApp.bind(self._on_translate)
+            self._is_bound = True
 
     # ==========================================================
-    # RELOAD (IDIOMA)
+    # REATIVIDADE
     # ==========================================================
+    def _on_translate(self, *_):
+        self._apply_translation()
+        self._recarregar_ui()
+
+    def _apply_translation(self):
+        TranslatorApp.text(self.lbl_contas, "Contas e Poupanças")
+        TranslatorApp.text(self.lbl_cartoes, "Cartões de Crédito")
+
     def _recarregar_ui(self):
         self.carregar_contas()
         self.carregar_cartoes()
@@ -68,7 +81,7 @@ class TransacaoView(QWidget):
         self.left = QVBoxLayout()
         self.left.setSpacing(10)
 
-        contas_box, self.lista_contas = self._criar_lista_com_header(
+        contas_box, self.lista_contas, self.lbl_contas = self._criar_lista_com_header(
             "Contas e Poupanças", self.criar_conta_dialog, altura_max=220
         )
 
@@ -83,7 +96,7 @@ class TransacaoView(QWidget):
         contas_box.addWidget(self.lbl_saldo_total_contas)
         self.left.addLayout(contas_box)
 
-        cartoes_box, self.lista_cartoes = self._criar_lista_com_header(
+        cartoes_box, self.lista_cartoes, self.lbl_cartoes = self._criar_lista_com_header(
             "Cartões de Crédito", self.criar_cartao_dialog, altura_max=160
         )
 
@@ -165,8 +178,10 @@ class TransacaoView(QWidget):
             saldo = float(conta.get("Saldo_Atual", 0))
             saldo_total += saldo
 
+            tipo = TranslatorApp.get(conta.get("Tipo", ""))
+
             texto = (
-                f"{conta.get('Nome_Conta')} ({conta.get('Tipo')})\n"
+                f"{conta.get('Nome_Conta')} ({tipo})\n"
                 f"{TranslatorApp.get('Saldo')}: {CurrencyFormatter.format(saldo)}"
             )
 
@@ -332,7 +347,6 @@ class TransacaoView(QWidget):
         header = QHBoxLayout()
 
         label = QLabel()
-        TranslatorApp.text(label, titulo)
         label.setStyleSheet("font-size: 15px; font-weight: bold;")
 
         btn = QPushButton("+")
@@ -350,4 +364,4 @@ class TransacaoView(QWidget):
         container.addLayout(header)
         container.addWidget(lista)
 
-        return container, lista
+        return container, lista, label

@@ -13,7 +13,6 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import QDate
 
-from core.session import Session
 from core.translator_app import TranslatorApp
 
 from controllers.favorecido_controller import FavorecidoController
@@ -31,11 +30,6 @@ class TransactionDialog(QDialog):
         self.contexto = contexto
         self.id_contexto = id_contexto
 
-        self.usuario = Session.get_usuario()
-        if not self.usuario:
-            raise RuntimeError("Usuário não autenticado")
-
-        self.usuario_id = self.usuario["ID_Usuario"]
 
         self.main_controller = MainController()
         self.fatura_controller = FaturaController()
@@ -43,17 +37,29 @@ class TransactionDialog(QDialog):
         self.category_controller = CategoryController()
         self.import_controller = IAImportController()
 
-        # 🔥 título traduzível
+        self._is_bound = False
+
+        # título
         TranslatorApp.window_title(self, "Novo Lançamento")
 
         self.setMinimumWidth(520)
 
         self._build_ui()
+        self._apply_translation()
+
         self._carregar_favorecidos()
         self._carregar_categorias()
 
-        # 🔥 REATIVIDADE
-        TranslatorApp.__bind(lambda _: self._retranslate())
+        # 🔥 bind correto (sem executar função)
+        if not self._is_bound:
+            TranslatorApp.bind(self._on_translate)
+
+            self._is_bound = True
+
+
+    def _on_translate(self, *_):
+        self._apply_translation()
+        self._retranslate()
 
     # ======================================================
     # UI
@@ -67,7 +73,6 @@ class TransactionDialog(QDialog):
         linha1 = QHBoxLayout()
 
         self.descricao_edit = QLineEdit()
-        TranslatorApp.placeholder(self.descricao_edit, "Descrição")
         linha1.addWidget(self.descricao_edit)
 
         self.data_edit = QDateEdit(QDate.currentDate())
@@ -80,7 +85,6 @@ class TransactionDialog(QDialog):
         # FAVORECIDO
         # -------------------------
         self.lbl_favorecido = QLabel()
-        TranslatorApp.text(self.lbl_favorecido, "Favorecido")
         layout.addWidget(self.lbl_favorecido)
 
         self.favorecido_combo = QComboBox()
@@ -90,7 +94,6 @@ class TransactionDialog(QDialog):
         # CATEGORIA
         # -------------------------
         self.lbl_categoria = QLabel()
-        TranslatorApp.text(self.lbl_categoria, "Categoria")
         layout.addWidget(self.lbl_categoria)
 
         self.categoria_combo = QComboBox()
@@ -100,11 +103,9 @@ class TransactionDialog(QDialog):
         # VALOR
         # -------------------------
         self.lbl_valor = QLabel()
-        TranslatorApp.text(self.lbl_valor, "Valor")
         layout.addWidget(self.lbl_valor)
 
         self.valor_edit = QLineEdit()
-        TranslatorApp.placeholder(self.valor_edit, "0,00")
         layout.addWidget(self.valor_edit)
 
         # -------------------------
@@ -112,7 +113,6 @@ class TransactionDialog(QDialog):
         # -------------------------
         if self.contexto == "cartao":
             self.lbl_parcelas = QLabel()
-            TranslatorApp.text(self.lbl_parcelas, "Parcelas")
             layout.addWidget(self.lbl_parcelas)
 
             self.parcelas_spin = QSpinBox()
@@ -127,11 +127,9 @@ class TransactionDialog(QDialog):
         botoes = QHBoxLayout()
 
         self.importar_btn = QPushButton()
-        TranslatorApp.text(self.importar_btn, "Importar comprovante")
         self.importar_btn.clicked.connect(self.importar_comprovante)
 
         self.salvar_btn = QPushButton()
-        TranslatorApp.text(self.salvar_btn, "Salvar")
         self.salvar_btn.clicked.connect(self.salvar)
 
         botoes.addWidget(self.importar_btn)
@@ -141,10 +139,28 @@ class TransactionDialog(QDialog):
         layout.addLayout(botoes)
 
     # ======================================================
-    # RETRANSLATE (IDIOMA)
+    # TRADUÇÃO
     # ======================================================
+    def _on_translate(self, *_):
+        self._apply_translation()
+        self._retranslate()
+
+    def _apply_translation(self):
+
+        TranslatorApp.text(self.lbl_favorecido, "Favorecido")
+        TranslatorApp.text(self.lbl_categoria, "Categoria")
+        TranslatorApp.text(self.lbl_valor, "Valor")
+
+        TranslatorApp.placeholder(self.descricao_edit, "Descrição")
+        TranslatorApp.placeholder(self.valor_edit, "0,00")
+
+        TranslatorApp.text(self.importar_btn, "Importar comprovante")
+        TranslatorApp.text(self.salvar_btn, "Salvar")
+
+        if self.contexto == "cartao":
+            TranslatorApp.text(self.lbl_parcelas, "Parcelas")
+
     def _retranslate(self):
-        # recarrega combos (caso nomes mudem futuramente)
         self._carregar_favorecidos()
         self._carregar_categorias()
 
@@ -220,7 +236,6 @@ class TransactionDialog(QDialog):
                     "ID_Conta": self.id_contexto,
                     "ID_Favorecido": self.favorecido_combo.currentData(),
                     "ID_Categoria": self.categoria_combo.currentData(),
-                    "ID_Usuario": self.usuario_id,
                     "Tipo": "Despesa",
                 }
 
@@ -245,7 +260,6 @@ class TransactionDialog(QDialog):
                 }
 
                 self.fatura_controller.registrar_despesa_cartao(dados, self.usuario_id)
-
                 self.accept()
 
         except ValueError as e:

@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import (
 
 from controllers.account_controller import AccountController
 from core.session import Session
-
+from core.translator_app import TranslatorApp
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +26,10 @@ class CriarContaDialog(QDialog):
         super().__init__(parent)
 
         self.controller = AccountController()
-       
 
-        self.setWindowTitle("Criar Conta")
+        # 🔥 título reativo
+        TranslatorApp.window_title(self, "Criar Conta")
+
         self.setFixedSize(360, 260)
 
         self._init_ui()
@@ -40,63 +41,82 @@ class CriarContaDialog(QDialog):
         layout = QVBoxLayout(self)
         form = QFormLayout()
 
+        # Nome
         self.nome_input = QLineEdit()
-        form.addRow("Nome da Conta:", self.nome_input)
+        TranslatorApp.form(form, "Nome da Conta:", self.nome_input)
 
+        # Instituição
         self.instituicao_input = QLineEdit()
-        form.addRow("Instituição:", self.instituicao_input)
+        TranslatorApp.form(form, "Instituição:", self.instituicao_input)
 
+        # Tipo
         self.tipo_combo = QComboBox()
-        self.tipo_combo.addItems([
-            "Corrente",
-            "Poupança",
-            "Investimento"
-        ])
-        form.addRow("Tipo:", self.tipo_combo)
+        TranslatorApp.combo(
+            self.tipo_combo,
+            ["Corrente", "Poupança", "Investimento"]
+        )
+        TranslatorApp.form(form, "Tipo:", self.tipo_combo)
 
+        # Saldo
         self.saldo_input = QLineEdit()
-        self.saldo_input.setPlaceholderText("0,00")
-        form.addRow("Saldo Inicial:", self.saldo_input)
+        TranslatorApp.placeholder(self.saldo_input, "0,00")
+        TranslatorApp.form(form, "Saldo Inicial:", self.saldo_input)
 
         layout.addLayout(form)
 
-        buttons = QDialogButtonBox(
+        # Botões
+        self.buttons = QDialogButtonBox(
             QDialogButtonBox.Ok | QDialogButtonBox.Cancel
         )
-        buttons.accepted.connect(self._salvar)
-        buttons.rejected.connect(self.reject)
 
-        layout.addWidget(buttons)
+        self.buttons.accepted.connect(self._salvar)
+        self.buttons.rejected.connect(self.reject)
+
+        layout.addWidget(self.buttons)
+
+        # 🔥 tradução dos botões
+        self.buttons.button(QDialogButtonBox.Ok).setText(
+            TranslatorApp.get("Salvar")
+        )
+        self.buttons.button(QDialogButtonBox.Cancel).setText(
+            TranslatorApp.get("Cancelar")
+        )
 
     # --------------------------------------------------
     # SALVAR
     # --------------------------------------------------
     def _salvar(self):
         usuario = Session.get_usuario()
+
         dados = {
             "Nome_Conta": self.nome_input.text().strip(),
             "Instituicao": self.instituicao_input.text().strip(),
             "Tipo": self.tipo_combo.currentText(),
             "Saldo_Atual": self.saldo_input.text().strip() or "0",
-            "ID_Usuario": usuario["ID_Usuario"]
+            "ID_Usuario": usuario["ID_Usuario"],
         }
 
         try:
             self.controller.create_account(dados)
+
             QMessageBox.information(
                 self,
-                "Sucesso",
-                "Conta criada com sucesso."
+                TranslatorApp.get("Sucesso"),
+                TranslatorApp.get("Conta criada com sucesso."),
             )
             self.accept()
 
         except ValueError as e:
-            QMessageBox.warning(self, "Atenção", str(e))
+            QMessageBox.warning(
+                self,
+                TranslatorApp.get("Atenção"),
+                str(e)
+            )
 
-        except Exception as e:
+        except Exception:
             logger.exception("Erro ao criar conta")
             QMessageBox.critical(
                 self,
-                "Erro",
-                "Não foi possível criar a conta."
+                TranslatorApp.get("Erro"),
+                TranslatorApp.get("Não foi possível criar a conta."),
             )

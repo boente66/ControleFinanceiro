@@ -13,32 +13,41 @@ from views.main_view import MainView
 logger = logging.getLogger(__name__)
 
 
+def aplicar_tema(app, tema):
+    """
+    Aplica tema com fallback seguro
+    """
+    try:
+        style = get_theme(tema)
+
+        if isinstance(style, str) and style.strip():
+            app.setStyleSheet(style)
+        else:
+            logger.warning(f"Tema inválido retornado: {tema}")
+            app.setStyleSheet("")
+
+    except Exception:
+        logger.exception("Erro ao aplicar tema")
+        app.setStyleSheet("")
+
+
 def main():
     app = QApplication(sys.argv)
 
     # ==============================
-    # CARREGAR CONFIGURAÇÕES
+    # CONFIGURAÇÕES
     # ==============================
     config = carregar_config()
     Session.load_config(config)
 
     # ==============================
-    # APLICAR TEMA
+    # TEMA INICIAL
     # ==============================
     tema = config.get("tema", "Claro")
+    aplicar_tema(app, tema)
 
-    try:
-        style = get_theme(tema)
-
-        # Garantia de segurança
-        if isinstance(style, str) and style.strip():
-            app.setStyleSheet(style)
-        else:
-            logger.warning(f"Tema inválido retornado: {tema}")
-
-    except Exception as e:
-        logger.exception("Erro ao aplicar tema")
-        print("Erro ao aplicar tema:", e)
+    # 🔥 REATIVIDADE DO TEMA
+    Session.on_tema_change(lambda novo: aplicar_tema(app, novo))
 
     # ==============================
     # LOGIN
@@ -48,17 +57,24 @@ def main():
     if login.exec_() == QDialog.Accepted:
         usuario = login.usuario_logado
 
-        # Segurança extra: garantir que Session tenha o usuário
+        if not usuario:
+            logger.error("Login retornou sem usuário")
+            sys.exit(0)
+
+        # garante sessão
         Session.set_usuario(usuario)
 
-        main_window = MainView(usuario)
-        main_window.show()
+        try:
+            main_window = MainView(usuario)
+            main_window.show()
+        except Exception:
+            logger.exception("Erro ao abrir MainView")
+            sys.exit(1)
 
         sys.exit(app.exec_())
 
-    else:
-        # Se usuário cancelar login, encerra aplicação
-        sys.exit(0)
+    # cancelado
+    sys.exit(0)
 
 
 if __name__ == "__main__":

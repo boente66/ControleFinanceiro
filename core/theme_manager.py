@@ -1,7 +1,7 @@
 import logging
 from PyQt5.QtWidgets import QApplication
 
-from core.themes import get_theme, V, ALIASES
+from core.themes import get_theme, THEMES, V
 from core.session import Session
 
 logger = logging.getLogger(__name__)
@@ -10,14 +10,19 @@ logger = logging.getLogger(__name__)
 class ThemeManager:
     """
     Gerenciador central de temas da aplicação.
+    Compatível com: Claro, Escuro, Verde
     """
+
+    DEFAULT = "Claro"
 
     # ======================================================
     # APLICAÇÃO DE TEMA
     # ======================================================
     @staticmethod
-    def aplicar_tema(nome_tema: str, app: QApplication = None) -> bool:
+    def aplicar_tema(nome_tema: str = None, app: QApplication = None) -> bool:
         try:
+            nome_tema = ThemeManager._normalizar(nome_tema)
+
             css = get_theme(nome_tema)
             app = app or QApplication.instance()
 
@@ -25,31 +30,35 @@ class ThemeManager:
                 logger.error("Nenhuma instância QApplication ativa.")
                 return False
 
-            # 🔥 refresh visual garantido
+            # 🔥 força refresh visual completo
             app.setStyleSheet("")
             app.setStyleSheet(css)
 
-            logger.info(f"Tema aplicado: {nome_tema}")
+            logger.info(f"[Theme] Tema aplicado: {nome_tema}")
             return True
 
         except Exception:
-            logger.exception(f"Falha ao aplicar tema '{nome_tema}'")
+            logger.exception(f"[Theme] Falha ao aplicar tema '{nome_tema}'")
             return False
+
+    # ======================================================
+    # NORMALIZAÇÃO
+    # ======================================================
+    @staticmethod
+    def _normalizar(nome: str) -> str:
+        if not isinstance(nome, str):
+            return ThemeManager.tema_atual()
+
+        nome = nome.strip()
+
+        if nome not in THEMES:
+            return ThemeManager.DEFAULT
+
+        return nome
 
     # ======================================================
     # ESTADO DO TEMA
     # ======================================================
-    @staticmethod
-    def _resolve_nome(nome: str) -> str:
-        """
-        Resolve aliases para nome real do tema.
-        """
-        if not isinstance(nome, str):
-            return "Organizze Claro"
-
-        nome = nome.strip()
-        return ALIASES.get(nome, nome)
-
     @staticmethod
     def tema_atual() -> str:
         usuario = Session.get_usuario()
@@ -57,10 +66,12 @@ class ThemeManager:
         if usuario and usuario.get("Tema"):
             return usuario["Tema"]
 
-        return Session.get_config("tema", "Claro")
+        return Session.get_config("tema", ThemeManager.DEFAULT)
 
     @staticmethod
-    def definir_tema(nome_tema: str) -> bool:
+    def definir_tema(nome_tema: str, app: QApplication = None) -> bool:
+        nome_tema = ThemeManager._normalizar(nome_tema)
+
         usuario = Session.get_usuario()
 
         if usuario:
@@ -68,45 +79,65 @@ class ThemeManager:
 
         Session.set_config("tema", nome_tema)
 
-        return ThemeManager.aplicar_tema(nome_tema)
+        return ThemeManager.aplicar_tema(nome_tema, app)
 
     # ======================================================
-    # DARK MODE DETECTION (CORRIGIDO)
+    # DETECÇÃO DE TEMA
     # ======================================================
     @staticmethod
     def is_dark() -> bool:
-        nome = ThemeManager._resolve_nome(ThemeManager.tema_atual())
+        return ThemeManager.tema_atual() == "Escuro"
 
-        return any(x in nome.lower() for x in ["dark", "escuro", "vscode"])
+    @staticmethod
+    def is_light() -> bool:
+        return ThemeManager.tema_atual() == "Claro"
+
+    @staticmethod
+    def is_green() -> bool:
+        return ThemeManager.tema_atual() == "Verde"
 
     # ======================================================
-    # ALTERNAR TEMA (GENÉRICO)
+    # ALTERNAR TEMA
     # ======================================================
     @staticmethod
-    def alternar_tema() -> str:
+    def alternar_tema(app: QApplication = None) -> str:
         atual = ThemeManager.tema_atual()
-        atual_resolvido = ThemeManager._resolve_nome(atual)
 
-        if ThemeManager.is_dark():
-            novo = "Organizze Claro"
-        else:
-            novo = "Organizze Escuro"
+        ordem = ["Claro", "Escuro", "Verde"]
 
-        ThemeManager.definir_tema(novo)
+        try:
+            idx = ordem.index(atual)
+            novo = ordem[(idx + 1) % len(ordem)]
+        except ValueError:
+            novo = ThemeManager.DEFAULT
+
+        ThemeManager.definir_tema(novo, app)
         return novo
+
+    # ======================================================
+    # LISTAGEM
+    # ======================================================
+    @staticmethod
+    def temas_disponiveis() -> list:
+        return list(THEMES.keys())
 
     # ======================================================
     # TOKENS VISUAIS
     # ======================================================
     @staticmethod
     def get_color(token: str) -> str:
+        """
+        Busca cor baseada no tema atual
+        Ex: primary, success, danger, bg, text...
+        """
+
         tema = ThemeManager.tema_atual()
 
-        chave = (
-            f"{token}_dark"
-            if ThemeManager.is_dark()
-            else f"{token}_light"
-        )
+        # 🔥 tema verde usa base light com override
+        if tema == "Escuro":
+            chave = f"{token}_dark"
+        else:
+            chave = f"{token}_light"
 
         cor = V.get(chave)
 
@@ -122,10 +153,10 @@ class ThemeManager:
     @staticmethod
     def get_finance_color(tipo: str) -> str:
         if tipo == "receita":
-            return ThemeManager.get_color("success")
+            return V.get("success_light", "#16a34a")
 
         elif tipo == "despesa":
-            return ThemeManager.get_color("danger")
+            return V.get("danger_light", "#dc2626")
 
-        logger.warning(f"Tipo financeiro inválido: {tipo}")
+        logger.warning(f"[Theme] Tipo financeiro inválido: {tipo}")
         return "#000000"

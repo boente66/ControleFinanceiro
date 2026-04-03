@@ -1,11 +1,15 @@
+import logging
 from PyQt5.QtWidgets import (
-    QDialog, QVBoxLayout, QLabel, QLineEdit,
-    QPushButton, QMessageBox
+    QDialog,
+    QVBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QMessageBox,
 )
+
 from controllers.account_controller import AccountController
 from core.translator_app import TranslatorApp
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +17,6 @@ logger = logging.getLogger(__name__)
 class AjustarSaldoDialog(QDialog):
     """
     Diálogo para ajuste manual de saldo da conta.
-    Responsável APENAS pela UI.
     """
 
     def __init__(self, parent=None, conta=None):
@@ -27,7 +30,7 @@ class AjustarSaldoDialog(QDialog):
 
         self.setMinimumWidth(300)
 
-        # 🔥 título traduzível
+        # 🔥 título reativo
         TranslatorApp.window_title(self, "Ajustar Saldo da Conta")
 
         self._init_ui()
@@ -38,11 +41,10 @@ class AjustarSaldoDialog(QDialog):
     def _init_ui(self):
         layout = QVBoxLayout(self)
 
-        # Conta
+        # Conta (🔥 dinâmico → sem bind)
         self.lbl_conta = QLabel()
         layout.addWidget(self.lbl_conta)
-
-        TranslatorApp._bind(self._update_conta_label)
+        self._update_conta_label()
 
         # Label saldo
         self.lbl_saldo = QLabel()
@@ -69,7 +71,7 @@ class AjustarSaldoDialog(QDialog):
     # --------------------------------------------------
     # TEXTO DINÂMICO
     # --------------------------------------------------
-    def _update_conta_label(self, idioma):
+    def _update_conta_label(self):
         self.lbl_conta.setText(
             f"{TranslatorApp.get('Conta')}: {self.conta.get('Nome_Conta', '')}"
         )
@@ -86,12 +88,11 @@ class AjustarSaldoDialog(QDialog):
             QMessageBox.warning(
                 self,
                 TranslatorApp.get("Erro"),
-                TranslatorApp.get("Saldo inválido.")
+                TranslatorApp.get("Saldo inválido."),
             )
             return
 
         try:
-            # 🔥 SEM ID_USUARIO → controller resolve
             self.controller.ajustar_saldo(
                 id_conta=self.conta["ID_Conta"],
                 novo_saldo=novo_saldo
@@ -100,7 +101,7 @@ class AjustarSaldoDialog(QDialog):
             QMessageBox.information(
                 self,
                 TranslatorApp.get("Sucesso"),
-                TranslatorApp.get("Saldo ajustado com sucesso.")
+                TranslatorApp.get("Saldo ajustado com sucesso."),
             )
             self.accept()
 

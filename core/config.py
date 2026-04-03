@@ -7,32 +7,19 @@ import sys
 # ==========================================================
 
 def get_base_path():
-    """
-    Retorna o diretório base correto:
-    - Executável → pasta do executável
-    - Desenvolvimento → pasta raiz do projeto
-    """
-
     if getattr(sys, "frozen", False):
-        # Executável (PyInstaller, cx_Freeze, Nuitka)
         return os.path.dirname(sys.executable)
 
-    # Desenvolvimento
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 BASE_DIR = get_base_path()
 
 # ==========================================================
-# DIRETÓRIO DE DADOS DO USUÁRIO (MODO PRODUÇÃO)
+# DIRETÓRIO DE DADOS DO USUÁRIO
 # ==========================================================
 
 def get_app_data_dir():
-    """
-    Cria pasta oculta no diretório do usuário:
-    ~/.financeassist
-    """
-
     home = os.path.expanduser("~")
     app_dir = os.path.join(home, ".financeassist")
 
@@ -41,8 +28,6 @@ def get_app_data_dir():
     return app_dir
 
 
-# Se for executável → usa pasta do usuário
-# Se for desenvolvimento → usa raiz do projeto
 if getattr(sys, "frozen", False):
     DATA_DIR = get_app_data_dir()
 else:
@@ -50,31 +35,47 @@ else:
 
 
 # ==========================================================
-# BANCO DE DADOS
+# BANCO
 # ==========================================================
 
 DB_NAME = "financeiro.db"
 DB_PATH = os.path.join(DATA_DIR, DB_NAME)
 
 # ==========================================================
-# CONFIGURAÇÕES
+# NORMALIZAÇÃO DE IDIOMA 🔥
 # ==========================================================
 
-CONFIG_PATH = os.path.join(DATA_DIR, "configuracoes.json")
+IDIOMA_MAP = {
+    "Português": "pt",
+    "Inglês": "en",
+    "Espanhol": "es",
+    "pt": "pt",
+    "en": "en",
+    "es": "es"
+}
+
+def _normalize_idioma(valor):
+    return IDIOMA_MAP.get(valor, "pt")
+
+
+# ==========================================================
+# CONFIG PADRÃO
+# ==========================================================
 
 DEFAULTS = {
-    "idioma": "Português",
+    "idioma": "pt",   # 🔥 PADRÃO CORRETO
     "tema": "Claro",
     "moeda": "BRL"
 }
 
+CONFIG_PATH = os.path.join(DATA_DIR, "configuracoes.json")
+
+
+# ==========================================================
+# CARREGAR CONFIG
+# ==========================================================
 
 def carregar_config():
-    """
-    Carrega configurações do usuário.
-    Se não existir, retorna padrão.
-    """
-
     if not os.path.exists(CONFIG_PATH):
         return DEFAULTS.copy()
 
@@ -85,18 +86,31 @@ def carregar_config():
         cfg = DEFAULTS.copy()
         cfg.update(data)
 
+        # 🔥 normaliza idioma automaticamente
+        cfg["idioma"] = _normalize_idioma(cfg.get("idioma"))
+
         return cfg
 
     except Exception:
         return DEFAULTS.copy()
 
 
+# ==========================================================
+# SALVAR CONFIG
+# ==========================================================
+
 def salvar_config(config: dict):
-    """
-    Salva configurações no diretório correto.
-    """
 
-    os.makedirs(DATA_DIR, exist_ok=True)
+    try:
+        os.makedirs(DATA_DIR, exist_ok=True)
 
-    with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-        json.dump(config, f, indent=4, ensure_ascii=False)
+        config = config.copy()
+
+        # 🔥 garante padrão correto
+        config["idioma"] = _normalize_idioma(config.get("idioma"))
+
+        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump(config, f, indent=4, ensure_ascii=False)
+
+    except Exception:
+        pass

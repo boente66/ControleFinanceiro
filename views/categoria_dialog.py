@@ -3,7 +3,7 @@ import logging
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QFormLayout,
     QLineEdit, QComboBox,
-    QDialogButtonBox, QMessageBox
+    QDialogButtonBox, QMessageBox, QLabel
 )
 
 from core.translator_app import TranslatorApp
@@ -18,22 +18,35 @@ class CategoriaDialog(QDialog):
 
         self.setMinimumWidth(300)
 
+        # 🔥 título reativo
+        TranslatorApp.window_title(self, "Categoria")
+
         layout = QVBoxLayout(self)
 
         # ---------------- FORM ----------------
         form_layout = QFormLayout()
 
+        # Nome
+        self.lbl_nome = QLabel()
+        TranslatorApp.text(self.lbl_nome, "Nome")
+
         self.nome_input = QLineEdit()
-        self.nome_input.setText(nome if nome else "")
-        form_layout.addRow("", self.nome_input)
+        if nome:
+            self.nome_input.setText(nome)
+
+        form_layout.addRow(self.lbl_nome, self.nome_input)
+
+        # Tipo
+        self.lbl_tipo = QLabel()
+        TranslatorApp.text(self.lbl_tipo, "Tipo")
 
         self.tipo_combo = QComboBox()
-        self.tipo_combo.addItems(["Despesa", "Receita"])
+        TranslatorApp.combo(self.tipo_combo, ["Despesa", "Receita"])
 
         if tipo:
             self.tipo_combo.setCurrentText(tipo)
 
-        form_layout.addRow("", self.tipo_combo)
+        form_layout.addRow(self.lbl_tipo, self.tipo_combo)
 
         layout.addLayout(form_layout)
 
@@ -42,48 +55,20 @@ class CategoriaDialog(QDialog):
             QDialogButtonBox.Ok | QDialogButtonBox.Cancel
         )
 
-        self.button_box.accepted.connect(self._validar)
-        self.button_box.rejected.connect(self.reject)
-
         layout.addWidget(self.button_box)
 
-        # 🔥 TRADUÇÃO INICIAL
-        self._apply_translation()
-
-        # 🔥 REATIVO (MUDA AO TROCAR IDIOMA)
-        TranslatorApp.bind(lambda _: self._apply_translation())
-
-    # ==================================================
-    # TRADUÇÃO
-    # ==================================================
-    def _apply_translation(self):
-
-        self.setWindowTitle(TranslatorApp.get("Categoria"))
-
-        # Labels do form
-        layout = self.layout().itemAt(0).layout()
-
-        layout.labelForField(self.nome_input).setText(
-            TranslatorApp.get("Nome") + ":"
+        # 🔥 BOTÕES REATIVOS
+        TranslatorApp.text(
+            self.button_box.button(QDialogButtonBox.Ok),
+            "OK"
+        )
+        TranslatorApp.text(
+            self.button_box.button(QDialogButtonBox.Cancel),
+            "Cancelar"
         )
 
-        layout.labelForField(self.tipo_combo).setText(
-            TranslatorApp.get("Tipo") + ":"
-        )
-
-        # Combo traduzido
-        TranslatorApp.combo(
-            self.tipo_combo,
-            ["Despesa", "Receita"]
-        )
-
-        # Botões
-        self.button_box.button(QDialogButtonBox.Ok).setText(
-            TranslatorApp.get("OK")
-        )
-        self.button_box.button(QDialogButtonBox.Cancel).setText(
-            TranslatorApp.get("Cancelar")
-        )
+        self.button_box.accepted.connect(self._validar)
+        self.button_box.rejected.connect(self.reject)
 
     # ==================================================
     # VALIDAÇÃO
@@ -107,5 +92,5 @@ class CategoriaDialog(QDialog):
 
         return {
             "Nome": self.nome_input.text().strip(),
-            "Tipo": self.tipo_combo.currentText()
+            "Tipo": self.tipo_combo.currentData()
         }

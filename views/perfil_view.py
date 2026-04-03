@@ -26,10 +26,19 @@ class PerfilView(QWidget):
         if not self.usuario:
             raise RuntimeError("Usuário não autenticado.")
 
-        # ✅ título da janela
+        self._is_bound = False
+
+        # título
         TranslatorApp.window_title(self, "Perfil do Usuário")
 
         self._init_ui()
+        self._apply_translation()
+        self._update_user_info()
+
+        # 🔥 bind correto
+        if not self._is_bound:
+            TranslatorApp.bind(self._on_translate)
+            self._is_bound = True
 
     # --------------------------------------------------
     # UI
@@ -43,16 +52,10 @@ class PerfilView(QWidget):
         self.titulo.setObjectName("pageTitle")
         self.layout.addWidget(self.titulo)
 
-        TranslatorApp.text(self.titulo, "Perfil do Usuário")
-
         # GRUPO
         self.grupo = QGroupBox()
         self.g_layout = QVBoxLayout(self.grupo)
-
         self.layout.addWidget(self.grupo)
-
-        # ✅ forma correta (sem usar __bind direto)
-        TranslatorApp.group(self.grupo, "Dados da Conta")
 
         # Labels dinâmicos
         self.lbl_nome = QLabel()
@@ -65,23 +68,30 @@ class PerfilView(QWidget):
         self.g_layout.addWidget(self.lbl_email)
         self.g_layout.addWidget(self.lbl_nivel)
 
-        # 🔥 dados reativos (mantido, mas correto)
-        TranslatorApp.__bind(self._update_user_info)
-
         # BOTÃO LOGOUT
         self.btn_logout = QPushButton()
         self.btn_logout.setObjectName("deleteButton")
         self.btn_logout.clicked.connect(self._confirmar_logout)
         self.layout.addWidget(self.btn_logout)
 
-        TranslatorApp.text(self.btn_logout, "Encerrar Sessão")
-
         self.layout.addStretch()
+
+    # --------------------------------------------------
+    # TRADUÇÃO
+    # --------------------------------------------------
+    def _on_translate(self, *_):
+        self._apply_translation()
+        self._update_user_info()
+
+    def _apply_translation(self):
+        TranslatorApp.text(self.titulo, "Perfil do Usuário")
+        TranslatorApp.group(self.grupo, "Dados da Conta")
+        TranslatorApp.text(self.btn_logout, "Encerrar Sessão")
 
     # --------------------------------------------------
     # DADOS DINÂMICOS
     # --------------------------------------------------
-    def _update_user_info(self, idioma):
+    def _update_user_info(self):
 
         self.lbl_nome.setText(
             f"{TranslatorApp.get('Nome')}: {self.usuario.get('Nome', '-')}"
@@ -93,7 +103,8 @@ class PerfilView(QWidget):
             f"{TranslatorApp.get('E-mail')}: {self.usuario.get('Email', '-')}"
         )
         self.lbl_nivel.setText(
-            f"{TranslatorApp.get('Nível de Acesso')}: {self.usuario.get('Nivel_Acesso', '-')}"
+            f"{TranslatorApp.get('Nível de Acesso')}: "
+            f"{self.usuario.get('Nivel_Acesso', '-')}"
         )
 
     # --------------------------------------------------

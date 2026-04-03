@@ -37,7 +37,7 @@ class BackupView(QWidget):
 
         self.setMinimumWidth(420)
 
-        # ✅ título da janela
+        # 🔥 título reativo
         TranslatorApp.window_title(self, "Backup e Restauração")
 
         self._init_ui()
@@ -51,13 +51,16 @@ class BackupView(QWidget):
         self.titulo = QLabel()
         self.titulo.setObjectName("pageTitle")
         self.titulo.setAlignment(Qt.AlignCenter)
-
         self.layout.addWidget(self.titulo)
 
+        TranslatorApp.text(self.titulo, "Backup e Restauração")
+
         self.label_senha = QLabel()
+        TranslatorApp.text(self.label_senha, "Senha do Backup")
 
         self.senha_input = QLineEdit()
         self.senha_input.setEchoMode(QLineEdit.Password)
+        TranslatorApp.placeholder(self.senha_input, "Digite a senha")
 
         self.layout.addWidget(self.label_senha)
         self.layout.addWidget(self.senha_input)
@@ -67,23 +70,18 @@ class BackupView(QWidget):
         self.btn_backup = QPushButton()
         self.btn_backup.setObjectName("primaryButton")
         self.btn_backup.clicked.connect(self.gerar_backup)
+        TranslatorApp.text(self.btn_backup, "Gerar Backup")
 
         self.btn_restaurar = QPushButton()
         self.btn_restaurar.setObjectName("secondaryButton")
         self.btn_restaurar.clicked.connect(self.restaurar_backup)
+        TranslatorApp.text(self.btn_restaurar, "Restaurar Backup")
 
         botoes.addWidget(self.btn_backup)
         botoes.addWidget(self.btn_restaurar)
 
         self.layout.addLayout(botoes)
         self.layout.addStretch()
-
-        # 🔥 TRADUÇÃO REATIVA
-        TranslatorApp.text(self.titulo, "Backup e Restauração")
-        TranslatorApp.text(self.label_senha, "Senha do Backup")
-        TranslatorApp.placeholder(self.senha_input, "Digite a senha")
-        TranslatorApp.text(self.btn_backup, "Gerar Backup")
-        TranslatorApp.text(self.btn_restaurar, "Restaurar Backup")
 
     # -------------------------------------------------
     # UTIL
@@ -128,7 +126,7 @@ class BackupView(QWidget):
             QMessageBox.information(
                 self,
                 TranslatorApp.get("Sucesso"),
-                f"{TranslatorApp.get('Backup gerado com sucesso')}:\n{arquivo}",
+                TranslatorApp.get("Backup gerado com sucesso") + f":\n{arquivo}",
             )
 
         except Exception as e:
@@ -162,7 +160,7 @@ class BackupView(QWidget):
             self,
             TranslatorApp.get("Selecionar arquivo de backup"),
             "",
-            "Backup (*.kp);;Todos os arquivos (*)",
+            f"{TranslatorApp.get('Backup')} (*.kp);;{TranslatorApp.get('Todos os arquivos')} (*)",
         )
 
         if not arquivo:

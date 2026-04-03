@@ -27,15 +27,10 @@ from views.resumo_financeiro_view import ResumoFinanceiroView
 from views.meta_view import MetaView
 from views.login_dialog import LoginDialog
 
-
 logger = logging.getLogger(__name__)
 
 
 class MainView(QMainWindow):
-
-    # ==================================================
-    # INIT
-    # ==================================================
 
     def __init__(self, usuario_logado):
         super().__init__()
@@ -53,7 +48,7 @@ class MainView(QMainWindow):
 
         self.setGeometry(100, 100, 1200, 800)
 
-        # 🔥 título traduzível
+        # ✅ título traduzível (reativo)
         TranslatorApp.window_title(self, "Controle Financeiro")
 
         self._init_ui()
@@ -67,7 +62,6 @@ class MainView(QMainWindow):
     # ==================================================
     # UI BASE
     # ==================================================
-
     def _init_ui(self):
 
         central = QWidget(self)
@@ -76,7 +70,6 @@ class MainView(QMainWindow):
         main_layout = QHBoxLayout(central)
         main_layout.setContentsMargins(0, 0, 0, 0)
 
-        # SIDEBAR
         self.sidebar = QWidget()
         self.sidebar.setObjectName("sidebar")
 
@@ -86,7 +79,6 @@ class MainView(QMainWindow):
 
         main_layout.addWidget(self.sidebar, 1)
 
-        # CONTENT
         self.content = QWidget()
         self.content_layout = QVBoxLayout(self.content)
         self.content_layout.setContentsMargins(20, 20, 20, 20)
@@ -95,9 +87,8 @@ class MainView(QMainWindow):
         main_layout.addWidget(self.content, 4)
 
     # ==================================================
-    # UTILIDADES
+    # UTIL
     # ==================================================
-
     def _is_admin(self):
         return (self.usuario.get("Nivel_Acesso") or "").lower() == "admin"
 
@@ -107,12 +98,7 @@ class MainView(QMainWindow):
 
         try:
             path = IonPath.resource("assets", "icons", f"{nome}.svg")
-
-            if not os.path.exists(path):
-                logger.warning(f"[Ícone não encontrado] {path}")
-                icon = QIcon()
-            else:
-                icon = QIcon(path)
+            icon = QIcon(path) if os.path.exists(path) else QIcon()
 
             self._icon_cache[nome] = icon
             return icon
@@ -124,7 +110,6 @@ class MainView(QMainWindow):
     # ==================================================
     # MENU PRINCIPAL
     # ==================================================
-
     def _criar_menu(self):
 
         def add_btn(texto_chave, view_cls, icon_name):
@@ -134,7 +119,7 @@ class MainView(QMainWindow):
             btn.setProperty("active", False)
             btn.setCursor(Qt.PointingHandCursor)
 
-            # 🔥 tradução automática
+            # ✅ tradução automática
             TranslatorApp.text(btn, texto_chave)
 
             btn.setIcon(self._icon(icon_name))
@@ -168,15 +153,17 @@ class MainView(QMainWindow):
     # ==================================================
     # BLOCO USUÁRIO
     # ==================================================
-
     def _criar_bloco_usuario(self):
 
-        self.lbl_usuario = QLabel(self.usuario.get("Nome", "Usuário"))
+        self.lbl_usuario = QLabel()
         self.lbl_usuario.setObjectName("sidebarUser")
         self.lbl_usuario.setAlignment(Qt.AlignLeft)
         self.lbl_usuario.setContentsMargins(15, 10, 10, 10)
         self.lbl_usuario.setCursor(Qt.PointingHandCursor)
         self.lbl_usuario.mousePressEvent = self._toggle_user_menu
+
+        # ✅ bind correto
+        TranslatorApp.bind(self._update_user_label)
 
         self.sidebar_layout.addWidget(self.lbl_usuario)
 
@@ -190,10 +177,13 @@ class MainView(QMainWindow):
 
         self._criar_menu_usuario()
 
+    def _update_user_label(self):
+        nome = self.usuario.get("Nome") or TranslatorApp.get("Usuário")
+        self.lbl_usuario.setText(nome)
+
     # ==================================================
     # MENU USUÁRIO
     # ==================================================
-
     def _criar_menu_usuario(self):
 
         def add_user_btn(texto_chave, view_cls, icon_name):
@@ -202,7 +192,6 @@ class MainView(QMainWindow):
             btn.setObjectName("menuButton")
             btn.setCursor(Qt.PointingHandCursor)
 
-            # 🔥 tradução automática
             TranslatorApp.text(btn, texto_chave)
 
             btn.setIcon(self._icon(icon_name))
@@ -227,9 +216,8 @@ class MainView(QMainWindow):
         add_user_btn("Backup e Restauração", BackupView, "backup")
 
     # ==================================================
-    # TOGGLE MENU USUÁRIO
+    # TOGGLE MENU
     # ==================================================
-
     def _toggle_user_menu(self, event=None):
         self._user_menu_expanded = not self._user_menu_expanded
         self.user_menu_container.setVisible(self._user_menu_expanded)
@@ -237,7 +225,6 @@ class MainView(QMainWindow):
     # ==================================================
     # NAVEGAÇÃO
     # ==================================================
-
     def _abrir_primeira_view(self):
         if self._menu_buttons:
             btn, view_cls = self._menu_buttons[0]
@@ -266,26 +253,31 @@ class MainView(QMainWindow):
 
         if self._current_widget:
             self.content_layout.removeWidget(self._current_widget)
-            self._current_widget.setParent(None)
             self._current_widget.deleteLater()
-            self._current_widget = None
 
-        
-        view = view_cls(parent=self)
+        try:
+            view = view_cls(parent=self)
 
-           
+            if hasattr(view, "usuario"):
+                view.usuario = self.usuario
+
+            if hasattr(view, "logout_requested"):
+                view.logout_requested.connect(self._logout)
+
+            if hasattr(view, "on_load"):
+                view.on_load()
+
+        except Exception:
+            logger.exception(f"Erro ao carregar view {view_cls.__name__}")
+            return
 
         self.content_layout.addWidget(view)
-
-        self._current_view_class = view_cls
         self._current_widget = view
-
-        logger.info(f"View carregada: {view_cls.__name__}")
+        self._current_view_class = view_cls
 
     # ==================================================
     # LOGOUT
     # ==================================================
-
     def _logout(self):
 
         self.close()
@@ -301,7 +293,6 @@ class MainView(QMainWindow):
     # ==================================================
     # TEMA
     # ==================================================
-
     def aplicar_tema(self):
         try:
             tema = Session.get_config("tema", "Claro")

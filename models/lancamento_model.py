@@ -295,20 +295,20 @@ class LancamentoModel(Database):
         return True
 
 
-   def existe_previsto(self, id_cartao, descricao, mes, ano, id_usuario):
+    def existe_previsto(self, id_cartao, descricao, mes, ano, id_usuario):
 
-    sql = """
-        SELECT 1
-        FROM lancamentos
-        WHERE ID_Cartao = ?
-          AND Descricao = ?
-          AND Competencia_Mes = ?
-          AND Competencia_Ano = ?
-          AND ID_Usuario = ?
-          AND Previsto = 1
-        LIMIT 1
-    """
+        sql = """
+            SELECT 1
+            FROM lancamentos
+            WHERE ID_Cartao = ?
+            AND Descricao = ?
+            AND Competencia_Mes = ?
+            AND Competencia_Ano = ?
+            AND ID_Usuario = ?
+            AND Previsto = 1
+            LIMIT 1
+        """
 
-    return self.fetch_one(sql, (
-        id_cartao, descricao, mes, ano, id_usuario
-    )) is not None
+        return self.fetch_one(sql, (
+            id_cartao, descricao, mes, ano, id_usuario
+        )) is not None

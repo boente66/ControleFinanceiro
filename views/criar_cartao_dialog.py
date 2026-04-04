@@ -22,27 +22,29 @@ class CriarCartaoDialog(QDialog):
 
         self.controller = FaturaController()
 
-        # 🔥 título reativo
-        TranslatorApp.window_title(self, "Cadastrar Cartão")
+        # 🔥 título base (auto traduzido)
+        self.setWindowTitle("Cadastrar Cartão")
 
         self.setMinimumWidth(360)
 
         self._init_ui()
 
+        # 🔥 ativa tradução automática
+        TranslatorApp.enable_auto_translation(self)
+
     def _init_ui(self):
         layout = QVBoxLayout(self)
 
         # Nome
-        self.lbl_nome = QLabel()
-        TranslatorApp.text(self.lbl_nome, "Nome do cartão")
+        self.lbl_nome = QLabel("Nome do cartão")
         layout.addWidget(self.lbl_nome)
 
         self.nome_edit = QLineEdit()
+        self.nome_edit.setPlaceholderText("Ex: Nubank, Itaú")
         layout.addWidget(self.nome_edit)
 
         # Limite
-        self.lbl_limite = QLabel()
-        TranslatorApp.text(self.lbl_limite, "Limite do cartão")
+        self.lbl_limite = QLabel("Limite do cartão")
         layout.addWidget(self.lbl_limite)
 
         self.limite_edit = QDoubleSpinBox()
@@ -52,8 +54,7 @@ class CriarCartaoDialog(QDialog):
         layout.addWidget(self.limite_edit)
 
         # Fechamento
-        self.lbl_fechamento = QLabel()
-        TranslatorApp.text(self.lbl_fechamento, "Dia de fechamento da fatura")
+        self.lbl_fechamento = QLabel("Dia de fechamento da fatura")
         layout.addWidget(self.lbl_fechamento)
 
         self.fechamento_edit = QSpinBox()
@@ -61,8 +62,7 @@ class CriarCartaoDialog(QDialog):
         layout.addWidget(self.fechamento_edit)
 
         # Vencimento
-        self.lbl_vencimento = QLabel()
-        TranslatorApp.text(self.lbl_vencimento, "Dia de vencimento da fatura")
+        self.lbl_vencimento = QLabel("Dia de vencimento da fatura")
         layout.addWidget(self.lbl_vencimento)
 
         self.vencimento_edit = QSpinBox()
@@ -70,19 +70,15 @@ class CriarCartaoDialog(QDialog):
         layout.addWidget(self.vencimento_edit)
 
         # Ativo
-        self.ativo_checkbox = QCheckBox()
-        TranslatorApp.text(self.ativo_checkbox, "Cartão ativo")
+        self.ativo_checkbox = QCheckBox("Cartão ativo")
         self.ativo_checkbox.setChecked(True)
         layout.addWidget(self.ativo_checkbox)
 
         # Botões
         btns = QHBoxLayout()
 
-        self.salvar_btn = QPushButton()
-        TranslatorApp.text(self.salvar_btn, "Salvar")
-
-        self.cancelar_btn = QPushButton()
-        TranslatorApp.text(self.cancelar_btn, "Cancelar")
+        self.salvar_btn = QPushButton("Salvar")
+        self.cancelar_btn = QPushButton("Cancelar")
 
         self.salvar_btn.clicked.connect(self._salvar)
         self.cancelar_btn.clicked.connect(self.reject)
@@ -91,6 +87,9 @@ class CriarCartaoDialog(QDialog):
         btns.addWidget(self.cancelar_btn)
         layout.addLayout(btns)
 
+    # --------------------------------------------------
+    # VALIDAÇÃO
+    # --------------------------------------------------
     def _validar(self):
         nome = self.nome_edit.text().strip()
 
@@ -112,6 +111,9 @@ class CriarCartaoDialog(QDialog):
 
         return True
 
+    # --------------------------------------------------
+    # SALVAR
+    # --------------------------------------------------
     def _salvar(self):
         if not self._validar():
             return
@@ -154,26 +156,27 @@ class EditCartaoDialog(QDialog):
         self.cartao = cartao or {}
         self.controller = FaturaController()
 
-        # 🔥 título reativo
-        TranslatorApp.window_title(self, "Editar Cartão")
+        # 🔥 título base (auto traduzido)
+        self.setWindowTitle("Editar Cartão")
 
         self.setMinimumWidth(360)
 
         self._init_ui()
         self._preencher_campos()
 
+        # 🔥 tradução automática
+        TranslatorApp.enable_auto_translation(self)
+
     def _init_ui(self):
         layout = QVBoxLayout(self)
 
-        self.lbl_nome = QLabel()
-        TranslatorApp.text(self.lbl_nome, "Nome do cartão")
+        self.lbl_nome = QLabel("Nome do cartão")
         layout.addWidget(self.lbl_nome)
 
         self.nome_edit = QLineEdit()
         layout.addWidget(self.nome_edit)
 
-        self.lbl_limite = QLabel()
-        TranslatorApp.text(self.lbl_limite, "Limite do cartão")
+        self.lbl_limite = QLabel("Limite do cartão")
         layout.addWidget(self.lbl_limite)
 
         self.limite_edit = QDoubleSpinBox()
@@ -182,33 +185,27 @@ class EditCartaoDialog(QDialog):
         self.limite_edit.setDecimals(2)
         layout.addWidget(self.limite_edit)
 
-        self.lbl_fechamento = QLabel()
-        TranslatorApp.text(self.lbl_fechamento, "Dia de fechamento da fatura")
+        self.lbl_fechamento = QLabel("Dia de fechamento da fatura")
         layout.addWidget(self.lbl_fechamento)
 
         self.fechamento_edit = QSpinBox()
         self.fechamento_edit.setRange(1, 31)
         layout.addWidget(self.fechamento_edit)
 
-        self.lbl_vencimento = QLabel()
-        TranslatorApp.text(self.lbl_vencimento, "Dia de vencimento da fatura")
+        self.lbl_vencimento = QLabel("Dia de vencimento da fatura")
         layout.addWidget(self.lbl_vencimento)
 
         self.vencimento_edit = QSpinBox()
         self.vencimento_edit.setRange(1, 31)
         layout.addWidget(self.vencimento_edit)
 
-        self.ativo_checkbox = QCheckBox()
-        TranslatorApp.text(self.ativo_checkbox, "Cartão ativo")
+        self.ativo_checkbox = QCheckBox("Cartão ativo")
         layout.addWidget(self.ativo_checkbox)
 
         btns = QHBoxLayout()
 
-        self.salvar_btn = QPushButton()
-        TranslatorApp.text(self.salvar_btn, "Salvar")
-
-        self.cancelar_btn = QPushButton()
-        TranslatorApp.text(self.cancelar_btn, "Cancelar")
+        self.salvar_btn = QPushButton("Salvar")
+        self.cancelar_btn = QPushButton("Cancelar")
 
         self.salvar_btn.clicked.connect(self._salvar)
         self.cancelar_btn.clicked.connect(self.reject)
@@ -225,7 +222,9 @@ class EditCartaoDialog(QDialog):
         self.ativo_checkbox.setChecked(bool(self.cartao.get("ativo", 1)))
 
     def _salvar(self):
-        if not self.nome_edit.text().strip():
+        nome = self.nome_edit.text().strip()
+
+        if not nome:
             QMessageBox.warning(
                 self,
                 TranslatorApp.get("Atenção"),
@@ -234,7 +233,7 @@ class EditCartaoDialog(QDialog):
             return
 
         dados = {
-            "nome": self.nome_edit.text().strip(),
+            "nome": nome,
             "limite": round(self.limite_edit.value(), 2),
             "dia_fechamento": self.fechamento_edit.value(),
             "dia_vencimento": self.vencimento_edit.value(),

@@ -22,22 +22,16 @@ class MetaDialog(QDialog):
         self.controller = MetaController()
         self.category_controller = CategoryController()
 
-        self._is_bound = False
-
-        # título traduzível
-        TranslatorApp.window_title(self, "Nova Meta")
+        # 🔥 título base
+        self.setWindowTitle("Nova Meta")
 
         self.setMinimumWidth(400)
 
         self._init_ui()
-        self._apply_translation()
-
         self._carregar_categorias()
 
-        # 🔥 bind correto
-        if not self._is_bound:
-            TranslatorApp.bind(self._on_translate)
-            self._is_bound = True
+        # 🔥 tradução automática global
+        TranslatorApp.enable_auto_translation(self)
 
     # ==================================================
     # UI
@@ -47,41 +41,40 @@ class MetaDialog(QDialog):
         layout = QVBoxLayout(self)
 
         # Nome
-        self.lbl_nome = QLabel()
+        self.lbl_nome = QLabel("Nome da Meta")
         layout.addWidget(self.lbl_nome)
 
         self.input_nome = QLineEdit()
         layout.addWidget(self.input_nome)
 
         # Tipo
-        self.lbl_tipo = QLabel()
+        self.lbl_tipo = QLabel("Tipo")
         layout.addWidget(self.lbl_tipo)
 
         self.combo_tipo = QComboBox()
-        self.combo_tipo.addItems([
-            "Categoria",
-            "Economia",
-            "Objetivo"
-        ])
+        self.combo_tipo.addItem("Categoria", "Categoria")
+        self.combo_tipo.addItem("Economia", "Economia")
+        self.combo_tipo.addItem("Objetivo", "Objetivo")
         self.combo_tipo.currentTextChanged.connect(self._alterar_tipo)
         layout.addWidget(self.combo_tipo)
 
         # Categoria
-        self.lbl_categoria = QLabel()
+        self.lbl_categoria = QLabel("Categoria")
         layout.addWidget(self.lbl_categoria)
 
         self.combo_categoria = QComboBox()
         layout.addWidget(self.combo_categoria)
 
         # Valor alvo
-        self.lbl_valor = QLabel()
+        self.lbl_valor = QLabel("Valor Alvo")
         layout.addWidget(self.lbl_valor)
 
         self.input_valor = QLineEdit()
+        self.input_valor.setPlaceholderText("Ex: 1500,00")
         layout.addWidget(self.input_valor)
 
         # Datas
-        self.lbl_inicio = QLabel()
+        self.lbl_inicio = QLabel("Data Início")
         layout.addWidget(self.lbl_inicio)
 
         self.data_inicio = QDateEdit()
@@ -89,7 +82,7 @@ class MetaDialog(QDialog):
         self.data_inicio.setDate(QDate.currentDate())
         layout.addWidget(self.data_inicio)
 
-        self.lbl_fim = QLabel()
+        self.lbl_fim = QLabel("Data Fim")
         layout.addWidget(self.lbl_fim)
 
         self.data_fim = QDateEdit()
@@ -100,11 +93,11 @@ class MetaDialog(QDialog):
         # Botões
         botoes = QHBoxLayout()
 
-        self.btn_salvar = QPushButton()
+        self.btn_salvar = QPushButton("Salvar")
         self.btn_salvar.setObjectName("addButton")
         self.btn_salvar.clicked.connect(self._salvar)
 
-        self.btn_cancelar = QPushButton()
+        self.btn_cancelar = QPushButton("Cancelar")
         self.btn_cancelar.clicked.connect(self.reject)
 
         botoes.addWidget(self.btn_salvar)
@@ -113,26 +106,6 @@ class MetaDialog(QDialog):
         layout.addLayout(botoes)
 
         self._alterar_tipo("Categoria")
-
-    # ==================================================
-    # TRADUÇÃO
-    # ==================================================
-    def _on_translate(self, *_):
-        self._apply_translation()
-
-    def _apply_translation(self):
-
-        TranslatorApp.text(self.lbl_nome, "Nome da Meta")
-        TranslatorApp.text(self.lbl_tipo, "Tipo")
-        TranslatorApp.text(self.lbl_categoria, "Categoria")
-        TranslatorApp.text(self.lbl_valor, "Valor Alvo")
-        TranslatorApp.text(self.lbl_inicio, "Data Início")
-        TranslatorApp.text(self.lbl_fim, "Data Fim")
-
-        TranslatorApp.text(self.btn_salvar, "Salvar")
-        TranslatorApp.text(self.btn_cancelar, "Cancelar")
-
-        TranslatorApp.placeholder(self.input_valor, "Ex: 1500,00")
 
     # ==================================================
     # CARREGAR CATEGORIAS

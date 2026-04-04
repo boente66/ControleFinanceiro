@@ -3,11 +3,20 @@ import os
 from datetime import datetime
 
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
-    QToolButton, QLabel, QMessageBox,
-    QFileDialog, QAbstractItemView,
-    QInputDialog, QProgressDialog,
-    QComboBox, QLineEdit
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QTableWidget,
+    QTableWidgetItem,
+    QToolButton,
+    QLabel,
+    QMessageBox,
+    QFileDialog,
+    QAbstractItemView,
+    QInputDialog,
+    QProgressDialog,
+    QComboBox,
+    QLineEdit,
 )
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QColor, QFont, QIcon
@@ -18,6 +27,7 @@ from controllers.favorecido_controller import FavorecidoController
 from controllers.ia_import_controller import IAImportController
 from controllers.ia_export_controller import IAExportController
 
+from core.translator_binding import TranslatorBinding
 from views.TransactionDialog import TransactionDialog
 from views.TransferDialog import TransferDialog
 from views.editar_transacao_dialog import EditTransactionDialog
@@ -26,7 +36,6 @@ from utilitarios.currency_formatter import CurrencyFormatter
 from utilitarios.date_formatter import DateFormatter
 from utilitarios.ion_path import IonPath
 
-from core.theme_manager import ThemeManager
 from core.translator_app import TranslatorApp
 
 logger = logging.getLogger(__name__)
@@ -38,7 +47,7 @@ class PainelAccount(QWidget):
         ("MES", "Mês Atual"),
         ("3M", "Últimos 3 Meses"),
         ("ANO", "Ano Atual"),
-        ("ALL", "Todos")
+        ("ALL", "Todos"),
     ]
 
     def __init__(self, parent=None):
@@ -65,8 +74,7 @@ class PainelAccount(QWidget):
 
         self._montar_ui()
 
-        # 🔥 REATIVIDADE GLOBAL
-        TranslatorApp.bind(self._on_translate)
+        TranslatorBinding.bind(self._on_translate)
 
     # ==================================================
     # REATIVIDADE
@@ -80,33 +88,20 @@ class PainelAccount(QWidget):
         self.progress_bar.setCancelButtonText(TranslatorApp.get("Cancelar"))
 
     # ==================================================
-    # ÍCONES
-    # ==================================================
-    def _icon(self, nome):
-        if nome in self._icon_cache:
-            return self._icon_cache[nome]
-
-        path = IonPath.resource("assets", "icons", f"{nome}.svg")
-        icon = QIcon(path) if os.path.exists(path) else QIcon()
-
-        self._icon_cache[nome] = icon
-        return icon
-
-    # ==================================================
     # UI
     # ==================================================
     def _montar_ui(self):
         layout = QVBoxLayout(self)
 
+        # TOOLBAR
         toolbar = QHBoxLayout()
 
-        def btn(chave, icon, fn):
+        def btn(texto, icon, fn):
             b = QToolButton()
-            TranslatorApp.text(b, chave)
+            b.setText(TranslatorApp.get(texto))
             b.setIcon(self._icon(icon))
             b.setIconSize(QSize(18, 18))
             b.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
-            b.setCursor(Qt.PointingHandCursor)
             b.clicked.connect(fn)
             return b
 
@@ -121,15 +116,11 @@ class PainelAccount(QWidget):
 
         self.combo_filtro = QComboBox()
         for key, label in self.FILTROS:
-            self.combo_filtro.addItem(label, key)
+            self.combo_filtro.addItem(TranslatorApp.get(label), key)
 
-        TranslatorApp.combo(self.combo_filtro, [l for _, l in self.FILTROS])
         self.combo_filtro.currentIndexChanged.connect(self.carregar_historico)
 
-        self.lbl_periodo = QLabel()
-        TranslatorApp.text(self.lbl_periodo, "Período:")
-
-        toolbar.addWidget(self.lbl_periodo)
+        toolbar.addWidget(QLabel(TranslatorApp.get("Período")))
         toolbar.addWidget(self.combo_filtro)
 
         layout.addLayout(toolbar)
@@ -137,14 +128,13 @@ class PainelAccount(QWidget):
         # BUSCA
         busca_layout = QHBoxLayout()
 
-        self.lbl_busca = QLabel()
-        TranslatorApp.text(self.lbl_busca, "Buscar:")
-
         self.input_busca = QLineEdit()
-        TranslatorApp.placeholder(self.input_busca, "Buscar descrição ou favorecido")
+        self.input_busca.setPlaceholderText(
+            TranslatorApp.get("Buscar descrição ou favorecido")
+        )
         self.input_busca.textChanged.connect(self._filtrar)
 
-        busca_layout.addWidget(self.lbl_busca)
+        busca_layout.addWidget(QLabel(TranslatorApp.get("Buscar")))
         busca_layout.addWidget(self.input_busca)
 
         layout.addLayout(busca_layout)
@@ -154,8 +144,16 @@ class PainelAccount(QWidget):
 
         TranslatorApp.table_headers(
             self.table,
-            ["Data", "Número", "Descrição", "Favorecido",
-             "Categoria", "Receita", "Despesa", "Saldo"]
+            [
+                "Data",
+                "Número",
+                "Descrição",
+                "Favorecido",
+                "Categoria",
+                "Receita",
+                "Despesa",
+                "Saldo",
+            ],
         )
 
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -181,8 +179,19 @@ class PainelAccount(QWidget):
 
         layout.addLayout(pag)
 
+        # RESUMO
         self.resumo = QLabel()
         layout.addWidget(self.resumo)
+
+    def _icon(self, nome):
+        if nome in self._icon_cache:
+            return self._icon_cache[nome]
+
+        path = IonPath.resource("assets", "icons", f"{nome}.svg")
+        icon = QIcon(path) if os.path.exists(path) else QIcon()
+
+        self._icon_cache[nome] = icon
+        return icon
 
     # ==================================================
     # CONTA
@@ -195,14 +204,14 @@ class PainelAccount(QWidget):
     # HISTÓRICO
     # ==================================================
     def carregar_historico(self):
+
         if not self.conta:
             return
 
         inicio, fim = self._obter_periodo()
 
         transacoes = self.transaction_controller.get_transactions_by_account_periodo(
-            self.conta["ID_Conta"],
-            (inicio, fim)
+            self.conta["ID_Conta"], (inicio, fim)
         )
 
         self.dados_completos = transacoes or []
@@ -210,9 +219,6 @@ class PainelAccount(QWidget):
 
         self._aplicar()
 
-    # ==================================================
-    # PERÍODO (CORRETO)
-    # ==================================================
     def _obter_periodo(self):
         hoje = datetime.today()
         filtro = self.combo_filtro.currentData()
@@ -220,12 +226,8 @@ class PainelAccount(QWidget):
         if filtro == "MES":
             inicio = datetime(hoje.year, hoje.month, 1)
         elif filtro == "3M":
-            mes = hoje.month - 2
-            ano = hoje.year
-            if mes <= 0:
-                mes += 12
-                ano -= 1
-            inicio = datetime(ano, mes, 1)
+            mes = max(1, hoje.month - 2)
+            inicio = datetime(hoje.year, mes, 1)
         elif filtro == "ANO":
             inicio = datetime(hoje.year, 1, 1)
         else:
@@ -234,7 +236,7 @@ class PainelAccount(QWidget):
         return inicio.strftime("%Y-%m-%d"), hoje.strftime("%Y-%m-%d")
 
     # ==================================================
-    # FILTRO / PAGINAÇÃO
+    # FILTRO
     # ==================================================
     def _filtrar(self):
         self.texto_busca = self.input_busca.text().lower()
@@ -242,23 +244,22 @@ class PainelAccount(QWidget):
         self._aplicar()
 
     def _aplicar(self):
+
         dados = self.dados_completos
 
         if self.texto_busca:
             dados = [
-                t for t in dados
+                t
+                for t in dados
                 if self.texto_busca in str(t.get("Descricao", "")).lower()
                 or self.texto_busca in str(t.get("Favorecido", "")).lower()
             ]
 
         inicio = self.pagina_atual * self.itens_por_pagina
         fim = inicio + self.itens_por_pagina
-
         pagina = dados[inicio:fim]
 
-        self.lbl_page.setText(
-            f"{TranslatorApp.get('Página')} {self.pagina_atual + 1}"
-        )
+        self.lbl_page.setText(f"{TranslatorApp.get('Página')} {self.pagina_atual + 1}")
 
         self._preencher(pagina)
 
@@ -287,7 +288,9 @@ class PainelAccount(QWidget):
             r = self.table.rowCount()
             self.table.insertRow(r)
 
-            self.table.setItem(r, 0, QTableWidgetItem(DateFormatter.iso_to_br(t["Data"])))
+            self.table.setItem(
+                r, 0, QTableWidgetItem(DateFormatter.iso_to_br(t["Data"]))
+            )
             self.table.setItem(r, 1, QTableWidgetItem(str(t["ID_Transacao"])))
             self.table.setItem(r, 2, QTableWidgetItem(t.get("Descricao", "")))
             self.table.setItem(r, 3, QTableWidgetItem(str(t.get("Favorecido", ""))))
@@ -298,14 +301,14 @@ class PainelAccount(QWidget):
             if valor > 0:
                 receitas += valor
                 item = QTableWidgetItem(CurrencyFormatter.format(valor))
-                item.setForeground(QColor(ThemeManager.get_finance_color("receita") or "green"))
+                item.setForeground(QColor("green"))
                 self.table.setItem(r, 5, item)
                 self.table.setItem(r, 6, QTableWidgetItem(""))
             else:
                 despesas += abs(valor)
                 self.table.setItem(r, 5, QTableWidgetItem(""))
                 item = QTableWidgetItem(CurrencyFormatter.format(abs(valor)))
-                item.setForeground(QColor(ThemeManager.get_finance_color("despesa") or "red"))
+                item.setForeground(QColor("red"))
                 self.table.setItem(r, 6, item)
 
             saldo += valor
@@ -320,22 +323,11 @@ class PainelAccount(QWidget):
             f"{TranslatorApp.get('Saldo')}: {CurrencyFormatter.format(saldo)}"
         )
 
-
-
-     # 🔽 ADICIONE ISSO NO FINAL DA CLASSE (complemento do código anterior)
-
     # ==================================================
     # AÇÕES
     # ==================================================
     def add_transaction(self):
-        if not self.conta:
-            return
-
-        dlg = TransactionDialog(
-            self,
-            contexto="conta",
-            id_contexto=self.conta["ID_Conta"]
-        )
+        dlg = TransactionDialog(self, "conta", self.conta["ID_Conta"])
         if dlg.exec_():
             self.carregar_historico()
 
@@ -346,35 +338,19 @@ class PainelAccount(QWidget):
 
     def edit_transaction(self):
         row = self.table.currentRow()
-
         if row < 0:
-            QMessageBox.information(
-                self,
-                TranslatorApp.get("Editar"),
-                TranslatorApp.get("Selecione uma transação")
-            )
             return
 
         id_transacao = int(self.table.item(row, 1).text())
-
-        transacao = self.transaction_controller.get_transaction_by_id(
-            id_transacao
-        )
+        transacao = self.transaction_controller.get_transaction_by_id(id_transacao)
 
         dlg = EditTransactionDialog(transacao, self)
-
         if dlg.exec_():
             self.carregar_historico()
 
     def delete_transaction(self):
         row = self.table.currentRow()
-
         if row < 0:
-            QMessageBox.information(
-                self,
-                TranslatorApp.get("Excluir"),
-                TranslatorApp.get("Selecione uma transação")
-            )
             return
 
         id_transacao = int(self.table.item(row, 1).text())
@@ -383,7 +359,7 @@ class PainelAccount(QWidget):
             self,
             TranslatorApp.get("Excluir"),
             TranslatorApp.get("Deseja realmente excluir esta transação"),
-            QMessageBox.Yes | QMessageBox.No
+            QMessageBox.Yes | QMessageBox.No,
         )
 
         if confirm == QMessageBox.Yes:
@@ -396,59 +372,39 @@ class PainelAccount(QWidget):
     def importar_extrato(self):
 
         if not self.conta:
-            QMessageBox.warning(
-                self,
-                TranslatorApp.get("Importar"),
-                TranslatorApp.get("Nenhuma conta selecionada")
-            )
             return
 
         arquivo, _ = QFileDialog.getOpenFileName(
             self,
             TranslatorApp.get("Selecionar extrato"),
             "",
-            "CSV (*.csv);;Excel (*.xlsx);;PDF (*.pdf)"
+            "CSV (*.csv);;Excel (*.xlsx);;PDF (*.pdf)",
         )
 
         if not arquivo:
             return
 
-        confirm = QMessageBox.question(
-            self,
-            TranslatorApp.get("Confirmar Importação"),
-            f"{TranslatorApp.get('Deseja importar')}:\n{arquivo}",
-            QMessageBox.Yes | QMessageBox.No
-        )
-
-        if confirm != QMessageBox.Yes:
-            return
-
         try:
             self.progress_bar.setValue(0)
-            self._update_progress_text()
             self.progress_bar.show()
 
             self.ia_import_controller.importar_arquivo(
                 conta=self.conta,
                 caminho=arquivo,
-                progress_callback=self._mostrar_progresso_importacao
+                progress_callback=self._mostrar_progresso_importacao,
             )
 
             QMessageBox.information(
                 self,
                 TranslatorApp.get("Sucesso"),
-                TranslatorApp.get("Importação concluída")
+                TranslatorApp.get("Importação concluída"),
             )
 
             self.carregar_historico()
 
         except Exception as e:
             logger.exception("Erro ao importar")
-            QMessageBox.critical(
-                self,
-                TranslatorApp.get("Erro"),
-                str(e)
-            )
+            QMessageBox.critical(self, TranslatorApp.get("Erro"), str(e))
 
     # ==================================================
     # EXPORTAÇÃO
@@ -456,11 +412,6 @@ class PainelAccount(QWidget):
     def exportar_extrato(self):
 
         if not self.conta:
-            QMessageBox.warning(
-                self,
-                TranslatorApp.get("Exportar"),
-                TranslatorApp.get("Nenhuma conta selecionada")
-            )
             return
 
         formato, ok = QInputDialog.getItem(
@@ -469,7 +420,7 @@ class PainelAccount(QWidget):
             TranslatorApp.get("Formato"),
             ["CSV", "XLSX", "PDF"],
             0,
-            False
+            False,
         )
 
         if not ok:
@@ -479,7 +430,7 @@ class PainelAccount(QWidget):
             self,
             TranslatorApp.get("Salvar extrato"),
             "",
-            f"{formato} (*.{formato.lower()})"
+            f"{formato} (*.{formato.lower()})",
         )
 
         if not arquivo:
@@ -488,9 +439,10 @@ class PainelAccount(QWidget):
         try:
             inicio, fim = self._obter_periodo()
 
-            transacoes = self.transaction_controller.get_transactions_by_account_periodo(
-                self.conta["ID_Conta"],
-                (inicio, fim)
+            transacoes = (
+                self.transaction_controller.get_transactions_by_account_periodo(
+                    self.conta["ID_Conta"], (inicio, fim)
+                )
             )
 
             self.ia_export_controller.exportar_extrato_conta(
@@ -499,22 +451,18 @@ class PainelAccount(QWidget):
                 data_inicio=inicio,
                 data_fim=fim,
                 formato=formato,
-                caminho=arquivo
+                caminho=arquivo,
             )
 
             QMessageBox.information(
                 self,
                 TranslatorApp.get("Sucesso"),
-                TranslatorApp.get("Exportação concluída")
+                TranslatorApp.get("Exportação concluída"),
             )
 
         except Exception as e:
             logger.exception("Erro ao exportar")
-            QMessageBox.critical(
-                self,
-                TranslatorApp.get("Erro"),
-                str(e)
-            )
+            QMessageBox.critical(self, TranslatorApp.get("Erro"), str(e))
 
     # ==================================================
     # PROGRESSO

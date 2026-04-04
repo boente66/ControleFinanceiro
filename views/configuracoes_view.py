@@ -20,10 +20,14 @@ class ConfiguracoesView(QWidget):
 
         self.controller = UserController()
 
-        TranslatorApp.window_title(self, "Configurações")
+        # 🔥 título base (auto traduzido)
+        self.setWindowTitle("Configurações")
 
         self._init_ui()
         self._load_config()
+
+        # 🔥 ativa tradução automática global
+        TranslatorApp.enable_auto_translation(self)
 
     # ==================================================
     # UI
@@ -34,17 +38,15 @@ class ConfiguracoesView(QWidget):
         # =====================
         # TÍTULO
         # =====================
-        self.titulo_label = QLabel()
+        self.titulo_label = QLabel("Configurações")
         self.titulo_label.setObjectName("pageTitle")
         self.layout.addWidget(self.titulo_label)
-        TranslatorApp.text(self.titulo_label, "Configurações")
 
         # =====================
         # IDIOMA
         # =====================
-        self.idioma_label = QLabel()
+        self.idioma_label = QLabel("Idioma")
         self.layout.addWidget(self.idioma_label)
-        TranslatorApp.text(self.idioma_label, "Idioma")
 
         self.idioma_combo = QComboBox()
         self.layout.addWidget(self.idioma_combo)
@@ -64,9 +66,8 @@ class ConfiguracoesView(QWidget):
         # =====================
         # TEMA
         # =====================
-        self.tema_label = QLabel()
+        self.tema_label = QLabel("Tema")
         self.layout.addWidget(self.tema_label)
-        TranslatorApp.text(self.tema_label, "Tema")
 
         self.tema_combo = QComboBox()
         self.layout.addWidget(self.tema_combo)
@@ -76,15 +77,13 @@ class ConfiguracoesView(QWidget):
         self.tema_combo.addItems(available_themes())
         self.tema_combo.blockSignals(False)
 
-        # 🔥 troca em tempo real (corrigido)
         self.tema_combo.currentTextChanged.connect(self._on_tema_changed)
 
         # =====================
         # MOEDA
         # =====================
-        self.moeda_label = QLabel()
+        self.moeda_label = QLabel("Moeda")
         self.layout.addWidget(self.moeda_label)
-        TranslatorApp.text(self.moeda_label, "Moeda")
 
         self.moeda_combo = QComboBox()
         self.layout.addWidget(self.moeda_combo)
@@ -97,12 +96,10 @@ class ConfiguracoesView(QWidget):
         # =====================
         # BOTÃO SALVAR
         # =====================
-        self.salvar_btn = QPushButton()
+        self.salvar_btn = QPushButton("Salvar")
         self.salvar_btn.setObjectName("primaryButton")
         self.salvar_btn.clicked.connect(self.salvar_configuracoes)
         self.layout.addWidget(self.salvar_btn)
-
-        TranslatorApp.text(self.salvar_btn, "Salvar")
 
         self.layout.addStretch()
 
@@ -112,18 +109,24 @@ class ConfiguracoesView(QWidget):
     def _on_idioma_changed(self):
         idioma = self.idioma_combo.currentData()
 
-        # 🔥 troca instantânea
-        TranslatorApp.set_language(idioma)
+        if not idioma:
+            return
+
+        try:
+            # 🔥 troca instantânea global
+            TranslatorApp.set_language(idioma)
+        except Exception:
+            logger.exception("Erro ao trocar idioma")
 
     def _on_tema_changed(self, tema):
-        """
-        🔥 aplica tema em tempo real corretamente
-        """
+        if not tema:
+            return
+
         try:
-            app = QApplication.instance()
-            ThemeManager.definir_tema(tema, app)
+            # 🔥 aplicação correta (ThemeManager já resolve app internamente)
+            ThemeManager.definir_tema(tema)
         except Exception:
-            logger.exception("Erro ao trocar tema em tempo real")
+            logger.exception("Erro ao trocar tema")
 
     # ==================================================
     # LOAD CONFIG
@@ -134,9 +137,10 @@ class ConfiguracoesView(QWidget):
         tema = ThemeManager.tema_atual()
         moeda = Session.get_config("moeda", "BRL")
 
-        # 🔥 evita trigger durante load
+        # 🔥 evita disparar eventos durante load
         self.idioma_combo.blockSignals(True)
         self.tema_combo.blockSignals(True)
+        self.moeda_combo.blockSignals(True)
 
         self._set_combo_by_data(self.idioma_combo, idioma)
         self.tema_combo.setCurrentText(tema)
@@ -144,6 +148,7 @@ class ConfiguracoesView(QWidget):
 
         self.idioma_combo.blockSignals(False)
         self.tema_combo.blockSignals(False)
+        self.moeda_combo.blockSignals(False)
 
     # ==================================================
     # UTIL

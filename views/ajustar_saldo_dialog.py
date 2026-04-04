@@ -30,10 +30,16 @@ class AjustarSaldoDialog(QDialog):
 
         self.setMinimumWidth(300)
 
-        # 🔥 título reativo
-        TranslatorApp.window_title(self, "Ajustar Saldo da Conta")
-
         self._init_ui()
+
+        # 🔥 título base
+        self.setWindowTitle("Ajustar Saldo da Conta")
+
+        # 🔥 tradução automática global
+        TranslatorApp.enable_auto_translation(self)
+
+        # 🔥 garante atualização dinâmica do nome da conta ao trocar idioma
+        TranslatorApp.auto(self.lbl_conta, self._get_conta_text)
 
     # --------------------------------------------------
     # UI
@@ -41,40 +47,34 @@ class AjustarSaldoDialog(QDialog):
     def _init_ui(self):
         layout = QVBoxLayout(self)
 
-        # Conta (🔥 dinâmico → sem bind)
+        # Conta (dinâmico)
         self.lbl_conta = QLabel()
         layout.addWidget(self.lbl_conta)
-        self._update_conta_label()
 
         # Label saldo
-        self.lbl_saldo = QLabel()
+        self.lbl_saldo = QLabel("Novo saldo:")
         layout.addWidget(self.lbl_saldo)
-        TranslatorApp.text(self.lbl_saldo, "Novo saldo:")
 
         # Input
         self.saldo_edit = QLineEdit()
-        TranslatorApp.placeholder(self.saldo_edit, "Ex: 1500,00")
+        self.saldo_edit.setPlaceholderText("Ex: 1500,00")
         layout.addWidget(self.saldo_edit)
 
         # Botão salvar
-        self.btn_salvar = QPushButton()
+        self.btn_salvar = QPushButton("Salvar Ajuste")
         self.btn_salvar.clicked.connect(self.salvar)
         layout.addWidget(self.btn_salvar)
-        TranslatorApp.text(self.btn_salvar, "Salvar Ajuste")
 
         # Botão cancelar
-        self.btn_cancelar = QPushButton()
+        self.btn_cancelar = QPushButton("Cancelar")
         self.btn_cancelar.clicked.connect(self.reject)
         layout.addWidget(self.btn_cancelar)
-        TranslatorApp.text(self.btn_cancelar, "Cancelar")
 
     # --------------------------------------------------
-    # TEXTO DINÂMICO
+    # TEXTO DINÂMICO (AGORA REATIVO)
     # --------------------------------------------------
-    def _update_conta_label(self):
-        self.lbl_conta.setText(
-            f"{TranslatorApp.get('Conta')}: {self.conta.get('Nome_Conta', '')}"
-        )
+    def _get_conta_text(self):
+        return f"{TranslatorApp.get('Conta')}: {self.conta.get('Nome_Conta', '')}"
 
     # --------------------------------------------------
     # AÇÃO

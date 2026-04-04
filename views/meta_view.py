@@ -10,6 +10,7 @@ from views.meta_dialog import MetaDialog
 
 from utilitarios.currency_formatter import CurrencyFormatter
 from core.translator_app import TranslatorApp
+from core.translator_binding import TranslatorBinding
 
 logger = logging.getLogger(__name__)
 
@@ -21,13 +22,14 @@ class MetaView(QWidget):
 
         self.controller = MetaController()
 
-        TranslatorApp.window_title(self, "Metas Financeiras")
+        # 🔥 título base
+        self.setWindowTitle("Metas Financeiras")
 
         self._init_ui()
         self.carregar_metas()
 
-        # 🔥 REATIVIDADE NECESSÁRIA (TELA DINÂMICA)
-        TranslatorApp.bind(self._on_translate)
+        # 🔥 reatividade SOMENTE para recarregar dados
+        TranslatorBinding.bind(self._on_translate)
 
     # ==================================================
     # REATIVIDADE
@@ -42,16 +44,14 @@ class MetaView(QWidget):
 
         self.layout_principal = QVBoxLayout(self)
 
-        self.titulo = QLabel()
+        self.titulo = QLabel("Metas Financeiras")
         self.titulo.setObjectName("pageTitle")
         self.titulo.setAlignment(Qt.AlignCenter)
-        TranslatorApp.text(self.titulo, "Metas Financeiras")
 
         self.layout_principal.addWidget(self.titulo)
 
-        self.btn_nova = QPushButton()
+        self.btn_nova = QPushButton("Nova Meta")
         self.btn_nova.setObjectName("addButton")
-        TranslatorApp.text(self.btn_nova, "Nova Meta")
         self.btn_nova.clicked.connect(self._nova_meta)
 
         self.layout_principal.addWidget(self.btn_nova)
@@ -72,6 +72,7 @@ class MetaView(QWidget):
     # ==================================================
     def carregar_metas(self):
 
+        # limpa layout
         for i in reversed(range(self.container_layout.count())):
             item = self.container_layout.itemAt(i)
             widget = item.widget()
@@ -81,8 +82,7 @@ class MetaView(QWidget):
         metas = self.controller.listar_metas_ativas()
 
         if not metas:
-            label = QLabel()
-            TranslatorApp.text(label, "Nenhuma meta cadastrada")
+            label = QLabel(TranslatorApp.get("Nenhuma meta cadastrada"))
             self.container_layout.addWidget(label)
             self.container_layout.addStretch()
             return
@@ -120,9 +120,7 @@ class MetaView(QWidget):
         progress_bar.setValue(min(int(progresso["percentual"]), 100))
         layout.addWidget(progress_bar)
 
-        # 🔥 TEXTO REATIVO CORRETO
-        restante_label = QLabel()
-        restante_label.setText(
+        restante_label = QLabel(
             f"{TranslatorApp.get('Restante')}: "
             f"{CurrencyFormatter.format(progresso['restante'])}"
         )
@@ -142,15 +140,13 @@ class MetaView(QWidget):
 
         botoes_layout = QHBoxLayout()
 
-        btn_concluir = QPushButton()
-        TranslatorApp.text(btn_concluir, "Concluir")
+        btn_concluir = QPushButton(TranslatorApp.get("Concluir"))
         btn_concluir.clicked.connect(
             lambda: self._concluir(meta["ID_Meta"])
         )
 
-        btn_excluir = QPushButton()
+        btn_excluir = QPushButton(TranslatorApp.get("Excluir"))
         btn_excluir.setObjectName("deleteButton")
-        TranslatorApp.text(btn_excluir, "Excluir")
         btn_excluir.clicked.connect(
             lambda: self._excluir(meta["ID_Meta"])
         )

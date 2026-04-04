@@ -18,16 +18,23 @@ class EditarContaDialog(QDialog):
 
         self.conta = conta
         self.usuario = Session.get_usuario()
+
+        if not self.usuario:
+            raise ValueError("Usuário não autenticado")
+
         self.id_usuario = self.usuario["ID_Usuario"]
 
         self.controller = AccountController()
 
-        # 🔥 título reativo
-        TranslatorApp.window_title(self, "Editar Conta")
+        # 🔥 título base (auto traduzido)
+        self.setWindowTitle("Editar Conta")
 
         self.setMinimumWidth(400)
 
         self._init_ui()
+
+        # 🔥 tradução automática global
+        TranslatorApp.enable_auto_translation(self)
 
     # --------------------------------------------------
     # UI
@@ -36,42 +43,48 @@ class EditarContaDialog(QDialog):
         layout = QVBoxLayout(self)
 
         # Nome
-        self.lbl_nome = QLabel()
-        TranslatorApp.text(self.lbl_nome, "Nome da Conta")
+        self.lbl_nome = QLabel("Nome da Conta")
         layout.addWidget(self.lbl_nome)
 
         self.nome_edit = QLineEdit(self.conta.get("Nome_Conta", ""))
+        self.nome_edit.setPlaceholderText("Ex: Conta Principal")
         layout.addWidget(self.nome_edit)
 
         # Instituição
-        self.lbl_inst = QLabel()
-        TranslatorApp.text(self.lbl_inst, "Instituição")
+        self.lbl_inst = QLabel("Instituição")
         layout.addWidget(self.lbl_inst)
 
         self.inst_edit = QLineEdit(self.conta.get("Instituicao", ""))
+        self.inst_edit.setPlaceholderText("Ex: Nubank, Itaú")
         layout.addWidget(self.inst_edit)
 
         # Tipo
-        self.lbl_tipo = QLabel()
-        TranslatorApp.text(self.lbl_tipo, "Tipo da Conta")
+        self.lbl_tipo = QLabel("Tipo da Conta")
         layout.addWidget(self.lbl_tipo)
 
         self.tipo_combo = QComboBox()
-        TranslatorApp.combo(
-            self.tipo_combo,
-            ["Corrente", "Poupança", "Investimento"]
-        )
-        self.tipo_combo.setCurrentText(self.conta.get("Tipo", "Corrente"))
+
+        tipos = [
+            ("Corrente", "Corrente"),
+            ("Poupança", "Poupança"),
+            ("Investimento", "Investimento"),
+        ]
+
+        for texto, valor in tipos:
+            self.tipo_combo.addItem(texto, valor)
+
+        # 🔥 usa DATA (correto)
+        index = self.tipo_combo.findData(self.conta.get("Tipo", "Corrente"))
+        if index >= 0:
+            self.tipo_combo.setCurrentIndex(index)
+
         layout.addWidget(self.tipo_combo)
 
         # Botões
         botoes = QHBoxLayout()
 
-        self.salvar_btn = QPushButton()
-        TranslatorApp.text(self.salvar_btn, "Salvar")
-
-        self.cancelar_btn = QPushButton()
-        TranslatorApp.text(self.cancelar_btn, "Cancelar")
+        self.salvar_btn = QPushButton("Salvar")
+        self.cancelar_btn = QPushButton("Cancelar")
 
         self.salvar_btn.clicked.connect(self.salvar)
         self.cancelar_btn.clicked.connect(self.reject)
@@ -87,7 +100,7 @@ class EditarContaDialog(QDialog):
     def salvar(self):
         nome = self.nome_edit.text().strip()
         instituicao = self.inst_edit.text().strip()
-        tipo = self.tipo_combo.currentText()
+        tipo = self.tipo_combo.currentData()
 
         if not nome:
             QMessageBox.warning(

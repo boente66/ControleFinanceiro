@@ -1,3 +1,4 @@
+import logging
 from PyQt5.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -10,6 +11,8 @@ from PyQt5.QtCore import Qt, pyqtSignal
 
 from core.session import Session
 from core.translator_app import TranslatorApp
+
+logger = logging.getLogger(__name__)
 
 
 class PerfilView(QWidget):
@@ -26,19 +29,21 @@ class PerfilView(QWidget):
         if not self.usuario:
             raise RuntimeError("Usuário não autenticado.")
 
-        self._is_bound = False
-
-        # título
-        TranslatorApp.window_title(self, "Perfil do Usuário")
+        # 🔥 título base
+        self.setWindowTitle("Perfil do Usuário")
 
         self._init_ui()
-        self._apply_translation()
+
+        # 🔥 reatividade necessária (dados dinâmicos)
+        TranslatorBinding.bind(self._on_translate)
+
         self._update_user_info()
 
-        # 🔥 bind correto
-        if not self._is_bound:
-            TranslatorApp.bind(self._on_translate)
-            self._is_bound = True
+    # --------------------------------------------------
+    # REATIVIDADE
+    # --------------------------------------------------
+    def _on_translate(self, *_):
+        self._update_user_info()
 
     # --------------------------------------------------
     # UI
@@ -47,13 +52,13 @@ class PerfilView(QWidget):
         self.layout = QVBoxLayout(self)
 
         # TÍTULO
-        self.titulo = QLabel()
+        self.titulo = QLabel("Perfil do Usuário")
         self.titulo.setAlignment(Qt.AlignCenter)
         self.titulo.setObjectName("pageTitle")
         self.layout.addWidget(self.titulo)
 
         # GRUPO
-        self.grupo = QGroupBox()
+        self.grupo = QGroupBox("Dados da Conta")
         self.g_layout = QVBoxLayout(self.grupo)
         self.layout.addWidget(self.grupo)
 
@@ -69,24 +74,12 @@ class PerfilView(QWidget):
         self.g_layout.addWidget(self.lbl_nivel)
 
         # BOTÃO LOGOUT
-        self.btn_logout = QPushButton()
+        self.btn_logout = QPushButton("Encerrar Sessão")
         self.btn_logout.setObjectName("deleteButton")
         self.btn_logout.clicked.connect(self._confirmar_logout)
         self.layout.addWidget(self.btn_logout)
 
         self.layout.addStretch()
-
-    # --------------------------------------------------
-    # TRADUÇÃO
-    # --------------------------------------------------
-    def _on_translate(self, *_):
-        self._apply_translation()
-        self._update_user_info()
-
-    def _apply_translation(self):
-        TranslatorApp.text(self.titulo, "Perfil do Usuário")
-        TranslatorApp.group(self.grupo, "Dados da Conta")
-        TranslatorApp.text(self.btn_logout, "Encerrar Sessão")
 
     # --------------------------------------------------
     # DADOS DINÂMICOS

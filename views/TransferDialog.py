@@ -1,50 +1,61 @@
+import logging
+
 from PyQt5.QtWidgets import (
-    QDialog, QVBoxLayout, QLabel, QComboBox,
-    QDoubleSpinBox, QPushButton, QMessageBox, QDateEdit
+    QDialog,
+    QVBoxLayout,
+    QLabel,
+    QComboBox,
+    QDoubleSpinBox,
+    QPushButton,
+    QMessageBox,
+    QDateEdit,
 )
 from PyQt5.QtCore import QDate
-import logging
 
 from controllers.transaction_controller import TransactionController
 from controllers.account_controller import AccountController
 
 from core.translator_app import TranslatorApp
+from core.translator_binding import TranslatorBinding
 
 logger = logging.getLogger(__name__)
 
 
 class TransferDialog(QDialog):
     """
-    Diálogo responsável APENAS por coletar dados da UI
+    Diálogo responsável por coletar dados da UI
     e delegar a transferência ao controller.
     """
 
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        
-
-        
-
         self.transaction_controller = TransactionController()
         self.account_controller = AccountController()
 
-        self._is_bound = False
-
-        # título traduzível
-        TranslatorApp.window_title(self, "Transferir Saldo")
-
         self.setMinimumWidth(320)
+        self.setWindowTitle("Transferir Saldo")
 
         self._init_ui()
-        self._apply_translation()
-
         self._carregar_contas()
 
-        # 🔥 bind correto
-        if not self._is_bound:
-            TranslatorApp.bind(self._on_translate)
-            self._is_bound = True
+        # 🔥 precisa (labels + combos dinâmicos)
+        TranslatorBinding.bind(self._on_translate)
+
+    # --------------------------------------------------
+    # REATIVIDADE
+    # --------------------------------------------------
+    def _on_translate(self, *_):
+
+        self.setWindowTitle(TranslatorApp.get("Transferir Saldo"))
+
+        self.lbl_origem.setText(TranslatorApp.get("Conta de origem"))
+        self.lbl_destino.setText(TranslatorApp.get("Conta de destino"))
+        self.lbl_valor.setText(TranslatorApp.get("Valor"))
+        self.lbl_data.setText(TranslatorApp.get("Data"))
+        self.btn_transferir.setText(TranslatorApp.get("Transferir"))
+
+        self._carregar_contas()
 
     # --------------------------------------------------
     # UI
@@ -89,20 +100,6 @@ class TransferDialog(QDialog):
         layout.addWidget(self.btn_transferir)
 
     # --------------------------------------------------
-    # TRADUÇÃO
-    # --------------------------------------------------
-    def _on_translate(self, *_):
-        self._apply_translation()
-        self._carregar_contas()
-
-    def _apply_translation(self):
-        TranslatorApp.text(self.lbl_origem, "Conta de origem")
-        TranslatorApp.text(self.lbl_destino, "Conta de destino")
-        TranslatorApp.text(self.lbl_valor, "Valor")
-        TranslatorApp.text(self.lbl_data, "Data")
-        TranslatorApp.text(self.btn_transferir, "Transferir")
-
-    # --------------------------------------------------
     # DADOS
     # --------------------------------------------------
     def _carregar_contas(self):
@@ -129,6 +126,7 @@ class TransferDialog(QDialog):
     # AÇÃO
     # --------------------------------------------------
     def _transferir(self):
+
         id_origem = self.origem_combo.currentData()
         id_destino = self.destino_combo.currentData()
         valor = self.valor_input.value()
@@ -138,37 +136,36 @@ class TransferDialog(QDialog):
             QMessageBox.warning(
                 self,
                 TranslatorApp.get("Erro"),
-                TranslatorApp.get("Selecione contas diferentes.")
+                TranslatorApp.get("Selecione contas diferentes."),
+            )
+            return
+
+        if valor <= 0:
+            QMessageBox.warning(
+                self, TranslatorApp.get("Erro"), TranslatorApp.get("Valor inválido.")
             )
             return
 
         try:
             self.transaction_controller.transferir_saldo(
-                id_origem=id_origem,
-                id_destino=id_destino,
-                valor=valor,
-                data=data
+                id_origem=id_origem, id_destino=id_destino, valor=valor, data=data
             )
 
             QMessageBox.information(
                 self,
                 TranslatorApp.get("Sucesso"),
-                TranslatorApp.get("Transferência realizada com sucesso.")
+                TranslatorApp.get("Transferência realizada com sucesso."),
             )
 
             self.accept()
 
         except ValueError as e:
-            QMessageBox.warning(
-                self,
-                TranslatorApp.get("Atenção"),
-                str(e)
-            )
+            QMessageBox.warning(self, TranslatorApp.get("Atenção"), str(e))
 
         except Exception:
             logger.exception("Erro ao transferir saldo")
             QMessageBox.critical(
                 self,
                 TranslatorApp.get("Erro"),
-                TranslatorApp.get("Erro inesperado ao realizar transferência.")
+                TranslatorApp.get("Erro inesperado ao realizar transferência."),
             )

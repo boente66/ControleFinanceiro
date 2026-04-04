@@ -6,14 +6,14 @@ from PyQt5.QtWidgets import (
     QTableWidget, QTableWidgetItem, QLabel, QComboBox, QLineEdit,
     QMessageBox, QAbstractItemView, QHeaderView
 )
-from PyQt5.QtCore import Qt, QSize
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon
 
 from views.agendamento_dialog import AgendamentoDialog
 from controllers.schedule_controller import ScheduleController
 from controllers.main_controller import MainController
 from controllers.account_controller import AccountController
-from controllers.fatura_controller import FaturaController  # 🔥 NOVO
+from controllers.fatura_controller import FaturaController
 
 from utilitarios.currency_formatter import CurrencyFormatter
 from utilitarios.date_formatter import DateFormatter
@@ -32,44 +32,20 @@ class AgendamentoView(QWidget):
         self.schedule_controller = ScheduleController()
         self.main_controller = MainController()
         self.account_controller = AccountController()
-        self.fatura_controller = FaturaController()  # 🔥 NOVO
+        self.fatura_controller = FaturaController()
 
         self._icon_cache = {}
 
-        TranslatorApp.window_title(self, "Agendamentos")
-
         self._init_ui()
 
-        TranslatorApp.bind(self._on_translate)
+        # 🔥 título base
+        self.setWindowTitle("Agendamentos")
+
+        # 🔥 tradução global automática
+        TranslatorApp.enable_auto_translation(self)
 
         self.load_cartoes()
         self.load_data()
-
-    # ==================================================
-    # REATIVIDADE
-    # ==================================================
-    def _on_translate(self, *_):
-        self._retranslate_static()
-        self.load_data()
-
-    def _retranslate_static(self):
-        TranslatorApp.text(self.btn_receber, "Contas a Receber")
-        TranslatorApp.text(self.btn_pagar, "Contas a Pagar")
-        TranslatorApp.text(self.btn_transfer, "Transferências")
-        TranslatorApp.text(self.btn_todos, "Todos")
-
-        TranslatorApp.text(self.filter_label, "Filtrar por:")
-        TranslatorApp.placeholder(self.search_input, "Pesquisar...")
-
-        TranslatorApp.text(self.add_btn, "Adicionar")
-        TranslatorApp.text(self.edit_btn, "Editar")
-        TranslatorApp.text(self.cancel_btn, "Cancelar")
-        TranslatorApp.text(self.execute_btn, "Executar")
-
-        TranslatorApp.table_headers(
-            self.table,
-            ["ID", "Conta", "Favorecido", "Descrição", "Vencimento", "Valor", "Status"]
-        )
 
     # ==================================================
     # ICON
@@ -97,15 +73,14 @@ class AgendamentoView(QWidget):
         main_layout.addWidget(self.main_panel, 3)
 
     def _create_sidebar(self):
-        self.sidebar_group = QGroupBox()
-        TranslatorApp.group(self.sidebar_group, "Agendamentos")
+        self.sidebar_group = QGroupBox("Agendamentos")
 
         layout = QVBoxLayout(self.sidebar_group)
 
-        self.btn_receber = QPushButton()
-        self.btn_pagar = QPushButton()
-        self.btn_transfer = QPushButton()
-        self.btn_todos = QPushButton()
+        self.btn_receber = QPushButton("Contas a Receber")
+        self.btn_pagar = QPushButton("Contas a Pagar")
+        self.btn_transfer = QPushButton("Transferências")
+        self.btn_todos = QPushButton("Todos")
 
         for btn in (self.btn_receber, self.btn_pagar, self.btn_transfer, self.btn_todos):
             btn.setCursor(Qt.PointingHandCursor)
@@ -128,12 +103,15 @@ class AgendamentoView(QWidget):
         # ========================
         filtros = QHBoxLayout()
 
-        self.filter_label = QLabel()
+        self.filter_label = QLabel("Filtrar por:")
         self.filter_combo = QComboBox()
-        TranslatorApp.combo(self.filter_combo, ["Todos", "Contas a Receber", "Contas a Pagar", "Transferências"])
+        self.filter_combo.addItems([
+            "Todos", "Contas a Receber", "Contas a Pagar", "Transferências"
+        ])
         self.filter_combo.currentIndexChanged.connect(self.apply_filter)
 
         self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("Pesquisar...")
         self.search_input.textChanged.connect(self.apply_filter)
 
         filtros.addWidget(self.filter_label)
@@ -143,10 +121,10 @@ class AgendamentoView(QWidget):
         # ========================
         # BOTÕES
         # ========================
-        self.add_btn = QPushButton()
-        self.edit_btn = QPushButton()
-        self.cancel_btn = QPushButton()
-        self.execute_btn = QPushButton()
+        self.add_btn = QPushButton("Adicionar")
+        self.edit_btn = QPushButton("Editar")
+        self.cancel_btn = QPushButton("Cancelar")
+        self.execute_btn = QPushButton("Executar")
 
         self.add_btn.clicked.connect(self.open_add_dialog)
         self.edit_btn.clicked.connect(self.open_edit_dialog)
@@ -163,6 +141,9 @@ class AgendamentoView(QWidget):
         # ========================
         self.table = QTableWidget()
         self.table.setColumnCount(7)
+        self.table.setHorizontalHeaderLabels([
+            "ID", "Conta", "Favorecido", "Descrição", "Vencimento", "Valor", "Status"
+        ])
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setColumnHidden(0, True)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -170,7 +151,7 @@ class AgendamentoView(QWidget):
         layout.addWidget(self.table)
 
         # ========================
-        # 🔥 CARTÃO
+        # CARTÃO
         # ========================
         filtro_cartao_layout = QHBoxLayout()
 

@@ -14,13 +14,16 @@ class GerenciamentoUsuariosView(QtWidgets.QWidget):
 
         self.usuario_controller = UserController()
 
-        # ✅ título da janela
-        TranslatorApp.window_title(self, "Gerenciamento de Usuários")
+        # 🔥 título base
+        self.setWindowTitle("Gerenciamento de Usuários")
 
         self._init_ui()
 
         self.lista_completa = []
         self.atualizar_tabela()
+
+        # 🔥 tradução automática global
+        TranslatorApp.enable_auto_translation(self)
 
     # ==================================================
     # UI
@@ -34,11 +37,10 @@ class GerenciamentoUsuariosView(QtWidgets.QWidget):
         # -------------------------------------------------
         search_layout = QtWidgets.QHBoxLayout()
 
-        self.lbl_search = QtWidgets.QLabel()
-        TranslatorApp.text(self.lbl_search, "Pesquisar:")
+        self.lbl_search = QtWidgets.QLabel("Pesquisar:")
 
         self.search_input = QtWidgets.QLineEdit()
-        TranslatorApp.placeholder(self.search_input, "Nome, e-mail ou nível")
+        self.search_input.setPlaceholderText("Nome, e-mail ou nível")
         self.search_input.textChanged.connect(self.aplicar_filtro_pesquisa)
 
         search_layout.addWidget(self.lbl_search)
@@ -51,9 +53,7 @@ class GerenciamentoUsuariosView(QtWidgets.QWidget):
         # -------------------------------------------------
         self.table = QtWidgets.QTableWidget()
         self.table.setColumnCount(4)
-
-        TranslatorApp.table_headers(
-            self.table,
+        self.table.setHorizontalHeaderLabels(
             ["ID", "Nome", "Email", "Administrador"]
         )
 
@@ -67,18 +67,14 @@ class GerenciamentoUsuariosView(QtWidgets.QWidget):
         # -------------------------------------------------
         btn_layout = QtWidgets.QHBoxLayout()
 
-        self.btn_add = QtWidgets.QPushButton()
+        self.btn_add = QtWidgets.QPushButton("Adicionar")
         self.btn_add.setObjectName("primaryButton")
 
-        self.btn_edit = QtWidgets.QPushButton()
+        self.btn_edit = QtWidgets.QPushButton("Editar")
         self.btn_edit.setObjectName("menuButton")
 
-        self.btn_delete = QtWidgets.QPushButton()
+        self.btn_delete = QtWidgets.QPushButton("Excluir")
         self.btn_delete.setObjectName("deleteButton")
-
-        TranslatorApp.text(self.btn_add, "Adicionar")
-        TranslatorApp.text(self.btn_edit, "Editar")
-        TranslatorApp.text(self.btn_delete, "Excluir")
 
         btn_layout.addWidget(self.btn_add)
         btn_layout.addWidget(self.btn_edit)
@@ -197,7 +193,17 @@ class GerenciamentoUsuariosView(QtWidgets.QWidget):
 
         user_id = int(self.table.item(row, 0).text())
 
-        # ⚠️ REGRA DE NEGÓCIO (mantida)
+        confirm = QtWidgets.QMessageBox.question(
+            self,
+            TranslatorApp.get("Confirmar Exclusão"),
+            TranslatorApp.get("Deseja realmente excluir este usuário"),
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
+        )
+
+        if confirm != QtWidgets.QMessageBox.Yes:
+            return
+
+        # 🔥 regra de negócio correta (executa após confirmação)
         if not self.usuario_controller.delete_user(user_id):
             QtWidgets.QMessageBox.critical(
                 self,
@@ -206,13 +212,4 @@ class GerenciamentoUsuariosView(QtWidgets.QWidget):
             )
             return
 
-        confirm = QtWidgets.QMessageBox.question(
-            self,
-            TranslatorApp.get("Confirmar Exclusão"),
-            TranslatorApp.get("Deseja realmente excluir este usuário"),
-            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
-        )
-
-        if confirm == QtWidgets.QMessageBox.Yes:
-            self.usuario_controller.delete_user(user_id)
-            self.atualizar_tabela()
+        self.atualizar_tabela()

@@ -31,14 +31,17 @@ class AgendamentoDialog(QDialog):
         self.category_controller = CategoryController()
         self.favorecido_controller = FavorecidoController()
 
-        # 🔥 TÍTULO REATIVO GLOBAL
-        TranslatorApp.window_title(
-            self,
-            "Adicionar Agendamento" if agendamento_id is None else "Editar Agendamento"
-        )
-
         self._build_ui()
         self._connect_signals()
+
+        # 🔥 define título normal (sem tradução manual)
+        if agendamento_id is None:
+            self.setWindowTitle("Adicionar Agendamento")
+        else:
+            self.setWindowTitle("Editar Agendamento")
+
+        # 🔥 ATIVA TRADUÇÃO GLOBAL AUTOMÁTICA
+        TranslatorApp.enable_auto_translation(self)
 
         if self.agendamento_id:
             self._carregar_para_edicao()
@@ -55,76 +58,55 @@ class AgendamentoDialog(QDialog):
         self.form.setLabelAlignment(Qt.AlignRight)
 
         # Tipo
-        self.tipo_label = QLabel()
-        TranslatorApp.text(self.tipo_label, "Tipo")
-
+        self.tipo_label = QLabel("Tipo")
         self.tipo_combo = QComboBox()
-        TranslatorApp.combo(self.tipo_combo, self.TIPOS)
-
+        self.tipo_combo.addItems(self.TIPOS)
         self.form.addRow(self.tipo_label, self.tipo_combo)
 
         # Descrição
-        self.desc_label = QLabel()
-        TranslatorApp.text(self.desc_label, "Descrição")
-
+        self.desc_label = QLabel("Descrição")
         self.descricao_input = QLineEdit()
         self.form.addRow(self.desc_label, self.descricao_input)
 
         # Conta
-        self.conta_label = QLabel()
-        TranslatorApp.text(self.conta_label, "Conta")
-
+        self.conta_label = QLabel("Conta")
         self.conta_combo = QComboBox()
         self.form.addRow(self.conta_label, self.conta_combo)
 
         # Favorecido
-        self.fav_label = QLabel()
-        TranslatorApp.text(self.fav_label, "Favorecido")
-
+        self.fav_label = QLabel("Favorecido")
         self.favorecido_combo = QComboBox()
         self.form.addRow(self.fav_label, self.favorecido_combo)
 
         # Categoria
-        self.cat_label = QLabel()
-        TranslatorApp.text(self.cat_label, "Categoria")
-
+        self.cat_label = QLabel("Categoria")
         self.categoria_combo = QComboBox()
         self.form.addRow(self.cat_label, self.categoria_combo)
 
         # Valor
-        self.valor_label = QLabel()
-        TranslatorApp.text(self.valor_label, "Valor")
-
+        self.valor_label = QLabel("Valor")
         self.valor_spin = QDoubleSpinBox()
         self.valor_spin.setDecimals(2)
         self.valor_spin.setRange(0.01, 10_000_000)
         self.valor_spin.setPrefix("R$ ")
-
         self.form.addRow(self.valor_label, self.valor_spin)
 
         # Data
-        self.data_label = QLabel()
-        TranslatorApp.text(self.data_label, "Vencimento")
-
+        self.data_label = QLabel("Vencimento")
         self.data_vencimento = QDateEdit(QDate.currentDate())
         self.data_vencimento.setCalendarPopup(True)
-
         self.form.addRow(self.data_label, self.data_vencimento)
 
         # Recorrência
-        self.recorrente_label = QLabel()
-        TranslatorApp.text(self.recorrente_label, "Recorrente")
-
+        self.recorrente_label = QLabel("Recorrente")
         self.recorrente_check = QCheckBox()
         self.form.addRow(self.recorrente_label, self.recorrente_check)
 
-        self.periodicidade_label = QLabel()
-        TranslatorApp.text(self.periodicidade_label, "Periodicidade")
-
+        # Periodicidade
+        self.periodicidade_label = QLabel("Periodicidade")
         self.periodicidade_combo = QComboBox()
-        TranslatorApp.combo(self.periodicidade_combo, self.PERIODICIDADES)
+        self.periodicidade_combo.addItems(self.PERIODICIDADES)
         self.periodicidade_combo.setEnabled(False)
-
         self.form.addRow(self.periodicidade_label, self.periodicidade_combo)
 
         layout.addLayout(self.form)
@@ -134,18 +116,13 @@ class AgendamentoDialog(QDialog):
             QDialogButtonBox.Save | QDialogButtonBox.Cancel
         )
 
+        # define texto base (será traduzido automaticamente)
+        self.button_box.button(QDialogButtonBox.Save).setText("Salvar")
+        self.button_box.button(QDialogButtonBox.Cancel).setText("Cancelar")
+
         layout.addWidget(self.button_box)
 
-        # 🔥 BOTÕES REATIVOS
-        TranslatorApp.text(
-            self.button_box.button(QDialogButtonBox.Save),
-            "Salvar"
-        )
-        TranslatorApp.text(
-            self.button_box.button(QDialogButtonBox.Cancel),
-            "Cancelar"
-        )
-
+        # carregar dados
         self.load_contas()
         self.load_favorecidos()
         self.load_categorias()

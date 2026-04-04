@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import (
     QDialogButtonBox,
     QMessageBox,
     QComboBox,
+    QLabel,
 )
 
 from controllers.account_controller import AccountController
@@ -27,12 +28,15 @@ class CriarContaDialog(QDialog):
 
         self.controller = AccountController()
 
-        # 🔥 título reativo
-        TranslatorApp.window_title(self, "Criar Conta")
+        # 🔥 título base (auto traduzido)
+        self.setWindowTitle("Criar Conta")
 
         self.setFixedSize(360, 260)
 
         self._init_ui()
+
+        # 🔥 tradução automática global
+        TranslatorApp.enable_auto_translation(self)
 
     # --------------------------------------------------
     # UI
@@ -42,25 +46,40 @@ class CriarContaDialog(QDialog):
         form = QFormLayout()
 
         # Nome
+        self.lbl_nome = QLabel("Nome da Conta:")
         self.nome_input = QLineEdit()
-        TranslatorApp.form(form, "Nome da Conta:", self.nome_input)
+        self.nome_input.setPlaceholderText("Ex: Conta Principal")
+
+        form.addRow(self.lbl_nome, self.nome_input)
 
         # Instituição
+        self.lbl_instituicao = QLabel("Instituição:")
         self.instituicao_input = QLineEdit()
-        TranslatorApp.form(form, "Instituição:", self.instituicao_input)
+        self.instituicao_input.setPlaceholderText("Ex: Nubank, Itaú")
+
+        form.addRow(self.lbl_instituicao, self.instituicao_input)
 
         # Tipo
+        self.lbl_tipo = QLabel("Tipo:")
         self.tipo_combo = QComboBox()
-        TranslatorApp.combo(
-            self.tipo_combo,
-            ["Corrente", "Poupança", "Investimento"]
-        )
-        TranslatorApp.form(form, "Tipo:", self.tipo_combo)
+
+        tipos = [
+            ("Corrente", "Corrente"),
+            ("Poupança", "Poupança"),
+            ("Investimento", "Investimento"),
+        ]
+
+        for texto, valor in tipos:
+            self.tipo_combo.addItem(texto, valor)
+
+        form.addRow(self.lbl_tipo, self.tipo_combo)
 
         # Saldo
+        self.lbl_saldo = QLabel("Saldo Inicial:")
         self.saldo_input = QLineEdit()
-        TranslatorApp.placeholder(self.saldo_input, "0,00")
-        TranslatorApp.form(form, "Saldo Inicial:", self.saldo_input)
+        self.saldo_input.setPlaceholderText("0,00")
+
+        form.addRow(self.lbl_saldo, self.saldo_input)
 
         layout.addLayout(form)
 
@@ -74,13 +93,9 @@ class CriarContaDialog(QDialog):
 
         layout.addWidget(self.buttons)
 
-        # 🔥 tradução dos botões
-        self.buttons.button(QDialogButtonBox.Ok).setText(
-            TranslatorApp.get("Salvar")
-        )
-        self.buttons.button(QDialogButtonBox.Cancel).setText(
-            TranslatorApp.get("Cancelar")
-        )
+        # texto base (auto traduzido depois)
+        self.buttons.button(QDialogButtonBox.Ok).setText("Salvar")
+        self.buttons.button(QDialogButtonBox.Cancel).setText("Cancelar")
 
     # --------------------------------------------------
     # SALVAR
@@ -88,10 +103,28 @@ class CriarContaDialog(QDialog):
     def _salvar(self):
         usuario = Session.get_usuario()
 
+        if not usuario:
+            QMessageBox.warning(
+                self,
+                TranslatorApp.get("Erro"),
+                TranslatorApp.get("Usuário não autenticado."),
+            )
+            return
+
+        nome = self.nome_input.text().strip()
+
+        if not nome:
+            QMessageBox.warning(
+                self,
+                TranslatorApp.get("Atenção"),
+                TranslatorApp.get("Nome da conta é obrigatório."),
+            )
+            return
+
         dados = {
-            "Nome_Conta": self.nome_input.text().strip(),
+            "Nome_Conta": nome,
             "Instituicao": self.instituicao_input.text().strip(),
-            "Tipo": self.tipo_combo.currentText(),
+            "Tipo": self.tipo_combo.currentData(),
             "Saldo_Atual": self.saldo_input.text().strip() or "0",
             "ID_Usuario": usuario["ID_Usuario"],
         }

@@ -2,10 +2,20 @@ import logging
 from datetime import datetime
 
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
-    QTableWidget, QTableWidgetItem, QHeaderView,
-    QAbstractItemView, QFileDialog, QDialog,
-    QToolButton, QMessageBox, QPushButton
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QComboBox,
+    QTableWidget,
+    QTableWidgetItem,
+    QHeaderView,
+    QAbstractItemView,
+    QFileDialog,
+    QDialog,
+    QToolButton,
+    QMessageBox,
+    QPushButton,
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor
@@ -16,6 +26,7 @@ from controllers.account_controller import AccountController
 from core.theme_manager import ThemeManager
 from core.translator_app import TranslatorApp
 
+from core.translator_binding import TranslatorBinding
 from utilitarios.currency_formatter import CurrencyFormatter
 from utilitarios.date_formatter import DateFormatter
 
@@ -41,17 +52,19 @@ class PainelFatura(QWidget):
         self.mes_atual = hoje.month
         self.ano_atual = hoje.year
 
-        self._is_bound = False
-
-        TranslatorApp.window_title(self, "Fatura")
+        # 🔥 título base
+        self.setWindowTitle("Fatura")
 
         self._init_ui()
-        self._apply_translation()
 
-        # 🔥 bind correto
-        if not self._is_bound:
-            TranslatorApp.bind(self._on_translate)
-            self._is_bound = True
+        # 🔥 reatividade necessária (tabela dinâmica)
+        TranslatorBinding.bind(self._on_translate)
+
+    # ======================================================
+    # REATIVIDADE
+    # ======================================================
+    def _on_translate(self, *_):
+        self._carregar()
 
     # ======================================================
     # UI
@@ -72,13 +85,15 @@ class PainelFatura(QWidget):
         # TOOLBAR
         toolbar = QHBoxLayout()
 
-        self.btn_lancar = QToolButton()
-        self.btn_pagar = QToolButton()
-        self.btn_exportar = QToolButton()
+        def btn(texto, fn):
+            b = QToolButton()
+            b.setText(texto)
+            b.clicked.connect(fn)
+            return b
 
-        self.btn_lancar.clicked.connect(self.add_transaction)
-        self.btn_pagar.clicked.connect(self.pagar_fatura)
-        self.btn_exportar.clicked.connect(self.exportar_pdf)
+        self.btn_lancar = btn("Lançar", self.add_transaction)
+        self.btn_pagar = btn("Pagar", self.pagar_fatura)
+        self.btn_exportar = btn("PDF", self.exportar_pdf)
 
         toolbar.addWidget(self.btn_lancar)
         toolbar.addWidget(self.btn_pagar)
@@ -86,8 +101,11 @@ class PainelFatura(QWidget):
 
         toolbar.addStretch()
 
-        self.label_status = QLabel()
+        self.label_status = QLabel("Status:")
         self.filtro_combo = QComboBox()
+        self.filtro_combo.addItem("Todos", "Todos")
+        self.filtro_combo.addItem("Abertos", "Abertos")
+        self.filtro_combo.addItem("Pagos", "Pagos")
         self.filtro_combo.currentIndexChanged.connect(self._on_filtro_changed)
 
         toolbar.addWidget(self.label_status)
@@ -98,19 +116,21 @@ class PainelFatura(QWidget):
         # FILTRO DATA
         filtros = QHBoxLayout()
 
-        self.label_mes = QLabel()
+        self.label_mes = QLabel("Mês:")
         self.mes_combo = QComboBox()
         self.mes_combo.addItems([str(i) for i in range(1, 13)])
         self.mes_combo.setCurrentIndex(self.mes_atual - 1)
         self.mes_combo.currentIndexChanged.connect(self._reset_paginacao)
 
-        self.label_ano = QLabel()
+        self.label_ano = QLabel("Ano:")
         self.ano_combo = QComboBox()
-        self.ano_combo.addItems([
-            str(self.ano_atual - 1),
-            str(self.ano_atual),
-            str(self.ano_atual + 1),
-        ])
+        self.ano_combo.addItems(
+            [
+                str(self.ano_atual - 1),
+                str(self.ano_atual),
+                str(self.ano_atual + 1),
+            ]
+        )
         self.ano_combo.setCurrentText(str(self.ano_atual))
         self.ano_combo.currentIndexChanged.connect(self._reset_paginacao)
 
@@ -123,6 +143,9 @@ class PainelFatura(QWidget):
 
         # TABELA
         self.table = QTableWidget(0, 5)
+        self.table.setHorizontalHeaderLabels(
+            ["Data", "Descrição", "Categoria", "Valor", "Status"]
+        )
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setSortingEnabled(True)
@@ -148,34 +171,6 @@ class PainelFatura(QWidget):
         # RESUMO
         self.resumo_label = QLabel()
         layout.addWidget(self.resumo_label)
-
-    # ======================================================
-    # TRADUÇÃO
-    # ======================================================
-    def _on_translate(self, *_):
-        self._apply_translation()
-        self._carregar()
-
-    def _apply_translation(self):
-
-        TranslatorApp.text(self.btn_lancar, "Lançar")
-        TranslatorApp.text(self.btn_pagar, "Pagar")
-        TranslatorApp.text(self.btn_exportar, "PDF")
-
-        TranslatorApp.text(self.label_status, "Status:")
-        TranslatorApp.text(self.label_mes, "Mês:")
-        TranslatorApp.text(self.label_ano, "Ano:")
-
-        # 🔥 combo com DATA correta
-        self.filtro_combo.clear()
-        self.filtro_combo.addItem(TranslatorApp.get("Todos"), "Todos")
-        self.filtro_combo.addItem(TranslatorApp.get("Abertos"), "Abertos")
-        self.filtro_combo.addItem(TranslatorApp.get("Pagos"), "Pagos")
-
-        TranslatorApp.table_headers(
-            self.table,
-            ["Data", "Descrição", "Categoria", "Valor", "Status"]
-        )
 
     # ======================================================
     # CONTROLE
@@ -218,7 +213,7 @@ class PainelFatura(QWidget):
             mes,
             ano,
             limit=self.limit,
-            offset=self.page * self.limit
+            offset=self.page * self.limit,
         )
 
         dados = result["dados"]
@@ -232,9 +227,7 @@ class PainelFatura(QWidget):
         self._preencher_tabela(dados)
         self._atualizar_resumo(total)
 
-        self.label_page.setText(
-            f"{TranslatorApp.get('Página')} {self.page + 1}"
-        )
+        self.label_page.setText(f"{TranslatorApp.get('Página')} {self.page + 1}")
 
         self.nome_cartao_label.setText(self.cartao.get("Nome", ""))
 
@@ -254,20 +247,19 @@ class PainelFatura(QWidget):
 
             status = TranslatorApp.get("Pago") if pago else TranslatorApp.get("Aberto")
 
-            cor = ThemeManager.get_color("success") if pago \
+            cor = (
+                ThemeManager.get_color("success")
+                if pago
                 else ThemeManager.get_color("danger")
-
-            self.table.setItem(row, 0, QTableWidgetItem(
-                DateFormatter.iso_to_br(item["Data"])
-            ))
-            self.table.setItem(row, 1, QTableWidgetItem(item["Descricao"]))
-            self.table.setItem(row, 2, QTableWidgetItem(
-                str(item.get("Categoria", ""))
-            ))
-
-            valor_item = QTableWidgetItem(
-                CurrencyFormatter.format(valor)
             )
+
+            self.table.setItem(
+                row, 0, QTableWidgetItem(DateFormatter.iso_to_br(item["Data"]))
+            )
+            self.table.setItem(row, 1, QTableWidgetItem(item["Descricao"]))
+            self.table.setItem(row, 2, QTableWidgetItem(str(item.get("Categoria", ""))))
+
+            valor_item = QTableWidgetItem(CurrencyFormatter.format(valor))
             valor_item.setForeground(QColor(cor))
 
             self.table.setItem(row, 3, valor_item)
@@ -287,9 +279,7 @@ class PainelFatura(QWidget):
     # ======================================================
     def add_transaction(self):
         dialog = TransactionDialog(
-            parent=self,
-            contexto="cartao",
-            id_contexto=self.cartao["ID_Cartao"]
+            parent=self, contexto="cartao", id_contexto=self.cartao["ID_Cartao"]
         )
         if dialog.exec_() == QDialog.Accepted:
             self._carregar()
@@ -305,7 +295,7 @@ class PainelFatura(QWidget):
             QMessageBox.warning(
                 self,
                 TranslatorApp.get("Erro"),
-                TranslatorApp.get("Nenhuma conta disponível")
+                TranslatorApp.get("Nenhuma conta disponível"),
             )
             return
 
@@ -313,34 +303,24 @@ class PainelFatura(QWidget):
 
         try:
             self.controller.pagar_fatura(
-                id_cartao=self.cartao["ID_Cartao"],
-                id_conta=conta_id,
-                mes=mes,
-                ano=ano
+                id_cartao=self.cartao["ID_Cartao"], id_conta=conta_id, mes=mes, ano=ano
             )
 
             QMessageBox.information(
                 self,
                 TranslatorApp.get("Sucesso"),
-                TranslatorApp.get("Fatura paga com sucesso")
+                TranslatorApp.get("Fatura paga com sucesso"),
             )
 
             self._carregar()
 
         except Exception as e:
-            QMessageBox.critical(
-                self,
-                TranslatorApp.get("Erro"),
-                str(e)
-            )
+            QMessageBox.critical(self, TranslatorApp.get("Erro"), str(e))
 
     def exportar_pdf(self):
 
         caminho, _ = QFileDialog.getSaveFileName(
-            self,
-            TranslatorApp.get("Salvar PDF"),
-            "",
-            "PDF Files (*.pdf)"
+            self, TranslatorApp.get("Salvar PDF"), "", "PDF Files (*.pdf)"
         )
 
         if not caminho:
@@ -350,27 +330,15 @@ class PainelFatura(QWidget):
         ano = int(self.ano_combo.currentText())
 
         dados = self.controller.listar_lancamentos_fatura(
-            self.cartao["ID_Cartao"],
-            mes,
-            ano
+            self.cartao["ID_Cartao"], mes, ano
         )
 
         try:
-            self.controller.exportar_fatura_pdf(
-                self.cartao,
-                dados,
-                caminho
-            )
+            self.controller.exportar_fatura_pdf(self.cartao, dados, caminho)
 
             QMessageBox.information(
-                self,
-                TranslatorApp.get("Sucesso"),
-                TranslatorApp.get("PDF exportado")
+                self, TranslatorApp.get("Sucesso"), TranslatorApp.get("PDF exportado")
             )
 
         except Exception as e:
-            QMessageBox.critical(
-                self,
-                TranslatorApp.get("Erro"),
-                str(e)
-            )
+            QMessageBox.critical(self, TranslatorApp.get("Erro"), str(e))

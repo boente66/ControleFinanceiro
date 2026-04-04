@@ -27,19 +27,17 @@ class ImportacaoTemporariaDialog(QDialog):
         self.category_controller = CategoryController()
 
         self._categoria_cache = {}
-        self._is_bound = False
 
-        TranslatorApp.window_title(self, "Revisar Lançamentos Importados")
+        # 🔥 título base
+        self.setWindowTitle("Revisar Lançamentos Importados")
 
         self.resize(1000, 500)
 
         self._init_ui()
-        self._apply_translation()
+        self._popular_tabela()
 
-        # 🔥 bind correto
-        if not self._is_bound:
-            TranslatorApp.bind(self._on_translate)
-            self._is_bound = True
+        # 🔥 tradução automática global
+        TranslatorApp.enable_auto_translation(self)
 
     # ======================================================
     # UI
@@ -55,20 +53,30 @@ class ImportacaoTemporariaDialog(QDialog):
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
-        self._popular_tabela()
+        # headers base
+        self.table.setHorizontalHeaderLabels([
+            "Importar",
+            "Data",
+            "Descrição",
+            "Categoria",
+            "Confiança",
+            "Valor",
+            "Tipo"
+        ])
+
         layout.addWidget(self.table)
 
         # BOTÕES
         btns = QHBoxLayout()
 
-        self.btn_editar = QPushButton()
+        self.btn_editar = QPushButton("Editar selecionado")
         self.btn_editar.clicked.connect(self.editar_selecionado)
 
-        self.btn_confirmar = QPushButton()
+        self.btn_confirmar = QPushButton("Confirmar importação")
         self.btn_confirmar.setObjectName("addButton")
         self.btn_confirmar.clicked.connect(self.confirmar)
 
-        self.btn_cancelar = QPushButton()
+        self.btn_cancelar = QPushButton("Cancelar")
         self.btn_cancelar.clicked.connect(self.reject)
 
         btns.addWidget(self.btn_editar)
@@ -77,31 +85,6 @@ class ImportacaoTemporariaDialog(QDialog):
         btns.addWidget(self.btn_cancelar)
 
         layout.addLayout(btns)
-
-    # ======================================================
-    # TRADUÇÃO
-    # ======================================================
-    def _on_translate(self, *_):
-        self._apply_translation()
-
-    def _apply_translation(self):
-
-        TranslatorApp.table_headers(
-            self.table,
-            [
-                "Importar",
-                "Data",
-                "Descrição",
-                "Categoria",
-                "Confiança",
-                "Valor",
-                "Tipo"
-            ]
-        )
-
-        TranslatorApp.text(self.btn_editar, "Editar selecionado")
-        TranslatorApp.text(self.btn_confirmar, "Confirmar importação")
-        TranslatorApp.text(self.btn_cancelar, "Cancelar")
 
     # ======================================================
     # POPULAR TABELA

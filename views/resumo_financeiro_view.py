@@ -21,6 +21,7 @@ from controllers.transaction_controller import TransactionController
 from controllers.fatura_controller import FaturaController
 from controllers.meta_controller import MetaController
 
+from core.translator_binding import TranslatorBinding
 from utilitarios.currency_formatter import CurrencyFormatter
 from utilitarios.date_formatter import DateFormatter
 
@@ -41,19 +42,17 @@ class ResumoFinanceiroView(QWidget):
         self.meta_controller = MetaController()
 
         self._canvas = None
-        self._is_bound = False
+
+        self.setWindowTitle("Resumo Financeiro")
 
         self._init_ui()
-        self._update_static_texts()
         self.load_data()
 
-        # 🔥 bind seguro (evita duplicação)
-        if not self._is_bound:
-            TranslatorApp.bind(self._on_translate)
-            self._is_bound = True
+        # 🔥 dashboard → precisa de bind
+        TranslatorBinding.bind(self._on_translate)
 
     # ==================================================
-    # CICLO DE VIDA (🔥 FALTAVA ISSO)
+    # CICLO DE VIDA
     # ==================================================
     def closeEvent(self, event):
         try:
@@ -69,19 +68,7 @@ class ResumoFinanceiroView(QWidget):
     # REATIVIDADE
     # ==================================================
     def _on_translate(self, *_):
-        self._update_static_texts()
         self.load_data()
-
-    def _update_static_texts(self):
-        TranslatorApp.text(self.title, "Resumo Financeiro")
-
-        TranslatorApp.group(self.contas_group, "Saldos das Contas")
-        TranslatorApp.group(self.cartoes_group, "Cartões de Crédito")
-        TranslatorApp.group(self.lancamentos_group, "Próximos Lançamentos Agendados")
-
-        TranslatorApp.group(self.receitas_group, "Receitas e Despesas do Mês")
-        TranslatorApp.group(self.analise_group, "Análise do Mês")
-        TranslatorApp.group(self.metas_group, "Metas Financeiras")
 
     # ==================================================
     # UTIL
@@ -108,22 +95,22 @@ class ResumoFinanceiroView(QWidget):
         self.main_layout.setSpacing(25)
         self.main_layout.setContentsMargins(20, 20, 20, 20)
 
-        self.title = QLabel()
+        self.title = QLabel("Resumo Financeiro")
         self.title.setAlignment(Qt.AlignCenter)
         self.title.setObjectName("pageTitle")
         self.main_layout.addWidget(self.title)
 
         top_layout = QHBoxLayout()
 
-        self.contas_group = QGroupBox()
+        self.contas_group = QGroupBox("Saldos das Contas")
         self.contas_layout = QVBoxLayout(self.contas_group)
         top_layout.addWidget(self.contas_group)
 
-        self.cartoes_group = QGroupBox()
+        self.cartoes_group = QGroupBox("Cartões de Crédito")
         self.cartoes_layout = QVBoxLayout(self.cartoes_group)
         top_layout.addWidget(self.cartoes_group)
 
-        self.lancamentos_group = QGroupBox()
+        self.lancamentos_group = QGroupBox("Próximos Lançamentos Agendados")
         self.lancamentos_layout = QVBoxLayout(self.lancamentos_group)
         top_layout.addWidget(self.lancamentos_group)
 
@@ -131,15 +118,15 @@ class ResumoFinanceiroView(QWidget):
 
         bottom_layout = QHBoxLayout()
 
-        self.receitas_group = QGroupBox()
+        self.receitas_group = QGroupBox("Receitas e Despesas do Mês")
         self.receitas_layout = QVBoxLayout(self.receitas_group)
         bottom_layout.addWidget(self.receitas_group)
 
-        self.analise_group = QGroupBox()
+        self.analise_group = QGroupBox("Análise do Mês")
         self.analise_layout = QVBoxLayout(self.analise_group)
         bottom_layout.addWidget(self.analise_group)
 
-        self.metas_group = QGroupBox()
+        self.metas_group = QGroupBox("Metas Financeiras")
         self.metas_layout = QVBoxLayout(self.metas_group)
         bottom_layout.addWidget(self.metas_group)
 

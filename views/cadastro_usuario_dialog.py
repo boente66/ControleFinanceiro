@@ -16,14 +16,17 @@ class CadastroUsuarioDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        # 🔥 título reativo
-        TranslatorApp.window_title(self, "Cadastro de Usuário")
-
         self.setMinimumSize(420, 420)
 
         self.controller = UserController()
 
         self._init_ui()
+
+        # 🔥 título base
+        self.setWindowTitle("Cadastro de Usuário")
+
+        # 🔥 tradução automática global
+        TranslatorApp.enable_auto_translation(self)
 
     # -------------------------------------------------
     # UI
@@ -33,86 +36,74 @@ class CadastroUsuarioDialog(QDialog):
         layout = QVBoxLayout(self)
 
         # Grupo
-        self.group = QGroupBox()
-        TranslatorApp.group(self.group, "Informações do Usuário")
+        self.group = QGroupBox("Informações do Usuário")
 
         form = QFormLayout()
 
         # Nome
-        self.lbl_nome = QLabel()
-        TranslatorApp.text(self.lbl_nome, "Nome")
+        self.lbl_nome = QLabel("Nome")
         self.nome_input = QLineEdit()
         form.addRow(self.lbl_nome, self.nome_input)
 
         # Nascimento
-        self.lbl_nascimento = QLabel()
-        TranslatorApp.text(self.lbl_nascimento, "Data de Nascimento")
+        self.lbl_nascimento = QLabel("Data de Nascimento")
         self.nascimento_input = QDateEdit(QDate.currentDate())
         self.nascimento_input.setCalendarPopup(True)
         form.addRow(self.lbl_nascimento, self.nascimento_input)
 
         # Sexo
-        self.lbl_sexo = QLabel()
-        TranslatorApp.text(self.lbl_sexo, "Sexo")
+        self.lbl_sexo = QLabel("Sexo")
         self.sexo_input = QComboBox()
-        TranslatorApp.combo(
-            self.sexo_input,
-            ["Masculino", "Feminino", "Outro"]
-        )
+        self.sexo_input.addItem("Masculino", "Masculino")
+        self.sexo_input.addItem("Feminino", "Feminino")
+        self.sexo_input.addItem("Outro", "Outro")
         form.addRow(self.lbl_sexo, self.sexo_input)
 
         # CPF
-        self.lbl_cpf = QLabel()
-        TranslatorApp.text(self.lbl_cpf, "CPF")
+        self.lbl_cpf = QLabel("CPF")
         self.cpf_input = QLineEdit()
-        TranslatorApp.placeholder(self.cpf_input, "Somente números")
+        self.cpf_input.setPlaceholderText("Somente números")
         form.addRow(self.lbl_cpf, self.cpf_input)
 
         # Telefone
-        self.lbl_tel = QLabel()
-        TranslatorApp.text(self.lbl_tel, "Telefone")
+        self.lbl_tel = QLabel("Telefone")
         self.telefone_input = QLineEdit()
         form.addRow(self.lbl_tel, self.telefone_input)
 
         # Celular
-        self.lbl_cel = QLabel()
-        TranslatorApp.text(self.lbl_cel, "Celular")
+        self.lbl_cel = QLabel("Celular")
         self.celular_input = QLineEdit()
         form.addRow(self.lbl_cel, self.celular_input)
 
         # Email
-        self.lbl_email = QLabel()
-        TranslatorApp.text(self.lbl_email, "Email")
+        self.lbl_email = QLabel("Email")
         self.email_input = QLineEdit()
         form.addRow(self.lbl_email, self.email_input)
 
         # Login
-        self.lbl_login = QLabel()
-        TranslatorApp.text(self.lbl_login, "Login")
+        self.lbl_login = QLabel("Login")
         self.login_input = QLineEdit()
         form.addRow(self.lbl_login, self.login_input)
 
         # Senha
-        self.lbl_senha = QLabel()
-        TranslatorApp.text(self.lbl_senha, "Senha")
+        self.lbl_senha = QLabel("Senha")
         self.senha_input = QLineEdit()
         self.senha_input.setEchoMode(QLineEdit.Password)
         form.addRow(self.lbl_senha, self.senha_input)
 
         # Nível
-        self.lbl_nivel = QLabel()
-        TranslatorApp.text(self.lbl_nivel, "Nível de Acesso")
+        self.lbl_nivel = QLabel("Nível de Acesso")
         self.nivel_input = QComboBox()
-        TranslatorApp.combo(self.nivel_input, ["usuario", "admin"])
+        self.nivel_input.addItem("Usuário", "usuario")
+        self.nivel_input.addItem("Admin", "admin")
         form.addRow(self.lbl_nivel, self.nivel_input)
 
         self.group.setLayout(form)
         layout.addWidget(self.group)
 
         # Botão salvar
-        self.btn_salvar = QPushButton()
+        self.btn_salvar = QPushButton("Salvar")
         self.btn_salvar.setObjectName("primaryButton")
-        TranslatorApp.text(self.btn_salvar, "Salvar")
         self.btn_salvar.clicked.connect(self.salvar_usuario)
 
         layout.addWidget(self.btn_salvar)

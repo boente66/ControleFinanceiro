@@ -2,8 +2,10 @@ from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QFormLayout, QLineEdit, QComboBox,
     QDialogButtonBox, QMessageBox
 )
+
 from controllers.favorecido_controller import FavorecidoController
 from utilitarios.name_format import NameFormat
+from core.translator_app import TranslatorApp
 
 
 class FavorecidoDialog(QDialog):
@@ -14,6 +16,7 @@ class FavorecidoDialog(QDialog):
         self.controller = FavorecidoController()
         self.favorecido = favorecido
 
+        # 🔥 título base
         self.setWindowTitle("Favorecido")
         self.setMinimumWidth(400)
 
@@ -22,7 +25,8 @@ class FavorecidoDialog(QDialog):
 
         # ================= TIPO =================
         self.type_combo = QComboBox()
-        self.type_combo.addItems(["Pessoa Física", "Pessoa Jurídica"])
+        self.type_combo.addItem("Pessoa Física", "Pessoa Física")
+        self.type_combo.addItem("Pessoa Jurídica", "Pessoa Jurídica")
         self.type_combo.currentIndexChanged.connect(self.update_fields)
         self.form_layout.addRow("Tipo:", self.type_combo)
 
@@ -54,16 +58,22 @@ class FavorecidoDialog(QDialog):
         self.update_fields()
 
         # ================= BOTÕES =================
-        button_box = QDialogButtonBox(
+        self.button_box = QDialogButtonBox(
             QDialogButtonBox.Save | QDialogButtonBox.Cancel
         )
-        button_box.accepted.connect(self.save_favorecido)
-        button_box.rejected.connect(self.reject)
+        layout.addWidget(self.button_box)
 
-        layout.addWidget(button_box)
+        self.button_box.button(QDialogButtonBox.Save).setText("Salvar")
+        self.button_box.button(QDialogButtonBox.Cancel).setText("Cancelar")
+
+        self.button_box.accepted.connect(self.save_favorecido)
+        self.button_box.rejected.connect(self.reject)
 
         if self.favorecido:
             self.load_favorecido_data()
+
+        # 🔥 tradução automática global
+        TranslatorApp.enable_auto_translation(self)
 
     # =========================================================
     # CARREGAR DADOS PARA EDIÇÃO
@@ -71,7 +81,11 @@ class FavorecidoDialog(QDialog):
     def load_favorecido_data(self):
 
         tipo = self.favorecido.get("Tipo")
-        self.type_combo.setCurrentText(tipo)
+
+        index = self.type_combo.findData(tipo)
+        if index >= 0:
+            self.type_combo.setCurrentIndex(index)
+
         self.update_fields()
 
         if tipo == "Pessoa Física":
@@ -99,10 +113,9 @@ class FavorecidoDialog(QDialog):
     # =========================================================
     def update_fields(self):
 
-        tipo = self.type_combo.currentText()
+        tipo = self.type_combo.currentData()
         is_fisica = tipo == "Pessoa Física"
 
-        # PF
         self._set_field_visibility(
             self.name_input,
             self.cpf_input,
@@ -110,7 +123,6 @@ class FavorecidoDialog(QDialog):
             visible=is_fisica
         )
 
-        # PJ
         self._set_field_visibility(
             self.fantasia_input,
             self.razao_input,
@@ -132,16 +144,19 @@ class FavorecidoDialog(QDialog):
     def save_favorecido(self):
 
         try:
-            tipo = self.type_combo.currentText()
+            tipo = self.type_combo.currentData()
 
+            # ================= PF =================
             if tipo == "Pessoa Física":
 
                 nome = self.name_input.text().strip()
-                cpf = NameFormat.formatCPF(self.cpf_input.text().strip())
+                cpf_raw = self.cpf_input.text().strip()
                 telefone = self.telefone_pf_input.text().strip()
 
-                if not nome or not cpf:
+                if not nome or not cpf_raw:
                     raise ValueError("Nome e CPF são obrigatórios.")
+
+                cpf = NameFormat.formatCPF(cpf_raw)
 
                 data = {
                     "Tipo": tipo,
@@ -150,19 +165,20 @@ class FavorecidoDialog(QDialog):
                     "Telefone_PF": telefone
                 }
 
+            # ================= PJ =================
             else:
 
                 fantasia = self.fantasia_input.text().strip()
                 razao = self.razao_input.text().strip()
-                cnpj = NameFormat.formatCNPJ(
-                    self.cnpj_input.text().strip()
-                )
+                cnpj_raw = self.cnpj_input.text().strip()
                 telefone = self.telefone_pj_input.text().strip()
 
-                if not fantasia or not razao or not cnpj:
+                if not fantasia or not razao or not cnpj_raw:
                     raise ValueError(
                         "Nome Fantasia, Razão Social e CNPJ são obrigatórios."
                     )
+
+                cnpj = NameFormat.formatCNPJ(cnpj_raw)
 
                 data = {
                     "Tipo": tipo,
@@ -176,6 +192,7 @@ class FavorecidoDialog(QDialog):
             if self.favorecido:
 
                 idfav = self.favorecido["ID_Favorecido"]
+
                 sucesso = self.controller.atualizar_favorecido(idfav, data)
 
                 if not sucesso:
@@ -183,8 +200,8 @@ class FavorecidoDialog(QDialog):
 
                 QMessageBox.information(
                     self,
-                    "Sucesso",
-                    "Favorecido atualizado com sucesso!"
+                    TranslatorApp.get("Sucesso"),
+                    TranslatorApp.get("Favorecido atualizado com sucesso!")
                 )
                 self.accept()
                 return
@@ -197,14 +214,14 @@ class FavorecidoDialog(QDialog):
 
             QMessageBox.information(
                 self,
-                "Sucesso",
-                "Favorecido criado com sucesso!"
+                TranslatorApp.get("Sucesso"),
+                TranslatorApp.get("Favorecido criado com sucesso!")
             )
             self.accept()
 
         except Exception as e:
             QMessageBox.critical(
                 self,
-                "Erro",
-                f"Erro ao salvar favorecido:\n{e}"
+                TranslatorApp.get("Erro"),
+                f"{TranslatorApp.get('Erro ao salvar favorecido')}:\n{e}"
             )

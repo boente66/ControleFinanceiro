@@ -10,6 +10,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtPrintSupport import QPrinter, QPrintDialog
 
 from controllers.relatorio_controller import RelatorioController
+from core.translator_binding import TranslatorBinding
 from utilitarios.makepdf import MakePDF
 from utilitarios.currency_formatter import CurrencyFormatter
 
@@ -24,14 +25,65 @@ class RelatorioView(QWidget):
         super().__init__(parent)
 
         self.controller = RelatorioController()
-        self._is_bound = False
+
+        self.setWindowTitle("Relatórios")
 
         self._init_ui()
-        self._apply_translation()
 
-        if not self._is_bound:
-            TranslatorApp.bind(self._on_translate)
-            self._is_bound = True
+        # 🔥 tela dinâmica → precisa
+        TranslatorBinding.bind(self._on_translate)
+
+    # ==================================================
+    # REATIVIDADE
+    # ==================================================
+    def _on_translate(self, *_):
+        self._refresh_ui()
+
+    def _refresh_ui(self):
+
+        # sidebar
+        self.titulo.setText(TranslatorApp.get("Relatórios"))
+
+        self.sections.clear()
+        self.sections.addItems([
+            TranslatorApp.get("Relatório Diário"),
+            TranslatorApp.get("Relatório Anual"),
+            TranslatorApp.get("Informe de Rendimentos")
+        ])
+
+        # labels
+        self.lbl_diario.setText(TranslatorApp.get("Relatório Diário"))
+        self.lbl_dias.setText(TranslatorApp.get("Dias:"))
+        self.btn_diario.setText(TranslatorApp.get("Gerar"))
+        self.btn_export_diario.setText(TranslatorApp.get("Exportar CSV"))
+
+        self.lbl_anual.setText(TranslatorApp.get("Relatório Anual"))
+        self.lbl_ano.setText(TranslatorApp.get("Ano:"))
+        self.btn_anual.setText(TranslatorApp.get("Gerar"))
+        self.btn_export_anual.setText(TranslatorApp.get("Exportar CSV"))
+
+        self.lbl_informe.setText(TranslatorApp.get("Informe de Rendimentos"))
+        self.lbl_base.setText(TranslatorApp.get("Ano Base:"))
+        self.btn_preview.setText(TranslatorApp.get("Visualizar"))
+        self.btn_pdf.setText(TranslatorApp.get("Gerar PDF"))
+        self.btn_print.setText(TranslatorApp.get("Imprimir"))
+
+        # tabelas
+        self.table_diario.setHorizontalHeaderLabels([
+            TranslatorApp.get("Data"),
+            TranslatorApp.get("Categoria"),
+            TranslatorApp.get("Receita"),
+            TranslatorApp.get("Despesa"),
+            TranslatorApp.get("Economia"),
+        ])
+
+        self.table_anual.setHorizontalHeaderLabels([
+            TranslatorApp.get("Mês"),
+            TranslatorApp.get("Categoria"),
+            TranslatorApp.get("Receita"),
+            TranslatorApp.get("Despesa"),
+            TranslatorApp.get("Economia"),
+        ])
 
     # ==================================================
     # UI
@@ -42,12 +94,12 @@ class RelatorioView(QWidget):
         main_layout.setContentsMargins(12, 12, 12, 12)
         main_layout.setSpacing(10)
 
-        # ================= SIDEBAR =================
+        # SIDEBAR
         sidebar = QFrame()
         sidebar.setObjectName("sidebar")
         sidebar_layout = QVBoxLayout(sidebar)
 
-        self.titulo = QLabel()
+        self.titulo = QLabel("Relatórios")
         self.titulo.setAlignment(Qt.AlignCenter)
         sidebar_layout.addWidget(self.titulo)
 
@@ -60,7 +112,7 @@ class RelatorioView(QWidget):
 
         main_layout.addWidget(sidebar, 0)
 
-        # ================= STACK =================
+        # STACK
         self.stacked = QStackedWidget()
 
         self.w_diario = self._relatorio_diario_widget()
@@ -75,36 +127,6 @@ class RelatorioView(QWidget):
 
         self.sections.currentRowChanged.connect(self.stacked.setCurrentIndex)
         self.sections.setCurrentRow(0)
-
-    # ==================================================
-    # TRADUÇÃO
-    # ==================================================
-    def _on_translate(self, *_):
-        self._apply_translation()
-
-    def _apply_translation(self):
-
-        TranslatorApp.text(self.titulo, "Relatórios")
-
-        TranslatorApp.list_widget(
-            self.sections,
-            [
-                "Relatório Diário",
-                "Relatório Anual",
-                "Informe de Rendimentos"
-            ]
-        )
-
-        # tabelas
-        TranslatorApp.table_headers(
-            self.table_diario,
-            ["Data", "Categoria", "Receita", "Despesa", "Economia"]
-        )
-
-        TranslatorApp.table_headers(
-            self.table_anual,
-            ["Mês", "Categoria", "Receita", "Despesa", "Economia"]
-        )
 
     # ==================================================
     # UTIL

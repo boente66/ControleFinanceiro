@@ -32,13 +32,16 @@ class ListaCategoriasView(QWidget):
 
         self.controller = CategoryController()
 
-        # 🔥 título reativo
-        TranslatorApp.window_title(self, "Listas e Categorias")
+        # 🔥 título base
+        self.setWindowTitle("Listas e Categorias")
 
         self.resize(600, 400)
 
         self._init_ui()
         self.load_categorias()
+
+        # 🔥 tradução automática global
+        TranslatorApp.enable_auto_translation(self)
 
     # ==================================================
     # UI
@@ -47,21 +50,16 @@ class ListaCategoriasView(QWidget):
         layout = QVBoxLayout(self)
 
         # ---------------- TÍTULO ----------------
-        self.title = QLabel()
+        self.title = QLabel("Listas e Categorias")
         self.title.setObjectName("title")
-        TranslatorApp.text(self.title, "Listas e Categorias")
         layout.addWidget(self.title)
 
         # ---------------- BOTÕES ----------------
         buttons = QHBoxLayout()
 
-        self.btn_nova = QPushButton()
-        self.btn_sub = QPushButton()
-        self.btn_excluir = QPushButton()
-
-        TranslatorApp.text(self.btn_nova, "Nova Categoria")
-        TranslatorApp.text(self.btn_sub, "Nova Subcategoria")
-        TranslatorApp.text(self.btn_excluir, "Excluir")
+        self.btn_nova = QPushButton("Nova Categoria")
+        self.btn_sub = QPushButton("Nova Subcategoria")
+        self.btn_excluir = QPushButton("Excluir")
 
         self.btn_nova.clicked.connect(self.add_categoria_dialog)
         self.btn_sub.clicked.connect(self.add_subcategoria_dialog)
@@ -78,10 +76,11 @@ class ListaCategoriasView(QWidget):
         self.table = QTableWidget()
         self.table.setColumnCount(3)
 
-        TranslatorApp.table_headers(
-            self.table,
-            ["Categoria", "Tipo", "ID"]
-        )
+        self.table.setHorizontalHeaderLabels([
+            "Categoria",
+            "Tipo",
+            "ID"
+        ])
 
         self.table.setColumnHidden(2, True)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
@@ -271,9 +270,9 @@ class ListaCategoriasView(QWidget):
 
         menu = QMenu(self)
 
-        copiar = QAction(TranslatorApp.get("Copiar"), self)
-        editar = QAction(TranslatorApp.get("Editar"), self)
-        excluir = QAction(TranslatorApp.get("Excluir"), self)
+        copiar = QAction("Copiar", self)
+        editar = QAction("Editar", self)
+        excluir = QAction("Excluir", self)
 
         copiar.triggered.connect(self.copiar_categoria)
         editar.triggered.connect(self.editar_categoria)

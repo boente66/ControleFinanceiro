@@ -22,7 +22,8 @@ class LoginDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        TranslatorApp.window_title(self, "Login")
+        # 🔥 título base
+        self.setWindowTitle("Login")
 
         self.setMinimumSize(360, 300)
         self.setModal(True)
@@ -36,6 +37,9 @@ class LoginDialog(QDialog):
 
         self.login_input.setFocus()
 
+        # 🔥 tradução automática global
+        TranslatorApp.enable_auto_translation(self)
+
     # =====================================================
     # ICON
     # =====================================================
@@ -45,7 +49,6 @@ class LoginDialog(QDialog):
 
         try:
             path = IonPath.resource("assets", "icons", f"{nome}.svg")
-
             icon = QIcon(path) if os.path.exists(path) else QIcon()
 
             self._icon_cache[nome] = icon
@@ -64,8 +67,7 @@ class LoginDialog(QDialog):
         layout.setSpacing(10)
 
         # LOGIN
-        self.lbl_login = QLabel()
-        TranslatorApp.text(self.lbl_login, "Usuário ou e-mail:")
+        self.lbl_login = QLabel("Usuário ou e-mail:")
         layout.addWidget(self.lbl_login)
 
         container_login = QWidget()
@@ -76,7 +78,7 @@ class LoginDialog(QDialog):
         icon_user.setPixmap(self._icon("user").pixmap(16, 16))
 
         self.login_input = QLineEdit()
-        TranslatorApp.placeholder(self.login_input, "Login ou e-mail")
+        self.login_input.setPlaceholderText("Login ou e-mail")
         self.login_input.returnPressed.connect(self._autenticar)
 
         login_layout.addWidget(icon_user)
@@ -84,8 +86,7 @@ class LoginDialog(QDialog):
         layout.addWidget(container_login)
 
         # SENHA
-        self.lbl_senha = QLabel()
-        TranslatorApp.text(self.lbl_senha, "Senha:")
+        self.lbl_senha = QLabel("Senha:")
         layout.addWidget(self.lbl_senha)
 
         container_senha = QWidget()
@@ -97,7 +98,7 @@ class LoginDialog(QDialog):
 
         self.senha_input = QLineEdit()
         self.senha_input.setEchoMode(QLineEdit.Password)
-        TranslatorApp.placeholder(self.senha_input, "Digite sua senha")
+        self.senha_input.setPlaceholderText("Digite sua senha")
         self.senha_input.returnPressed.connect(self._autenticar)
 
         self.btn_toggle = QToolButton()
@@ -114,25 +115,22 @@ class LoginDialog(QDialog):
         layout.addWidget(container_senha)
 
         # BOTÕES
-        self.btn_login = QPushButton()
+        self.btn_login = QPushButton("Entrar")
         self.btn_login.setObjectName("primaryButton")
         self.btn_login.setIcon(self._icon("login"))
         self.btn_login.setIconSize(QSize(18, 18))
-        TranslatorApp.text(self.btn_login, "Entrar")
         layout.addWidget(self.btn_login)
 
-        self.btn_cadastrar = QPushButton()
+        self.btn_cadastrar = QPushButton("Cadastrar")
         self.btn_cadastrar.setObjectName("secondaryButton")
         self.btn_cadastrar.setIcon(self._icon("add_user"))
         self.btn_cadastrar.setIconSize(QSize(18, 18))
-        TranslatorApp.text(self.btn_cadastrar, "Cadastrar")
         layout.addWidget(self.btn_cadastrar)
 
-        self.btn_recuperar = QPushButton()
+        self.btn_recuperar = QPushButton("Esqueci minha senha")
         self.btn_recuperar.setFlat(True)
         self.btn_recuperar.setCursor(Qt.PointingHandCursor)
         self.btn_recuperar.setStyleSheet("text-align:left;")
-        TranslatorApp.text(self.btn_recuperar, "Esqueci minha senha")
         layout.addWidget(self.btn_recuperar)
 
         self.btn_login.clicked.connect(self._autenticar)

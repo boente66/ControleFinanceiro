@@ -37,10 +37,13 @@ class BackupView(QWidget):
 
         self.setMinimumWidth(420)
 
-        # 🔥 título reativo
-        TranslatorApp.window_title(self, "Backup e Restauração")
-
         self._init_ui()
+
+        # 🔥 título base
+        self.setWindowTitle("Backup e Restauração")
+
+        # 🔥 tradução automática global
+        TranslatorApp.enable_auto_translation(self)
 
     # -------------------------------------------------
     # UI
@@ -48,34 +51,29 @@ class BackupView(QWidget):
     def _init_ui(self):
         self.layout = QVBoxLayout(self)
 
-        self.titulo = QLabel()
+        self.titulo = QLabel("Backup e Restauração")
         self.titulo.setObjectName("pageTitle")
         self.titulo.setAlignment(Qt.AlignCenter)
         self.layout.addWidget(self.titulo)
 
-        TranslatorApp.text(self.titulo, "Backup e Restauração")
-
-        self.label_senha = QLabel()
-        TranslatorApp.text(self.label_senha, "Senha do Backup")
+        self.label_senha = QLabel("Senha do Backup")
 
         self.senha_input = QLineEdit()
         self.senha_input.setEchoMode(QLineEdit.Password)
-        TranslatorApp.placeholder(self.senha_input, "Digite a senha")
+        self.senha_input.setPlaceholderText("Digite a senha")
 
         self.layout.addWidget(self.label_senha)
         self.layout.addWidget(self.senha_input)
 
         botoes = QHBoxLayout()
 
-        self.btn_backup = QPushButton()
+        self.btn_backup = QPushButton("Gerar Backup")
         self.btn_backup.setObjectName("primaryButton")
         self.btn_backup.clicked.connect(self.gerar_backup)
-        TranslatorApp.text(self.btn_backup, "Gerar Backup")
 
-        self.btn_restaurar = QPushButton()
+        self.btn_restaurar = QPushButton("Restaurar Backup")
         self.btn_restaurar.setObjectName("secondaryButton")
         self.btn_restaurar.clicked.connect(self.restaurar_backup)
-        TranslatorApp.text(self.btn_restaurar, "Restaurar Backup")
 
         botoes.addWidget(self.btn_backup)
         botoes.addWidget(self.btn_restaurar)

@@ -24,11 +24,14 @@ class FavorecidoView(QWidget):
 
         self.setMinimumSize(820, 600)
 
-        # 🔥 título reativo
-        TranslatorApp.window_title(self, "Favorecidos")
+        # 🔥 título base
+        self.setWindowTitle("Favorecidos")
 
         self._init_ui()
         self.load_favorecidos()
+
+        # 🔥 tradução automática global
+        TranslatorApp.enable_auto_translation(self)
 
     # =====================================================
     # UI
@@ -38,30 +41,26 @@ class FavorecidoView(QWidget):
         main_layout = QVBoxLayout(self)
 
         # ---------- TÍTULO ----------
-        self.title_label = QLabel()
+        self.title_label = QLabel("Favorecidos")
         self.title_label.setObjectName("pageTitle")
-        TranslatorApp.text(self.title_label, "Favorecidos")
         main_layout.addWidget(self.title_label)
 
         # ---------- BOTÕES ----------
         button_layout = QHBoxLayout()
 
-        self.add_btn = QPushButton()
+        self.add_btn = QPushButton("Adicionar")
         self.add_btn.setObjectName("primaryButton")
         self.add_btn.setIcon(self._icon("add"))
-        TranslatorApp.text(self.add_btn, "Adicionar")
         self.add_btn.clicked.connect(self.open_add_favorecido_dialog)
 
-        self.edit_btn = QPushButton()
+        self.edit_btn = QPushButton("Editar")
         self.edit_btn.setObjectName("primaryButton")
         self.edit_btn.setIcon(self._icon("edit"))
-        TranslatorApp.text(self.edit_btn, "Editar")
         self.edit_btn.clicked.connect(self.edit_favorecido)
 
-        self.delete_btn = QPushButton()
+        self.delete_btn = QPushButton("Excluir")
         self.delete_btn.setObjectName("deleteButton")
         self.delete_btn.setIcon(self._icon("delete"))
-        TranslatorApp.text(self.delete_btn, "Excluir")
         self.delete_btn.clicked.connect(self.delete_favorecido)
 
         for btn in (self.add_btn, self.edit_btn, self.delete_btn):
@@ -73,12 +72,10 @@ class FavorecidoView(QWidget):
         # ---------- BUSCA ----------
         search_layout = QHBoxLayout()
 
-        self.search_label = QLabel()
-        TranslatorApp.text(self.search_label, "Buscar:")
+        self.search_label = QLabel("Buscar:")
 
         self.search_input = QLineEdit()
-        TranslatorApp.placeholder(
-            self.search_input,
+        self.search_input.setPlaceholderText(
             "Nome, tipo, CPF/CNPJ, contato..."
         )
         self.search_input.textChanged.connect(self.apply_filter)
@@ -91,9 +88,7 @@ class FavorecidoView(QWidget):
         # ---------- TABELA ----------
         self.table = QTableWidget()
         self.table.setColumnCount(4)
-
-        TranslatorApp.table_headers(
-            self.table,
+        self.table.setHorizontalHeaderLabels(
             ["Nome", "Tipo", "CPF/CNPJ", "Contato"]
         )
 
@@ -183,12 +178,11 @@ class FavorecidoView(QWidget):
         favorecidos = self.controller.listar_favorecidos()
 
         if not favorecidos:
-            # opcional UX
             self.table.setRowCount(1)
             self.table.setItem(
                 0,
                 0,
-                QTableWidgetItem(TranslatorApp.get("Nenhum registro encontrado"))
+                QTableWidgetItem("Nenhum registro encontrado")
             )
             self.table.setSpan(0, 0, 1, 4)
             return

@@ -48,8 +48,8 @@ class MainView(QMainWindow):
 
         self.setGeometry(100, 100, 1200, 800)
 
-        # ✅ título traduzível (reativo)
-        TranslatorApp.window_title(self, "Controle Financeiro")
+        # 🔥 título base
+        self.setWindowTitle("Controle Financeiro")
 
         self._init_ui()
         self._criar_menu()
@@ -58,6 +58,9 @@ class MainView(QMainWindow):
         Session.on_tema_change(lambda _: self.aplicar_tema())
 
         self._abrir_primeira_view()
+
+        # 🔥 tradução automática global
+        TranslatorApp.enable_auto_translation(self)
 
     # ==================================================
     # UI BASE
@@ -112,15 +115,12 @@ class MainView(QMainWindow):
     # ==================================================
     def _criar_menu(self):
 
-        def add_btn(texto_chave, view_cls, icon_name):
+        def add_btn(texto, view_cls, icon_name):
 
-            btn = QPushButton()
+            btn = QPushButton(texto)
             btn.setObjectName("menuButton")
             btn.setProperty("active", False)
             btn.setCursor(Qt.PointingHandCursor)
-
-            # ✅ tradução automática
-            TranslatorApp.text(btn, texto_chave)
 
             btn.setIcon(self._icon(icon_name))
             btn.setIconSize(QSize(18, 18))
@@ -155,15 +155,14 @@ class MainView(QMainWindow):
     # ==================================================
     def _criar_bloco_usuario(self):
 
-        self.lbl_usuario = QLabel()
+        nome = self.usuario.get("Nome") or "Usuário"
+
+        self.lbl_usuario = QLabel(nome)
         self.lbl_usuario.setObjectName("sidebarUser")
         self.lbl_usuario.setAlignment(Qt.AlignLeft)
         self.lbl_usuario.setContentsMargins(15, 10, 10, 10)
         self.lbl_usuario.setCursor(Qt.PointingHandCursor)
         self.lbl_usuario.mousePressEvent = self._toggle_user_menu
-
-        # ✅ bind correto
-        TranslatorApp.bind(self._update_user_label)
 
         self.sidebar_layout.addWidget(self.lbl_usuario)
 
@@ -177,22 +176,16 @@ class MainView(QMainWindow):
 
         self._criar_menu_usuario()
 
-    def _update_user_label(self):
-        nome = self.usuario.get("Nome") or TranslatorApp.get("Usuário")
-        self.lbl_usuario.setText(nome)
-
     # ==================================================
     # MENU USUÁRIO
     # ==================================================
     def _criar_menu_usuario(self):
 
-        def add_user_btn(texto_chave, view_cls, icon_name):
+        def add_user_btn(texto, view_cls, icon_name):
 
-            btn = QPushButton()
+            btn = QPushButton(texto)
             btn.setObjectName("menuButton")
             btn.setCursor(Qt.PointingHandCursor)
-
-            TranslatorApp.text(btn, texto_chave)
 
             btn.setIcon(self._icon(icon_name))
             btn.setIconSize(QSize(16, 16))

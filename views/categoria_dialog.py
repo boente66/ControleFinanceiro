@@ -18,8 +18,8 @@ class CategoriaDialog(QDialog):
 
         self.setMinimumWidth(300)
 
-        # 🔥 título reativo
-        TranslatorApp.window_title(self, "Categoria")
+        # 🔥 título base (auto traduzido)
+        self.setWindowTitle("Categoria")
 
         layout = QVBoxLayout(self)
 
@@ -27,24 +27,27 @@ class CategoriaDialog(QDialog):
         form_layout = QFormLayout()
 
         # Nome
-        self.lbl_nome = QLabel()
-        TranslatorApp.text(self.lbl_nome, "Nome")
+        self.lbl_nome = QLabel("Nome")
 
         self.nome_input = QLineEdit()
+        self.nome_input.setPlaceholderText("Digite o nome da categoria")
+
         if nome:
             self.nome_input.setText(nome)
 
         form_layout.addRow(self.lbl_nome, self.nome_input)
 
         # Tipo
-        self.lbl_tipo = QLabel()
-        TranslatorApp.text(self.lbl_tipo, "Tipo")
+        self.lbl_tipo = QLabel("Tipo")
 
         self.tipo_combo = QComboBox()
-        TranslatorApp.combo(self.tipo_combo, ["Despesa", "Receita"])
+        self.tipo_combo.addItem("Despesa", "Despesa")
+        self.tipo_combo.addItem("Receita", "Receita")
 
         if tipo:
-            self.tipo_combo.setCurrentText(tipo)
+            index = self.tipo_combo.findData(tipo)
+            if index >= 0:
+                self.tipo_combo.setCurrentIndex(index)
 
         form_layout.addRow(self.lbl_tipo, self.tipo_combo)
 
@@ -55,33 +58,35 @@ class CategoriaDialog(QDialog):
             QDialogButtonBox.Ok | QDialogButtonBox.Cancel
         )
 
-        layout.addWidget(self.button_box)
+        # texto base (auto traduzido depois)
+        self.button_box.button(QDialogButtonBox.Ok).setText("OK")
+        self.button_box.button(QDialogButtonBox.Cancel).setText("Cancelar")
 
-        # 🔥 BOTÕES REATIVOS
-        TranslatorApp.text(
-            self.button_box.button(QDialogButtonBox.Ok),
-            "OK"
-        )
-        TranslatorApp.text(
-            self.button_box.button(QDialogButtonBox.Cancel),
-            "Cancelar"
-        )
+        layout.addWidget(self.button_box)
 
         self.button_box.accepted.connect(self._validar)
         self.button_box.rejected.connect(self.reject)
+
+        # 🔥 TRADUÇÃO GLOBAL AUTOMÁTICA
+        TranslatorApp.enable_auto_translation(self)
 
     # ==================================================
     # VALIDAÇÃO
     # ==================================================
     def _validar(self):
 
-        if not self.nome_input.text().strip():
+        nome = self.nome_input.text().strip()
+
+        if not nome:
             QMessageBox.warning(
                 self,
                 TranslatorApp.get("Atenção"),
                 TranslatorApp.get("O nome da categoria não pode estar vazio.")
             )
             return
+
+        # 🔥 normalização (evita lixo no banco)
+        self.nome_input.setText(nome)
 
         self.accept()
 

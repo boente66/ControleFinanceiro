@@ -189,9 +189,9 @@ class TranslatorApp:
 
 
     @classmethod
-    def current(cls):
-        return cls._current_idioma
-    
+    def get_all(cls):
+        idioma = cls.current()
+        return cls._translate("todos", idioma)
 
     @classmethod
     def bind(cls, widget, *args):

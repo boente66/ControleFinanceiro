@@ -74,7 +74,7 @@ class PainelAccount(QWidget):
 
         self._montar_ui()
 
-        TranslatorBinding.bind(self._on_translate)
+        TranslatorApp.bind(self._on_translate, self)
 
     # ==================================================
     # REATIVIDADE

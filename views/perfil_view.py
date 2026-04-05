@@ -35,7 +35,7 @@ class PerfilView(QWidget):
         self._init_ui()
 
         # 🔥 reatividade necessária (dados dinâmicos)
-        TranslatorBinding.bind(self._on_translate)
+        TranslatorApp.bind(self._on_translate, self)
 
         self._update_user_info()
 

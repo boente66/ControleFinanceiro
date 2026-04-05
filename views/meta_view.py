@@ -1,7 +1,13 @@
 import logging
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-    QPushButton, QScrollArea, QFrame, QProgressBar
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QScrollArea,
+    QFrame,
+    QProgressBar,
 )
 from PyQt5.QtCore import Qt
 
@@ -29,7 +35,7 @@ class MetaView(QWidget):
         self.carregar_metas()
 
         # 🔥 reatividade SOMENTE para recarregar dados
-        TranslatorBinding.bind(self._on_translate)
+        TranslatorApp.bind(self._on_translate, self)
 
     # ==================================================
     # REATIVIDADE
@@ -141,15 +147,11 @@ class MetaView(QWidget):
         botoes_layout = QHBoxLayout()
 
         btn_concluir = QPushButton(TranslatorApp.get("Concluir"))
-        btn_concluir.clicked.connect(
-            lambda: self._concluir(meta["ID_Meta"])
-        )
+        btn_concluir.clicked.connect(lambda: self._concluir(meta["ID_Meta"]))
 
         btn_excluir = QPushButton(TranslatorApp.get("Excluir"))
         btn_excluir.setObjectName("deleteButton")
-        btn_excluir.clicked.connect(
-            lambda: self._excluir(meta["ID_Meta"])
-        )
+        btn_excluir.clicked.connect(lambda: self._excluir(meta["ID_Meta"]))
 
         botoes_layout.addWidget(btn_concluir)
         botoes_layout.addWidget(btn_excluir)

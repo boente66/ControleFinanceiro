@@ -11,7 +11,6 @@ from PyQt5.QtGui import QIcon
 
 from views.agendamento_dialog import AgendamentoDialog
 from controllers.schedule_controller import ScheduleController
-from controllers.main_controller import MainController
 from controllers.account_controller import AccountController
 from controllers.fatura_controller import FaturaController
 
@@ -30,18 +29,16 @@ class AgendamentoView(QWidget):
         super().__init__(parent)
 
         self.schedule_controller = ScheduleController()
-        self.main_controller = MainController()
         self.account_controller = AccountController()
         self.fatura_controller = FaturaController()
 
         self._icon_cache = {}
 
+        self.data = []
+
         self._init_ui()
 
-        # 🔥 título base
         self.setWindowTitle("Agendamentos")
-
-        # 🔥 tradução global automática
         TranslatorApp.enable_auto_translation(self)
 
         self.load_cartoes()
@@ -66,61 +63,66 @@ class AgendamentoView(QWidget):
     def _init_ui(self):
         main_layout = QHBoxLayout(self)
 
-        self.sidebar = self._create_sidebar()
-        main_layout.addWidget(self.sidebar, 1)
+        main_layout.addWidget(self._create_sidebar(), 1)
+        main_layout.addWidget(self._create_main_panel(), 4)
 
-        self.main_panel = self._create_main_panel()
-        main_layout.addWidget(self.main_panel, 3)
-
+    # ==================================================
+    # SIDEBAR
+    # ==================================================
     def _create_sidebar(self):
-        self.sidebar_group = QGroupBox("Agendamentos")
+        box = QGroupBox("Filtros rápidos")
+        layout = QVBoxLayout(box)
 
-        layout = QVBoxLayout(self.sidebar_group)
+        buttons = [
+            ("Todos", None),
+            ("Receber", "Contas a Receber"),
+            ("Pagar", "Contas a Pagar"),
+            ("Transferência", "Transferências"),
+        ]
 
-        self.btn_receber = QPushButton("Contas a Receber")
-        self.btn_pagar = QPushButton("Contas a Pagar")
-        self.btn_transfer = QPushButton("Transferências")
-        self.btn_todos = QPushButton("Todos")
-
-        for btn in (self.btn_receber, self.btn_pagar, self.btn_transfer, self.btn_todos):
+        for texto, tipo in buttons:
+            btn = QPushButton(texto)
             btn.setCursor(Qt.PointingHandCursor)
+            btn.clicked.connect(lambda _, t=tipo: self.apply_quick_filter(t))
             layout.addWidget(btn)
 
-        self.btn_receber.clicked.connect(lambda: self.apply_quick_filter("Contas a Receber"))
-        self.btn_pagar.clicked.connect(lambda: self.apply_quick_filter("Contas a Pagar"))
-        self.btn_transfer.clicked.connect(lambda: self.apply_quick_filter("Transferências"))
-        self.btn_todos.clicked.connect(lambda: self.apply_quick_filter(None))
-
         layout.addStretch()
-        return self.sidebar_group
+        return box
 
+    # ==================================================
+    # MAIN PANEL
+    # ==================================================
     def _create_main_panel(self):
         container = QWidget()
-        layout = QVBoxLayout(container)
+        main_layout = QVBoxLayout(container)
 
         # ========================
         # FILTROS
         # ========================
         filtros = QHBoxLayout()
 
-        self.filter_label = QLabel("Filtrar por:")
-        self.filter_combo = QComboBox()
-        self.filter_combo.addItems([
+        self.combo_tipo = QComboBox()
+        self.combo_tipo.addItems([
             "Todos", "Contas a Receber", "Contas a Pagar", "Transferências"
         ])
-        self.filter_combo.currentIndexChanged.connect(self.apply_filter)
+
+        self.combo_status = QComboBox()
+        self.combo_status.addItems([
+            "Todos", "AGENDADO", "PAGO", "CANCELADO"
+        ])
 
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Pesquisar...")
+
+        self.combo_tipo.currentIndexChanged.connect(self.apply_filter)
+        self.combo_status.currentIndexChanged.connect(self.apply_filter)
         self.search_input.textChanged.connect(self.apply_filter)
 
-        filtros.addWidget(self.filter_label)
-        filtros.addWidget(self.filter_combo)
+        filtros.addWidget(self.combo_tipo)
+        filtros.addWidget(self.combo_status)
         filtros.addWidget(self.search_input)
 
-        # ========================
         # BOTÕES
-        # ========================
         self.add_btn = QPushButton("Adicionar")
         self.edit_btn = QPushButton("Editar")
         self.cancel_btn = QPushButton("Cancelar")
@@ -134,65 +136,72 @@ class AgendamentoView(QWidget):
         for btn in (self.add_btn, self.edit_btn, self.cancel_btn, self.execute_btn):
             filtros.addWidget(btn)
 
-        layout.addLayout(filtros)
+        main_layout.addLayout(filtros)
 
         # ========================
-        # TABELA PRINCIPAL
+        # CORPO (DUAS COLUNAS)
         # ========================
+        body = QHBoxLayout()
+
+        # -------- AGENDAMENTOS --------
+        ag_group = QGroupBox("Agendamentos")
+        ag_layout = QVBoxLayout(ag_group)
+
         self.table = QTableWidget()
         self.table.setColumnCount(7)
         self.table.setHorizontalHeaderLabels([
-            "ID", "Conta", "Favorecido", "Descrição", "Vencimento", "Valor", "Status"
+            "ID", "Conta", "Favorecido", "Descrição", "Data", "Valor", "Status"
         ])
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setColumnHidden(0, True)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
-        layout.addWidget(self.table)
+        ag_layout.addWidget(self.table)
+        body.addWidget(ag_group, 3)
 
-        # ========================
-        # CARTÃO
-        # ========================
-        filtro_cartao_layout = QHBoxLayout()
+        # -------- CARTÕES --------
+        card_group = QGroupBox("Cartões (Fatura Prevista)")
+        card_layout = QVBoxLayout(card_group)
 
-        self.lbl_cartao = QLabel("Cartão:")
         self.cartao_filter = QComboBox()
         self.cartao_filter.currentIndexChanged.connect(self.load_data)
 
-        filtro_cartao_layout.addWidget(self.lbl_cartao)
-        filtro_cartao_layout.addWidget(self.cartao_filter)
-
-        layout.addLayout(filtro_cartao_layout)
+        card_layout.addWidget(self.cartao_filter)
 
         self.table_cartao = QTableWidget()
-        self.table_cartao.setColumnCount(5)
-        self.table_cartao.setHorizontalHeaderLabels(
-            ["Descrição", "Data", "Valor", "Origem", "Tipo"]
-        )
+        self.table_cartao.setColumnCount(4)
+        self.table_cartao.setHorizontalHeaderLabels([
+            "Descrição", "Data", "Valor", "Tipo"
+        ])
         self.table_cartao.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
-        layout.addWidget(self.table_cartao)
+        card_layout.addWidget(self.table_cartao)
+        body.addWidget(card_group, 2)
+
+        main_layout.addLayout(body)
 
         # ========================
         # RESUMO
         # ========================
-        self.lbl_total_pagar = QLabel()
-        self.lbl_total_receber = QLabel()
-        self.lbl_fatura_prevista = QLabel()
-        self.lbl_saldo_atual = QLabel()
-        self.lbl_saldo_previsto = QLabel()
-
-        layout.addWidget(self.lbl_total_pagar)
-        layout.addWidget(self.lbl_total_receber)
-        layout.addWidget(self.lbl_fatura_prevista)
-        layout.addWidget(self.lbl_saldo_atual)
-        layout.addWidget(self.lbl_saldo_previsto)
+        self.lbl_total = QLabel()
+        main_layout.addWidget(self.lbl_total)
 
         return container
 
     # ==================================================
-    # CARTÕES
+    # LOAD
     # ==================================================
+    def load_data(self):
+        try:
+            self.data = self.schedule_controller.get_all_schedules() or []
+        except Exception:
+            logger.exception("Erro ao carregar agendamentos")
+            self.data = []
+
+        self.apply_filter()
+        self.load_cartao()
+        self.calcular_resumo()
+
     def load_cartoes(self):
         try:
             cartoes = self.fatura_controller.listar_cartoes()
@@ -200,38 +209,32 @@ class AgendamentoView(QWidget):
 
             for c in cartoes:
                 self.cartao_filter.addItem(c["Nome"], c["ID_Cartao"])
-
         except Exception:
             logger.exception("Erro ao carregar cartões")
 
     # ==================================================
-    # LOAD GERAL
+    # FILTROS
     # ==================================================
-    def load_data(self):
-        self.load_agendamentos()
-        self.load_cartao()
-        self.calcular_resumo()
+    def apply_filter(self):
 
-    # ==================================================
-    # AGENDAMENTOS
-    # ==================================================
-    def load_agendamentos(self, tipo_filtro=None, termo_busca=None):
+        tipo = self.combo_tipo.currentText()
+        status = self.combo_status.currentText()
+        termo = self.search_input.text().lower()
 
         self.table.setRowCount(0)
 
         self.total_pagar = 0
         self.total_receber = 0
 
-        ags = self.schedule_controller.get_all_schedules()
+        for ag in self.data:
 
-        for ag in ags:
-
-            tipo = ag.get("Tipo")
-
-            if tipo_filtro and tipo != tipo_filtro:
+            if tipo != "Todos" and ag.get("Tipo") != tipo:
                 continue
 
-            if termo_busca and termo_busca.lower() not in (ag.get("Descricao") or "").lower():
+            if status != "Todos" and ag.get("Status") != status:
+                continue
+
+            if termo and termo not in (ag.get("Descricao") or "").lower():
                 continue
 
             valor = float(ag.get("Valor", 0))
@@ -248,10 +251,13 @@ class AgendamentoView(QWidget):
             self.table.setItem(row, 6, QTableWidgetItem(TranslatorApp.get(ag.get("Status", ""))))
 
             if ag.get("Status") == "AGENDADO":
-                if tipo == "Contas a Pagar":
+                if ag.get("Tipo") == "Contas a Pagar":
                     self.total_pagar += valor
-                elif tipo == "Contas a Receber":
+                elif ag.get("Tipo") == "Contas a Receber":
                     self.total_receber += valor
+
+    def apply_quick_filter(self, tipo):
+        self.combo_tipo.setCurrentText(tipo or "Todos")
 
     # ==================================================
     # CARTÃO
@@ -265,9 +271,7 @@ class AgendamentoView(QWidget):
         if not id_cartao:
             return
 
-        ags = self.schedule_controller.get_all_schedules()
-
-        for ag in ags:
+        for ag in self.data:
 
             if ag.get("ID_Cartao") != id_cartao:
                 continue
@@ -284,8 +288,7 @@ class AgendamentoView(QWidget):
             self.table_cartao.setItem(row, 0, QTableWidgetItem(ag.get("Descricao", "")))
             self.table_cartao.setItem(row, 1, QTableWidgetItem(DateFormatter.iso_to_br(ag.get("Data"))))
             self.table_cartao.setItem(row, 2, QTableWidgetItem(CurrencyFormatter.format(valor)))
-            self.table_cartao.setItem(row, 3, QTableWidgetItem("Agendamento"))
-            self.table_cartao.setItem(row, 4, QTableWidgetItem("Previsto"))
+            self.table_cartao.setItem(row, 3, QTableWidgetItem("Previsto"))
 
     # ==================================================
     # RESUMO
@@ -295,15 +298,52 @@ class AgendamentoView(QWidget):
         contas = self.account_controller.get_all_accounts()
         saldo_atual = sum(float(c.get("Saldo_Atual", 0)) for c in contas)
 
-        saldo_previsto = (
-            saldo_atual
-            - self.total_pagar
-            + self.total_receber
-            - self.total_previsto
+        saldo_previsto = saldo_atual - self.total_pagar + self.total_receber - self.total_previsto
+
+        self.lbl_total.setText(
+            f"Pagar: {CurrencyFormatter.format(self.total_pagar)} | "
+            f"Receber: {CurrencyFormatter.format(self.total_receber)} | "
+            f"Fatura: {CurrencyFormatter.format(self.total_previsto)} | "
+            f"Saldo: {CurrencyFormatter.format(saldo_previsto)}"
         )
 
-        self.lbl_total_pagar.setText(f"Total a pagar: {CurrencyFormatter.format(self.total_pagar)}")
-        self.lbl_total_receber.setText(f"Total a receber: {CurrencyFormatter.format(self.total_receber)}")
-        self.lbl_fatura_prevista.setText(f"Fatura prevista: {CurrencyFormatter.format(self.total_previsto)}")
-        self.lbl_saldo_atual.setText(f"Saldo atual: {CurrencyFormatter.format(saldo_atual)}")
-        self.lbl_saldo_previsto.setText(f"Saldo projetado: {CurrencyFormatter.format(saldo_previsto)}")
+    # ==================================================
+    # AÇÕES
+    # ==================================================
+    def _get_selected_id(self):
+        row = self.table.currentRow()
+        if row < 0:
+            return None
+        return self.table.item(row, 0).text()
+
+    def open_add_dialog(self):
+        dlg = AgendamentoDialog(self)
+        if dlg.exec_():
+            self.load_data()
+
+    def open_edit_dialog(self):
+        ag_id = self._get_selected_id()
+        if not ag_id:
+            return
+
+        dlg = AgendamentoDialog(self, agendamento_id=ag_id)
+        if dlg.exec_():
+            self.load_data()
+
+    def cancel_agendamento(self):
+        ag_id = self._get_selected_id()
+        if not ag_id:
+            return
+
+        if QMessageBox.question(self, "Confirmar", "Cancelar agendamento?") == QMessageBox.Yes:
+            self.schedule_controller.cancelar_agendamento(ag_id)
+            self.load_data()
+
+    def execute_agendamento(self):
+        ag_id = self._get_selected_id()
+        if not ag_id:
+            return
+
+        if QMessageBox.question(self, "Confirmar", "Executar agora?") == QMessageBox.Yes:
+            self.schedule_controller.executar_agendamento(ag_id)
+            self.load_data()

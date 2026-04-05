@@ -1,9 +1,9 @@
-from core.session import Session
-from core.i18n import t
-
 import weakref
 import logging
 from functools import lru_cache
+
+from core.session import Session
+from core.i18n import t
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +19,7 @@ class TranslatorApp:
     @classmethod
     def set_language(cls, idioma):
         Session.set_config("idioma", idioma)
+        cls._translate_cached.cache_clear()  # 🔥 limpa cache
         cls.refresh()
 
     @classmethod
@@ -72,7 +73,7 @@ class TranslatorApp:
         }.get(idioma, "en")
 
     # ==================================================
-    # REFRESH GLOBAL
+    # REFRESH GLOBAL (CORRIGIDO)
     # ==================================================
     @classmethod
     def refresh(cls):
@@ -84,33 +85,39 @@ class TranslatorApp:
 
         try:
             idioma = cls.current()
-            ativos = []
+            novos = []
 
-            for callback, ref in cls._callbacks:
-                if ref() is None:
+            for callback, ref in list(cls._callbacks):
+
+                obj = ref()
+                if obj is None:
                     continue
 
                 try:
                     callback(idioma)
-                    ativos.append((callback, ref))
+                    novos.append((callback, ref))
                 except Exception:
                     logger.exception("[Translator] erro refresh")
 
-            cls._callbacks = ativos
+            cls._callbacks = novos
 
         finally:
             cls._lock_refresh = False
 
     # ==================================================
-    # REGISTRAR CALLBACK
+    # REGISTRO SEGURO
     # ==================================================
     @classmethod
-    def _register(cls, callback, ref):
+    def bind(cls, callback, widget=None):
+
+        ref = weakref.ref(widget) if widget else weakref.ref(callback)
+
         cls._callbacks.append((callback, ref))
-        Session.on_idioma_change(callback)
+
+        # 🔥 NÃO usa mais Session.on_idioma_change (evita duplicação)
 
     # ==================================================
-    # 🔥 AUTO TRANSLATE TREE
+    # AUTO TRANSLATE TREE (OTIMIZADO)
     # ==================================================
     @classmethod
     def auto_translate_tree(cls, root):
@@ -121,32 +128,35 @@ class TranslatorApp:
 
             try:
                 # TEXT
-                if hasattr(widget, "text") and hasattr(widget, "setText"):
+                if hasattr(widget, "setText") and hasattr(widget, "text"):
 
-                    if not hasattr(widget, "_original_text"):
-                        widget._original_text = widget.text()
+                    base = getattr(widget, "_original_text", None)
+                    if base is None:
+                        base = widget.text()
+                        widget._original_text = base
 
-                    base = widget._original_text
                     if base:
                         widget.setText(cls._translate(base, idioma))
 
                 # PLACEHOLDER
-                if hasattr(widget, "placeholderText") and hasattr(widget, "setPlaceholderText"):
+                if hasattr(widget, "setPlaceholderText"):
 
-                    if not hasattr(widget, "_original_placeholder"):
-                        widget._original_placeholder = widget.placeholderText()
+                    base = getattr(widget, "_original_placeholder", None)
+                    if base is None:
+                        base = widget.placeholderText()
+                        widget._original_placeholder = base
 
-                    base = widget._original_placeholder
                     if base:
                         widget.setPlaceholderText(cls._translate(base, idioma))
 
                 # TITLE
-                if hasattr(widget, "title") and hasattr(widget, "setTitle"):
+                if hasattr(widget, "setTitle"):
 
-                    if not hasattr(widget, "_original_title"):
-                        widget._original_title = widget.title()
+                    base = getattr(widget, "_original_title", None)
+                    if base is None:
+                        base = widget.title()
+                        widget._original_title = base
 
-                    base = widget._original_title
                     if base:
                         widget.setTitle(cls._translate(base, idioma))
 
@@ -179,7 +189,7 @@ class TranslatorApp:
             cls.auto_translate_tree(obj)
 
         cls.auto_translate_tree(root)
-        cls._register(update, ref)
+        cls.bind(update, root)
 
     # ==================================================
     # TEXTO DINÂMICO
@@ -200,7 +210,26 @@ class TranslatorApp:
                 logger.exception("[Translator] erro auto")
 
         update()
-        cls._register(lambda _: update(), ref)
+        cls.bind(update, widget)
+
+    # ==================================================
+    # HELPERS
+    # ==================================================
+    @classmethod
+    def text(cls, widget, texto):
+        widget.setText(cls.get(texto))
+
+    @classmethod
+    def group(cls, widget, texto):
+        widget.setTitle(cls.get(texto))
+
+    @classmethod
+    def placeholder(cls, widget, texto):
+        widget.setPlaceholderText(cls.get(texto))
+
+    @classmethod
+    def window_title(cls, widget, texto):
+        widget.setWindowTitle(cls.get(texto))
 
     # ==================================================
     # GET
@@ -212,3 +241,11 @@ class TranslatorApp:
     @classmethod
     def get_all(cls):
         return cls._translate("Todos", cls.current())
+
+    @classmethod
+    def table_headers(cls, table, headers):
+        try:
+            table.setHorizontalHeaderLabels([
+                cls.get(h) for h in headers])
+        except Exception:
+            logger.exception("[Translator] erro ao traduzir cabeçalhos da tabela")

@@ -30,7 +30,6 @@ class ThemeManager:
                 logger.error("Nenhuma instância QApplication ativa.")
                 return False
 
-            # 🔥 força refresh visual completo
             app.setStyleSheet("")
             app.setStyleSheet(css)
 
@@ -57,7 +56,7 @@ class ThemeManager:
         return nome
 
     # ======================================================
-    # ESTADO DO TEMA
+    # ESTADO
     # ======================================================
     @staticmethod
     def tema_atual() -> str:
@@ -82,7 +81,7 @@ class ThemeManager:
         return ThemeManager.aplicar_tema(nome_tema, app)
 
     # ======================================================
-    # DETECÇÃO DE TEMA
+    # DETECÇÃO
     # ======================================================
     @staticmethod
     def is_dark() -> bool:
@@ -97,7 +96,7 @@ class ThemeManager:
         return ThemeManager.tema_atual() == "Verde"
 
     # ======================================================
-    # ALTERNAR TEMA
+    # ALTERNAR
     # ======================================================
     @staticmethod
     def alternar_tema(app: QApplication = None) -> str:
@@ -122,18 +121,21 @@ class ThemeManager:
         return list(THEMES.keys())
 
     # ======================================================
-    # TOKENS VISUAIS
+    # 🎨 TOKEN UNIVERSAL
     # ======================================================
     @staticmethod
     def get_color(token: str) -> str:
         """
-        Busca cor baseada no tema atual
-        Ex: primary, success, danger, bg, text...
+        Retorna cor baseada no tema atual
         """
 
         tema = ThemeManager.tema_atual()
 
-        # 🔥 tema verde usa base light com override
+        # direto do dicionário
+        if token in V:
+            return V[token]
+
+        # variação por tema
         if tema == "Escuro":
             chave = f"{token}_dark"
         else:
@@ -141,22 +143,65 @@ class ThemeManager:
 
         cor = V.get(chave)
 
-        if not cor:
-            logger.warning(f"[Theme] Token não encontrado: {chave}")
-            return "#000000"
+        if cor:
+            return cor
 
-        return cor
+        logger.warning(f"[Theme] Token não encontrado: {token}")
+        return "#000000"
 
     # ======================================================
-    # CORES FINANCEIRAS
+    # 💰 CORES FINANCEIRAS
     # ======================================================
     @staticmethod
     def get_finance_color(tipo: str) -> str:
-        if tipo == "receita":
-            return V.get("success_light", "#16a34a")
+        tipo = (tipo or "").lower()
 
-        elif tipo == "despesa":
-            return V.get("danger_light", "#dc2626")
+        if tipo in ("receita", "entrada", "ganho"):
+            return ThemeManager.get_color("success")
+
+        elif tipo in ("despesa", "saida", "gasto"):
+            return ThemeManager.get_color("danger")
+
+        elif tipo in ("saldo", "info", "neutro"):
+            return ThemeManager.get_color("primary")
 
         logger.warning(f"[Theme] Tipo financeiro inválido: {tipo}")
         return "#000000"
+
+    # ======================================================
+    # 📊 CORES PARA GRÁFICOS
+    # ======================================================
+    @staticmethod
+    def get_chart_colors() -> dict:
+        """
+        Paleta padrão para gráficos baseada no tema
+        """
+
+        tema = ThemeManager.tema_atual()
+
+        if tema == "Escuro":
+            return {
+                "receita": "#22c55e",
+                "despesa": "#ef4444",
+                "saldo": "#3b82f6",
+                "grid": "#2a2f3a",
+                "text": "#e6eef8"
+            }
+
+        elif tema == "Verde":
+            return {
+                "receita": "#16a34a",
+                "despesa": "#dc2626",
+                "saldo": "#14532d",
+                "grid": "#d1fae5",
+                "text": "#052e16"
+            }
+
+        # Claro (default)
+        return {
+            "receita": "#16a34a",
+            "despesa": "#dc2626",
+            "saldo": "#2563eb",
+            "grid": "#e5e7eb",
+            "text": "#111827"
+        }

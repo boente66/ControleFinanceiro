@@ -47,8 +47,6 @@ class MainView(QMainWindow):
         self._icon_cache = {}
 
         self.setGeometry(100, 100, 1200, 800)
-
-        # 🔥 título base
         self.setWindowTitle("Controle Financeiro")
 
         self._init_ui()
@@ -59,7 +57,6 @@ class MainView(QMainWindow):
 
         self._abrir_primeira_view()
 
-        # 🔥 tradução automática global
         TranslatorApp.enable_auto_translation(self)
 
     # ==================================================
@@ -102,7 +99,6 @@ class MainView(QMainWindow):
         try:
             path = IonPath.resource("assets", "icons", f"{nome}.svg")
             icon = QIcon(path) if os.path.exists(path) else QIcon()
-
             self._icon_cache[nome] = icon
             return icon
 
@@ -238,17 +234,26 @@ class MainView(QMainWindow):
             btn.style().unpolish(btn)
             btn.style().polish(btn)
 
-        clicked_button.setProperty("active", True)
-        clicked_button.style().unpolish(clicked_button)
-        clicked_button.style().polish(clicked_button)
+        if clicked_button:
+            clicked_button.setProperty("active", True)
+            clicked_button.style().unpolish(clicked_button)
+            clicked_button.style().polish(clicked_button)
 
+    # ==================================================
+    # TROCA DE VIEW (CORRIGIDO)
+    # ==================================================
     def _carregar_view(self, view_cls):
 
-        if self._current_widget:
-            self.content_layout.removeWidget(self._current_widget)
-            self._current_widget.deleteLater()
-
         try:
+            if self._current_widget:
+
+                if self._current_widget.parent() is not None:
+                    self.content_layout.removeWidget(self._current_widget)
+
+                self._current_widget.setParent(None)
+                self._current_widget.deleteLater()
+                self._current_widget = None
+
             view = view_cls(parent=self)
 
             if hasattr(view, "usuario"):
@@ -260,13 +265,13 @@ class MainView(QMainWindow):
             if hasattr(view, "on_load"):
                 view.on_load()
 
+            self.content_layout.addWidget(view)
+
+            self._current_widget = view
+            self._current_view_class = view_cls
+
         except Exception:
             logger.exception(f"Erro ao carregar view {view_cls.__name__}")
-            return
-
-        self.content_layout.addWidget(view)
-        self._current_widget = view
-        self._current_view_class = view_cls
 
     # ==================================================
     # LOGOUT

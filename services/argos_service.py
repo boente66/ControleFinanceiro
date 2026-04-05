@@ -1,4 +1,3 @@
-import os
 import threading
 import logging
 
@@ -23,7 +22,7 @@ class ArgosService:
     DEFAULT_TARGET = "en"
 
     # ==================================================
-    # DETECTAR SE MODELO EXISTE
+    # DETECTAR SE MODELO EXISTE (CORRIGIDO)
     # ==================================================
     @classmethod
     def _is_installed(cls, origem, destino):
@@ -32,9 +31,20 @@ class ArgosService:
 
             for lang in installed:
                 if lang.code == origem:
-                    for t in lang.translations:
-                        if t.to_lang.code == destino:
-                            return True
+
+                    # 🔥 compatibilidade com versões diferentes
+                    translations = getattr(lang, "translations_to", None)
+
+                    if translations is None:
+                        translations = getattr(lang, "translations", [])
+
+                    for t in translations:
+                        try:
+                            if t.to_lang.code == destino:
+                                return True
+                        except Exception:
+                            continue
+
             return False
 
         except Exception:
@@ -114,20 +124,19 @@ class ArgosService:
 
         # CACHE
         if key in cls._cache:
-            logger.debug(f"[Argos] Cache hit: {texto}")
             return cls._cache[key]
 
         try:
-            # NÃO BLOQUEAR UI
+            # 🔥 não bloqueia UI
             if not cls._is_installed(origem, destino):
                 cls.ensure_model(origem, destino, background=True)
-                return texto  # fallback imediato
+                return texto
 
             resultado = argostranslate.translate.translate(
                 texto, origem, destino
             )
 
-            # CONTROLE DE CACHE
+            # 🔥 controle de cache
             if len(cls._cache) >= cls.MAX_CACHE:
                 cls._cache.clear()
 
@@ -140,7 +149,7 @@ class ArgosService:
             return texto
 
     # ==================================================
-    # TRADUÇÃO SEGURA (ASSÍNCRONA)
+    # TRADUÇÃO ASSÍNCRONA
     # ==================================================
     @classmethod
     def traduzir_async(cls, texto, callback, origem=None, destino=None):
@@ -159,17 +168,14 @@ class ArgosService:
     # ==================================================
     @classmethod
     def preload(cls, pares=None):
-        """
-        Baixa modelos em background
-        Ex: [("pt","en"), ("pt","es")]
-        """
+
         pares = pares or [("pt", "en")]
 
         for origem, destino in pares:
             cls.ensure_model(origem, destino, background=True)
 
     # ==================================================
-    # LIMPAR CACHE (UTIL)
+    # LIMPAR CACHE
     # ==================================================
     @classmethod
     def clear_cache(cls):

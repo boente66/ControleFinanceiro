@@ -16,7 +16,7 @@ from controllers.transaction_controller import TransactionController
 from controllers.account_controller import AccountController
 
 from core.translator_app import TranslatorApp
-from core.translator_binding import TranslatorBinding
+
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ class TransferDialog(QDialog):
         self._carregar_contas()
 
         # 🔥 precisa (labels + combos dinâmicos)
-        TranslatorBinding.bind(self._on_translate)
+        TranslatorApp.bind(self._on_translate,self)
 
     # --------------------------------------------------
     # REATIVIDADE

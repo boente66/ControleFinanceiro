@@ -49,7 +49,7 @@ class ResumoFinanceiroView(QWidget):
         self.load_data()
 
         # 🔥 dashboard → precisa de bind
-        TranslatorBinding.bind(self._on_translate)
+        TranslatorApp.bind(self._on_translate,self)
 
     # ==================================================
     # CICLO DE VIDA
@@ -212,8 +212,12 @@ class ResumoFinanceiroView(QWidget):
 
                 dias_restantes = (vencimento - hoje).days
 
-                fatura = self.fatura_controller.obter_valor_fatura_atual(card["ID_Cartao"])
-                disponivel = self.fatura_controller.obter_limite_disponivel(card["ID_Cartao"])
+                fatura = self.fatura_controller.obter_valor_fatura_atual(
+                    card["ID_Cartao"]
+                )
+                disponivel = self.fatura_controller.obter_limite_disponivel(
+                    card["ID_Cartao"]
+                )
 
                 texto = QLabel(
                     f"{nome}\n"

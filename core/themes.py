@@ -1,5 +1,5 @@
 # =========================================================
-# SISTEMA DE TEMAS PROFISSIONAL (SIMPLIFICADO + UX)
+# SISTEMA DE TEMAS PROFISSIONAL (COMPLETO FINAL)
 # =========================================================
 
 from core.session import Session
@@ -31,9 +31,10 @@ V = {
     "panel_light": "#ffffff",
     "panel_dark": "#121214",
 
-    "card_light": "#fbfdff",
-    "card_dark": "#151515",
+    "card_light": "#ffffff",
+    "card_dark": "#1a1a1a",
 
+    "sidebar_dark": "#111827",
     "sidebar_dark_green": "#14532d",
 
     "border_light": "#e6e9ee",
@@ -48,34 +49,166 @@ V = {
     "green": "#16a34a",
     "green_hover": "#15803d",
 
-    "success": "#16a34a",
-    "danger": "#dc2626",
+    "success": "#22c55e",
+    "danger": "#ef4444",
+    "warning": "#f59e0b",
 
     "highlight_light": "#f3f4f6",
     "highlight_dark": "#222831",
 }
 
 # =========================================================
-# HELPERS
+# COMPONENTES
 # =========================================================
+def _sidebar(tokens):
+    return f"""
+QWidget#sidebar {{
+    background-color: {tokens['sidebar']};
+}}
+
+QPushButton#menuButton {{
+    background: transparent;
+    color: white;
+    text-align: left;
+    padding: 10px 15px;
+    border: none;
+}}
+
+QPushButton#menuButton:hover {{
+    background-color: rgba(255,255,255,0.08);
+}}
+
+QPushButton#menuButton[active="true"] {{
+    background-color: rgba(255,255,255,0.15);
+    border-left: 4px solid {tokens['primary']};
+}}
+
+QLabel#sidebarUser {{
+    color: #cbd5e1;
+    font-weight: bold;
+}}
+"""
+
+
+def _buttons(primary, hover):
+    return f"""
+QPushButton {{
+    background-color: {primary};
+    color: white;
+    padding: 8px;
+    border-radius: 8px;
+}}
+
+QPushButton:hover {{
+    background-color: {hover};
+}}
+"""
+
+
+def _inputs(bg, border):
+    return f"""
+QLineEdit, QComboBox {{
+    background: {bg};
+    border: 1px solid {border};
+    padding: 6px;
+    border-radius: 6px;
+}}
+
+QComboBox QAbstractItemView {{
+    background-color: {bg};
+    selection-background-color: {border};
+}}
+"""
+
+
+def _cards(tokens):
+    return f"""
+QFrame#card {{
+    background-color: {tokens['card']};
+    border-radius: 12px;
+    padding: 12px;
+    border: 1px solid {tokens['border']};
+}}
+
+QLabel#cardTitle {{
+    font-size: 12px;
+    color: {tokens['text']};
+    opacity: 0.7;
+}}
+
+QLabel#cardValue {{
+    font-size: 20px;
+    font-weight: bold;
+    color: {tokens['primary']};
+}}
+"""
+
+
+def _groupbox(tokens):
+    return f"""
+QGroupBox {{
+    border: 1px solid {tokens['border']};
+    border-radius: 8px;
+    margin-top: 10px;
+    padding: 10px;
+}}
+
+QGroupBox::title {{
+    subcontrol-origin: margin;
+    left: 10px;
+    padding: 0 3px;
+}}
+"""
+
+
 def _table(tokens):
     return f"""
 QTableWidget {{
     background-color: {tokens['card']};
     color: {tokens['text']};
-    border-radius: 8px;
+    border-radius: 10px;
+    gridline-color: {tokens['highlight']};
 }}
 
 QHeaderView::section {{
     background-color: {tokens['highlight']};
-    padding: 6px;
+    padding: 8px;
+    border: none;
 }}
 
 QTableWidget::item:selected {{
     background-color: {tokens['primary']};
-    color: #fff;
+    color: white;
 }}
 """
+
+
+def _progress(color):
+    return f"""
+QProgressBar {{
+    border-radius: 6px;
+    background-color: rgba(0,0,0,0.1);
+}}
+
+QProgressBar::chunk {{
+    background-color: {color};
+    border-radius: 6px;
+}}
+"""
+
+
+def _labels(tokens):
+    return f"""
+QLabel#positivo {{ color: {tokens['success']}; font-weight: bold; }}
+QLabel#negativo {{ color: {tokens['danger']}; font-weight: bold; }}
+QLabel#warning {{ color: {tokens['warning']}; font-weight: bold; }}
+
+QLabel#pageTitle {{
+    font-size: 18px;
+    font-weight: bold;
+}}
+"""
+
 
 # =========================================================
 # 🎨 TEMA CLARO
@@ -87,30 +220,25 @@ QWidget {{
     color: {V['text_light']};
 }}
 
-QWidget#sidebar {{
-    background-color: #111827;
-}}
+{_sidebar({
+    "sidebar": V['sidebar_dark'],
+    "primary": V['primary_blue']
+})}
 
-QPushButton {{
-    background-color: {V['primary_blue']};
-    color: white;
-    padding: 8px;
-    border-radius: 8px;
-}}
+{_buttons(V['primary_blue'], "#1d4ed8")}
+{_inputs(V['panel_light'], V['border_light'])}
+{_progress(V['green'])}
 
-QPushButton:hover {{
-    background-color: #1d4ed8;
-}}
+{_cards({
+    "card": V['card_light'],
+    "text": V['text_light'],
+    "primary": V['primary_blue'],
+    "border": V['border_light']
+})}
 
-QLineEdit, QComboBox {{
-    background: {V['panel_light']};
-    border: 1px solid {V['border_light']};
-    padding: 6px;
-}}
-
-QProgressBar::chunk {{
-    background-color: {V['green']};
-}}
+{_groupbox({
+    "border": V['border_light']
+})}
 
 {_table({
     "card": V['card_light'],
@@ -119,9 +247,9 @@ QProgressBar::chunk {{
     "primary": V['primary_blue']
 })}
 
-QLabel#positivo {{ color: {V['success']}; font-weight: bold; }}
-QLabel#negativo {{ color: {V['danger']}; font-weight: bold; }}
+{_labels(V)}
 """
+
 
 # =========================================================
 # 🌙 TEMA ESCURO
@@ -133,30 +261,25 @@ QWidget {{
     color: {V['text_dark']};
 }}
 
-QWidget#sidebar {{
-    background-color: #1f2330;
-}}
+{_sidebar({
+    "sidebar": "#1f2330",
+    "primary": V['primary_dark']
+})}
 
-QPushButton {{
-    background-color: {V['primary_dark']};
-    color: white;
-    padding: 8px;
-    border-radius: 8px;
-}}
+{_buttons(V['primary_dark'], "#2a6ef6")}
+{_inputs(V['panel_dark'], V['border_dark'])}
+{_progress("#0ea5e9")}
 
-QPushButton:hover {{
-    background-color: #2a6ef6;
-}}
+{_cards({
+    "card": V['card_dark'],
+    "text": V['text_dark'],
+    "primary": V['primary_dark'],
+    "border": V['border_dark']
+})}
 
-QLineEdit, QComboBox {{
-    background: {V['panel_dark']};
-    border: 1px solid {V['border_dark']};
-    padding: 6px;
-}}
-
-QProgressBar::chunk {{
-    background-color: #0ea5e9;
-}}
+{_groupbox({
+    "border": V['border_dark']
+})}
 
 {_table({
     "card": V['card_dark'],
@@ -165,12 +288,12 @@ QProgressBar::chunk {{
     "primary": V['primary_dark']
 })}
 
-QLabel#positivo {{ color: #22c55e; font-weight: bold; }}
-QLabel#negativo {{ color: #ef4444; font-weight: bold; }}
+{_labels(V)}
 """
 
+
 # =========================================================
-# 💚 TEMA VERDE (SEU DIFERENCIAL)
+# 💚 TEMA VERDE
 # =========================================================
 def tema_verde():
     return BASE + f"""
@@ -179,31 +302,25 @@ QWidget {{
     color: {V['text_light']};
 }}
 
-QWidget#sidebar {{
-    background-color: {V['sidebar_dark_green']};
-    border-right: 3px solid {V['green']};
-}}
+{_sidebar({
+    "sidebar": V['sidebar_dark_green'],
+    "primary": V['green']
+})}
 
-QPushButton {{
-    background-color: {V['green']};
-    color: white;
-    padding: 8px;
-    border-radius: 8px;
-}}
+{_buttons(V['green'], V['green_hover'])}
+{_inputs("white", V['green'])}
+{_progress(V['green'])}
 
-QPushButton:hover {{
-    background-color: {V['green_hover']};
-}}
+{_cards({
+    "card": V['card_light'],
+    "text": V['text_light'],
+    "primary": V['green'],
+    "border": V['border_light']
+})}
 
-QLineEdit, QComboBox {{
-    background: white;
-    border: 1px solid {V['green']};
-    padding: 6px;
-}}
-
-QProgressBar::chunk {{
-    background-color: {V['green']};
-}}
+{_groupbox({
+    "border": V['border_light']
+})}
 
 {_table({
     "card": V['card_light'],
@@ -212,12 +329,12 @@ QProgressBar::chunk {{
     "primary": V['green']
 })}
 
-QLabel#positivo {{ color: {V['green']}; font-weight: bold; }}
-QLabel#negativo {{ color: {V['danger']}; font-weight: bold; }}
+{_labels(V)}
 """
 
+
 # =========================================================
-# REGISTRO (UX SIMPLES)
+# REGISTRO
 # =========================================================
 THEMES = {
     "Claro": tema_claro,
@@ -232,20 +349,13 @@ DEFAULT_THEME = "Claro"
 # =========================================================
 def get_theme(nome: str = None) -> str:
     nome = nome or Session.get_config("tema", DEFAULT_THEME)
-    builder = THEMES.get(nome, tema_claro)
-    return builder()
+    return THEMES.get(nome, tema_claro)()
 
 
 def apply_theme(app, nome: str = None):
-    """
-    Aplica tema no app inteiro (QApplication)
-    """
     nome = nome or DEFAULT_THEME
-
     Session.set_config("tema", nome)
-
-    css = get_theme(nome)
-    app.setStyleSheet(css)
+    app.setStyleSheet(get_theme(nome))
 
 
 def current_theme():
@@ -257,7 +367,5 @@ def available_themes():
 
 
 def register_theme(nome: str, builder):
-    if not nome or not callable(builder):
-        return
-
-    THEMES[nome] = builder
+    if nome and callable(builder):
+        THEMES[nome] = builder

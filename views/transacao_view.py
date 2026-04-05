@@ -54,7 +54,7 @@ class TransacaoView(QWidget):
         self.carregar_cartoes()
 
         # 🔥 precisa (listas + labels dinâmicos)
-        TranslatorBinding.bind(self._on_translate)
+        TranslatorApp.bind(self._on_translate, self)
 
     # ==========================================================
     # REATIVIDADE

@@ -31,7 +31,7 @@ class SubcategoriaDialog(QDialog):
         self._selecionar_categoria_pai()
 
         # 🔥 precisa (labels + botões mudam idioma)
-        TranslatorBinding.bind(self._on_translate)
+        TranslatorApp.bind(self._on_translate,self)
 
     # ==================================================
     # REATIVIDADE

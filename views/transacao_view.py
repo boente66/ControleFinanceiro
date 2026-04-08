@@ -17,7 +17,6 @@ from PyQt5.QtCore import Qt
 from controllers.account_controller import AccountController
 from controllers.fatura_controller import FaturaController
 
-from core.translator_binding import TranslatorBinding
 from views.criar_conta_dialog import CriarContaDialog
 from views.editar_conta_dialog import EditarContaDialog
 from views.criar_cartao_dialog import CriarCartaoDialog, EditCartaoDialog

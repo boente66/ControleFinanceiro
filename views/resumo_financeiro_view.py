@@ -279,7 +279,7 @@ class ResumoFinanceiroView(QWidget):
         self.clear_layout(self.receitas_layout)
 
         try:
-            dados = self.transaction_controller.get_resumo_mes_atual()
+            dados = self.transaction_controller.get_resumo_financeiro()
 
             receitas = float(dados.get("Receitas", 0))
             despesas = abs(float(dados.get("Despesas", 0)))

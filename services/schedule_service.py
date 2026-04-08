@@ -228,3 +228,11 @@ class ScheduleService:
             nova = data
 
         return nova.strftime("%Y-%m-%d")
+
+
+    def get_upcoming_schedules(self, user_id: int):
+        try:
+            return self.schedule_model.get_upcoming_schedules(user_id)
+        except Exception as e:
+            logger.error("Erro ao obter próximos agendamentos: %s", e, exc_info=True)
+            return []

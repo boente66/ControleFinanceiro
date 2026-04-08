@@ -224,15 +224,20 @@ class PainelFatura(QWidget):
     # ======================================================
     def _atualizar_header(self, dados):
 
-        limite = float(self.cartao.get("Limite", 0))
-        usado = sum(float(d.get("Valor", 0)) for d in dados)
-        disponivel = limite - usado
+        resumo = self.controller.get_resumo_cartao(
+    self.cartao["ID_Cartao"]
+)
+
+       limite = resumo.get("limite", 0)
+       saldo_devedor = resumo.get("saldo_devedor", 0)
+       disponivel = resumo.get("disponivel", 0)
 
         self.info_label.setText(
-            f"Limite: {CurrencyFormatter.format(limite)} | "
-            f"Usado: {CurrencyFormatter.format(usado)} | "
-            f"Disponível: {CurrencyFormatter.format(disponivel)}"
-        )
+        f"Limite: {CurrencyFormatter.format(limite)} | "
+  f"Devedor:{CurrencyFormatter.format(saldo_devedor)}
+| "
+        f"Disponível:{CurrencyFormatter.format(disponivel)}"
+)
 
     # ======================================================
     # TABELA

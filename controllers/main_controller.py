@@ -1,4 +1,7 @@
 import logging
+from datetime import datetime
+
+from dateutil.relativedelta import relativedelta
 
 from core.session import Session
 from controllers.fatura_controller import FaturaController
@@ -43,11 +46,6 @@ class MainController:
     # LANÇAMENTOS MANUAIS
     # ======================================================
     def inserir_lancamento(self, data: dict) -> bool:
-        """
-        Direciona o lançamento para o fluxo correto:
-        - Conta bancária
-        - Cartão de crédito
-        """
         try:
             usuario_id = self.get_usuario_id()
             if not usuario_id:
@@ -61,9 +59,7 @@ class MainController:
             if data.get("ID_Cartao"):
                 return self.fatura_controller.registrar_despesa_cartao(data)
 
-            raise ValueError(
-                "Informe uma conta (ID_Conta) ou cartão (ID_Cartao)."
-            )
+            raise ValueError("Informe uma conta (ID_Conta) ou cartão (ID_Cartao).")
 
         except Exception as e:
             logger.error(
@@ -76,9 +72,6 @@ class MainController:
     # EXECUTAR UM AGENDAMENTO
     # ======================================================
     def execute_schedule(self, agendamento_id: int) -> bool:
-        """
-        Executa um único agendamento.
-        """
         try:
             usuario = Session.get_usuario()
             if not usuario:
@@ -96,32 +89,66 @@ class MainController:
             if agendamento["Status"] not in ("AGENDADO", "ATRASADO"):
                 raise ValueError("Agendamento não pode ser executado.")
 
-            # ----------------------------------------------
-            # Monta lançamento
-            # ----------------------------------------------
-            lancamento = {
+            # ==================================================
+            # BASE DO LANÇAMENTO
+            # ==================================================
+            base_lancamento = {
                 "Data": agendamento["Data"],
                 "Valor": agendamento["Valor"],
-                "Descricao": agendamento.get("Descricao"),
+                "Descricao": agendamento.get("Descricao") or "Agendamento",
                 "ID_Usuario": usuario_id,
                 "ID_Categoria": agendamento.get("ID_Categoria"),
+                "ID_Favorecido": agendamento.get("ID_Favorecido"),
+                "Tipo": agendamento.get("Tipo"),
                 "ID_Agendamento": agendamento_id,
             }
 
-            # ----------------------------------------------
-            # Direcionamento
-            # ----------------------------------------------
+            sucesso = False
+
+            # ==================================================
+            # CONTA (normal)
+            # ==================================================
             if agendamento.get("ID_Conta"):
+                lancamento = base_lancamento.copy()
                 lancamento["ID_Conta"] = agendamento["ID_Conta"]
+
                 sucesso = self.transaction_controller.add_transaction(
                     lancamento
                 )
 
+            # ==================================================
+            # CARTÃO (com parcelas)
+            # ==================================================
             elif agendamento.get("ID_Cartao"):
-                lancamento["ID_Cartao"] = agendamento["ID_Cartao"]
-                sucesso = self.fatura_controller.registrar_despesa_cartao(
-                    lancamento
-                )
+
+                parcelas = int(agendamento.get("Parcelas", 1))
+                valor_total = float(agendamento["Valor"])
+                valor_parcela = valor_total / parcelas
+
+                data_base = datetime.fromisoformat(agendamento["Data"])
+
+                for i in range(parcelas):
+
+                    lancamento = base_lancamento.copy()
+
+                    data_parcela = data_base + relativedelta(months=i)
+
+                    lancamento.update({
+                        "ID_Cartao": agendamento["ID_Cartao"],
+                        "Valor": valor_parcela,
+                        "Data": data_parcela.date().isoformat(),
+                        "Parcela": i + 1,
+                        "Total_Parcelas": parcelas,
+                    })
+
+                    ok = self.fatura_controller.registrar_despesa_cartao(
+                        lancamento
+                    )
+
+                    if not ok:
+                        raise RuntimeError(f"Erro ao lançar parcela {i+1}")
+
+                sucesso = True
 
             else:
                 raise ValueError("Agendamento sem conta ou cartão.")
@@ -129,11 +156,12 @@ class MainController:
             if not sucesso:
                 raise RuntimeError("Falha ao criar lançamento.")
 
-            # ----------------------------------------------
-            # Atualiza status
-            # ----------------------------------------------
+            # ==================================================
+            # ATUALIZA STATUS
+            # ==================================================
             self.schedule_service.execute_schedule(
-                agendamento_id, usuario_id
+                agendamento_id,
+                usuario_id
             )
 
             logger.info(
@@ -146,17 +174,17 @@ class MainController:
         except Exception as e:
             logger.error(
                 "Erro ao executar agendamento %s para usuário %s: %s",
-                agendamento_id, self.get_usuario_id(), e, exc_info=True
+                agendamento_id,
+                self.get_usuario_id(),
+                e,
+                exc_info=True
             )
             return False
 
     # ======================================================
-    # EXECUTAR SELECIONADOS
+    # EXECUTAR VÁRIOS
     # ======================================================
     def execute_multiple_schedules(self, agendamento_ids: list[int]):
-        """
-        Executa múltiplos agendamentos selecionados.
-        """
         sucesso = []
         falha = []
 
@@ -172,9 +200,6 @@ class MainController:
     # EXECUTAR TODOS
     # ======================================================
     def execute_all_schedules(self):
-        """
-        Executa todos os agendamentos pendentes do usuário.
-        """
         try:
             agendamentos = self.schedule_controller.get_all_schedules()
 
@@ -189,6 +214,8 @@ class MainController:
         except Exception as e:
             logger.error(
                 "Erro ao executar todos os agendamentos para usuário %s: %s",
-                self.get_usuario_id(), e, exc_info=True
+                self.get_usuario_id(),
+                e,
+                exc_info=True
             )
             return [], []

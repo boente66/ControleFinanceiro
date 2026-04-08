@@ -214,7 +214,7 @@ CREATE TABLE IF NOT EXISTS credito (
 -- FAVORECIDOS
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS favorecidos (
+CREATE TABLE IF NOT EXISTS favorecido (
 
     ID_Favorecido INTEGER PRIMARY KEY AUTOINCREMENT,
 
@@ -245,7 +245,6 @@ ON favorecidos(ID_Usuario);
 CREATE TABLE IF NOT EXISTS pessoa_fisica (
 
     ID_Favorecido INTEGER PRIMARY KEY,
-
     CPF TEXT,
     Telefone TEXT,
 

@@ -119,23 +119,23 @@ class FaturaService:
 
     def get_resumo_cartao(self, id_cartao, id_usuario):
 
-        cartao = self.buscar_cartao_por_id(id_cartao, id_usuario)
-        if not cartao:
-            return {}
+    cartao = self.buscar_cartao_por_id(id_cartao, id_usuario)
+    if not cartao:
+        return {}
 
-        limite = float(cartao["Limite"])
+    limite = float(cartao["Limite"])
 
-        lancamentos = self.lancamento_model.get_lancamentos_nao_pagos(
-            id_cartao, id_usuario
-        )
+    lancamentos = self.lancamento_model.get_lancamentos_nao_pagos(
+        id_cartao, id_usuario
+    )
 
-        usado = sum(float(l["Valor"]) for l in lancamentos)
+    saldo_devedor = sum(float(l["Valor"]) for l in lancamentos)
 
-        return {
-            "limite": limite,
-            "usado": usado,
-            "disponivel": limite - usado
-        }
+    return {
+        "limite": limite,
+        "saldo_devedor": saldo_devedor,
+        "disponivel": limite - saldo_devedor
+    }
 
     def verificar_limite(self, id_cartao, id_usuario):
 

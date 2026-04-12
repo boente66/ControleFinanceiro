@@ -8,19 +8,12 @@ class CategoryModel(Database):
 
     def __init__(self):
         super().__init__()
-        try:
-            self.connect()
-        except Exception:
-            pass
 
     # ==================================================
-    # CATEGORIAS
+    # CREATE
     # ==================================================
 
     def add_category(self, nome, tipo, id_usuario, id_categoria_pai=None):
-        """
-        Cria categoria principal.
-        """
 
         query = """
         INSERT INTO categorias
@@ -33,13 +26,15 @@ class CategoryModel(Database):
             (nome, tipo, id_usuario, id_categoria_pai)
         )
 
+    # ==================================================
+    # READ
+    # ==================================================
+
     def get_all_categories(self, id_usuario):
-        """
-        Retorna todas as categorias principais do usuário.
-        """
 
         query = """
-        SELECT * FROM categorias
+        SELECT *
+        FROM categorias
         WHERE ID_Usuario = ?
         ORDER BY Nome
         """
@@ -49,7 +44,7 @@ class CategoryModel(Database):
     def get_category_by_id(self, id_categoria, id_usuario):
 
         query = """
-        SELECT ID_Categoria, Nome, Tipo
+        SELECT ID_Categoria, Nome, Tipo, ID_Categoria_Pai
         FROM categorias
         WHERE ID_Categoria = ?
         AND ID_Usuario = ?
@@ -68,6 +63,10 @@ class CategoryModel(Database):
 
         return self.fetch_one(query, (nome, id_usuario))
 
+    # ==================================================
+    # UPDATE
+    # ==================================================
+
     def update_category(self, id_categoria, nome, tipo, id_usuario):
 
         query = """
@@ -77,22 +76,18 @@ class CategoryModel(Database):
         AND ID_Usuario = ?
         """
 
-        self.execute_query(
-            query,
-            (nome, tipo, id_categoria, id_usuario)
-        )
-
+        self.execute_query(query, (nome, tipo, id_categoria, id_usuario))
         return True
 
     # ==================================================
-    # SUBCATEGORIAS
+    # SUBCATEGORIAS (CORRETO)
     # ==================================================
 
-    
     def get_subcategories(self, id_categoria_pai, id_usuario):
 
         query = """
-        SELECT * FROM categorias
+        SELECT *
+        FROM categorias
         WHERE ID_Categoria_Pai = ?
         AND ID_Usuario = ?
         ORDER BY Nome
@@ -100,94 +95,115 @@ class CategoryModel(Database):
 
         return self.fetch_all(query, (id_categoria_pai, id_usuario))
 
-    
+    def add_subcategory(self, nome, tipo, id_categoria_pai, id_usuario):
+        """
+        Subcategoria é apenas categoria com pai
+        """
+
+        return self.add_category(
+            nome=nome,
+            tipo=tipo,
+            id_usuario=id_usuario,
+            id_categoria_pai=id_categoria_pai
+        )
+
     # ==================================================
-    # EXCLUSÃO
+    # DELETE
     # ==================================================
 
     def delete_category(self, id_categoria, id_usuario):
-        """
-        Exclui categoria somente se:
-        - Não possuir subcategorias
-        - Não estiver vinculada a transações
-        """
 
-        # 1️⃣ Verificar subcategorias
-        query_filhos = """
-        SELECT COUNT(*) as total
-        FROM categorias
-        WHERE ID_Categoria_Pai = ?
-        AND ID_Usuario = ?
-        """
-
-        filhos = self.fetch_one(query_filhos, (id_categoria, id_usuario))
+        # 🔹 Verificar filhos
+        filhos = self.fetch_one("""
+            SELECT COUNT(*) as total
+            FROM categorias
+            WHERE ID_Categoria_Pai = ?
+            AND ID_Usuario = ?
+        """, (id_categoria, id_usuario))
 
         if filhos and filhos["total"] > 0:
-            return False, "Categoria possui subcategorias vinculadas."
+            return False, "Categoria possui subcategorias."
 
-        # 2️⃣ Verificar transações
-        query_trans = """
-        SELECT COUNT(*) as total
-        FROM transacoes
-        WHERE ID_Categoria = ?
-        AND ID_Usuario = ?
-        """
-
-        trans = self.fetch_one(query_trans, (id_categoria, id_usuario))
+        # 🔹 Verificar uso em transações
+        trans = self.fetch_one("""
+            SELECT COUNT(*) as total
+            FROM transacoes
+            WHERE ID_Categoria = ?
+            AND ID_Usuario = ?
+        """, (id_categoria, id_usuario))
 
         if trans and trans["total"] > 0:
-            return False, "Categoria está em uso por transações."
+            return False, "Categoria em uso."
 
-        # 3️⃣ Excluir
-        query_delete = """
-        DELETE FROM categorias
-        WHERE ID_Categoria = ?
-        AND ID_Usuario = ?
-        """
+        # 🔹 Verificar uso em lançamentos de cartão
+        lanc = self.fetch_one("""
+            SELECT COUNT(*) as total
+            FROM lancamentos
+            WHERE ID_Categoria = ?
+            AND ID_Usuario = ?
+        """, (id_categoria, id_usuario))
 
-        self.execute_query(query_delete, (id_categoria, id_usuario))
+        if lanc and lanc["total"] > 0:
+            return False, "Categoria usada em lançamentos."
+
+        # 🔹 Excluir
+        self.execute_query("""
+            DELETE FROM categorias
+            WHERE ID_Categoria = ?
+            AND ID_Usuario = ?
+        """, (id_categoria, id_usuario))
 
         return True, None
 
     # ==================================================
-    # NOME PELO ID
+    # UTIL
     # ==================================================
 
     def get_nome_categoria_by_id(self, id_categoria, id_usuario):
-
-        try:
-            query = """
-            SELECT Nome
-            FROM categorias
-            WHERE ID_Categoria = ?
-            AND ID_Usuario = ?
-            """
-
-            categoria = self.fetch_one(query, (id_categoria, id_usuario))
-
-            if categoria:
-                return categoria["Nome"]
-
-            return "Categoria Desconhecida"
-
-        except DatabaseError as e:
-            logger.error(f"Erro ao buscar nome da categoria: {e}")
-            return "Categoria Desconhecida"
-
-    # ==================================================
-    # CRIAR SUBCATEGORIA
-    # ==================================================
-    def add_subcategory(self, nome, id_categoria, id_usuario):
-
-        query = """
-        INSERT INTO subcategorias
-        (Nome, ID_Categoria, ID_Usuario)
-        VALUES (?, ?, ?)
+        """
+        ⚠️ Fallback apenas (não usar em massa)
         """
 
-        return self.execute_insert(
-            query,
-            (nome, id_categoria, id_usuario)
-        )
+        try:
+            categoria = self.fetch_one("""
+                SELECT Nome
+                FROM categorias
+                WHERE ID_Categoria = ?
+                AND ID_Usuario = ?
+            """, (id_categoria, id_usuario))
 
+            return categoria["Nome"] if categoria else "Sem categoria"
 
+        except DatabaseError as e:
+            logger.error(f"Erro categoria: {e}")
+            return "Sem categoria"
+
+    # ==================================================
+    # JOIN (🔥 SOLUÇÃO CERTA)
+    # ==================================================
+
+    def map_categorias(self, lancamentos, id_usuario):
+        """
+        Resolve categorias em lote (evita N+1)
+        """
+
+        ids = list({l.get("ID_Categoria") for l in lancamentos if l.get("ID_Categoria")})
+
+        if not ids:
+            return lancamentos
+
+        placeholders = ",".join("?" for _ in ids)
+
+        categorias = self.fetch_all(f"""
+            SELECT ID_Categoria, Nome
+            FROM categorias
+            WHERE ID_Categoria IN ({placeholders})
+            AND ID_Usuario = ?
+        """, (*ids, id_usuario))
+
+        mapa = {c["ID_Categoria"]: c["Nome"] for c in categorias}
+
+        for l in lancamentos:
+            l["Categoria"] = mapa.get(l.get("ID_Categoria"), "Sem categoria")
+
+        return lancamentos

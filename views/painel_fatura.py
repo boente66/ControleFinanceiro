@@ -1,5 +1,7 @@
+# -*- coding: utf-8 -*-
 import logging
 from datetime import datetime
+import os
 
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
@@ -8,7 +10,7 @@ from PyQt5.QtWidgets import (
     QToolButton, QMessageBox, QPushButton
 )
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColor
+from PyQt5.QtGui import QColor, QIcon
 
 from controllers.fatura_controller import FaturaController
 from controllers.account_controller import AccountController
@@ -19,6 +21,7 @@ from core.translator_app import TranslatorApp
 from utilitarios.currency_formatter import CurrencyFormatter
 from utilitarios.date_formatter import DateFormatter
 
+from utilitarios.ion_path import IonPath
 from views.TransactionDialog import TransactionDialog
 
 logger = logging.getLogger(__name__)
@@ -54,12 +57,29 @@ class PainelFatura(QWidget):
         self._carregar()
 
     # ======================================================
+    #  ICONE
+    # ======================================================
+    def _icon(self, nome):
+        if nome in self._icon_cache:
+            return self._icon_cache[nome]
+
+        try:
+            path = IonPath.resource("assets", "icons", f"{nome}.svg")
+            icon = QIcon(path) if os.path.exists(path) else QIcon()
+            self._icon_cache[nome] = icon
+            return icon
+
+        except Exception:
+            logger.exception(f"Erro ao carregar ícone: {nome}")
+            return QIcon()
+
+
+    # ======================================================
     # UI
     # ======================================================
     def _init_ui(self):
         layout = QVBoxLayout(self)
 
-        # HEADER
         self.nome_cartao_label = QLabel("-")
         self.nome_cartao_label.setObjectName("pageTitle")
 
@@ -79,8 +99,11 @@ class PainelFatura(QWidget):
             return b
 
         self.btn_lancar = btn("+ Lançar", self.add_transaction)
-        self.btn_pagar = btn("💰 Pagar", self.pagar_fatura)
-        self.btn_exportar = btn("📄 PDF", self.exportar_pdf)
+        self.btn_lancar.setIcon(self._icon("add"))
+        self.btn_pagar = btn("Pagar", self.pagar_fatura)
+        self.btn_pagar.setIcon(self._icon("pay"))
+        self.btn_exportar = btn("PDF", self.exportar_pdf)
+        self.btn_exportar.setIcon(self._icon("pdf"))
 
         toolbar.addWidget(self.btn_lancar)
         toolbar.addWidget(self.btn_pagar)
@@ -88,14 +111,13 @@ class PainelFatura(QWidget):
 
         toolbar.addStretch()
 
-        self.label_status = QLabel("Status:")
         self.filtro_combo = QComboBox()
         self.filtro_combo.addItem("Todos", "Todos")
         self.filtro_combo.addItem("Abertos", "Abertos")
         self.filtro_combo.addItem("Pagos", "Pagos")
         self.filtro_combo.currentIndexChanged.connect(self._on_filtro_changed)
 
-        toolbar.addWidget(self.label_status)
+        toolbar.addWidget(QLabel("Status:"))
         toolbar.addWidget(self.filtro_combo)
 
         layout.addLayout(toolbar)
@@ -103,13 +125,11 @@ class PainelFatura(QWidget):
         # FILTROS
         filtros = QHBoxLayout()
 
-        self.label_mes = QLabel("Mês:")
         self.mes_combo = QComboBox()
         self.mes_combo.addItems([str(i) for i in range(1, 13)])
         self.mes_combo.setCurrentIndex(self.mes_atual - 1)
         self.mes_combo.currentIndexChanged.connect(self._reset_paginacao)
 
-        self.label_ano = QLabel("Ano:")
         self.ano_combo = QComboBox()
         self.ano_combo.addItems(
             [str(self.ano_atual - 1), str(self.ano_atual), str(self.ano_atual + 1)]
@@ -117,9 +137,9 @@ class PainelFatura(QWidget):
         self.ano_combo.setCurrentText(str(self.ano_atual))
         self.ano_combo.currentIndexChanged.connect(self._reset_paginacao)
 
-        filtros.addWidget(self.label_mes)
+        filtros.addWidget(QLabel("Mês:"))
         filtros.addWidget(self.mes_combo)
-        filtros.addWidget(self.label_ano)
+        filtros.addWidget(QLabel("Ano:"))
         filtros.addWidget(self.ano_combo)
 
         layout.addLayout(filtros)
@@ -131,7 +151,6 @@ class PainelFatura(QWidget):
         )
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.table.setSortingEnabled(True)
 
         layout.addWidget(self.table)
 
@@ -154,6 +173,11 @@ class PainelFatura(QWidget):
         # RESUMO
         self.resumo_label = QLabel()
         layout.addWidget(self.resumo_label)
+
+        # FUTURAS
+        self.futuras_label = QLabel()
+        self.futuras_label.setObjectName("muted")
+        layout.addWidget(self.futuras_label)
 
     # ======================================================
     # CONTROLE
@@ -181,7 +205,7 @@ class PainelFatura(QWidget):
             self._carregar()
 
     # ======================================================
-    # DADOS
+    # DADOS (100% CONTROLADOS)
     # ======================================================
     def _carregar(self):
 
@@ -191,61 +215,60 @@ class PainelFatura(QWidget):
         mes = int(self.mes_combo.currentText())
         ano = int(self.ano_combo.currentText())
 
-        result = self.controller.obter_fatura_paginada(
-            self.cartao["ID_Cartao"],
-            mes,
-            ano,
+        painel = self.controller.get_painel_cartao(
+            id_cartao=self.cartao["ID_Cartao"],
+            mes=mes,
+            ano=ano,
+            page=self.page,
             limit=self.limit,
-            offset=self.page * self.limit,
+            status=self.filtro_status
         ) or {}
 
-        dados = result.get("dados", [])
-        total = result.get("total", 0)
+        self._render_header(painel.get("resumo", {}))
+        self._render_tabela(painel.get("lancamentos", []))
+        self._render_resumo(painel.get("fatura", {}))
+        self._render_futuras(painel.get("futuras", {}))
 
-        if self.filtro_status == "Abertos":
-            dados = [d for d in dados if not d.get("Paga")]
-        elif self.filtro_status == "Pagos":
-            dados = [d for d in dados if d.get("Paga")]
-
-        self._preencher_tabela(dados)
-        self._atualizar_resumo(dados)
-        self._atualizar_header(dados)
-
+        total = painel.get("total_registros", 0)
         total_paginas = max(1, (total // self.limit) + 1)
 
-        self.label_page.setText(
-            f"{TranslatorApp.get('Página')} {self.page + 1} / {total_paginas}"
-        )
-
+        self.label_page.setText(f"{self.page + 1} / {total_paginas}")
         self.nome_cartao_label.setText(self.cartao.get("Nome", ""))
 
     # ======================================================
-    # HEADER
+    # RENDER
     # ======================================================
-    def _atualizar_header(self, dados):
-
-        resumo = self.controller.get_resumo_cartao(
-    self.cartao["ID_Cartao"]
-)
-
-       limite = resumo.get("limite", 0)
-       saldo_devedor = resumo.get("saldo_devedor", 0)
-       disponivel = resumo.get("disponivel", 0)
+    def _render_header(self, resumo):
 
         self.info_label.setText(
-        f"Limite: {CurrencyFormatter.format(limite)} | "
-  f"Devedor:{CurrencyFormatter.format(saldo_devedor)}
-| "
-        f"Disponível:{CurrencyFormatter.format(disponivel)}"
-)
+            f"Limite: {CurrencyFormatter.format(resumo.get('limite', 0))} | "
+            f"Devedor: {CurrencyFormatter.format(resumo.get('saldo_devedor', 0))} | "
+            f"Disponível: {CurrencyFormatter.format(resumo.get('disponivel', 0))}"
+        )
 
-    # ======================================================
-    # TABELA
-    # ======================================================
-    def _preencher_tabela(self, dados):
+    def _render_resumo(self, fatura):
+
+        self.resumo_label.setText(
+            f"Fatura: {CurrencyFormatter.format(fatura.get('total', 0))} | "
+            f"Abertos: {CurrencyFormatter.format(fatura.get('abertos', 0))} | "
+            f"Pagos: {CurrencyFormatter.format(fatura.get('pagos', 0))}"
+        )
+
+    def _render_futuras(self, futuras):
+
+        texto = "Próximas faturas:\n"
+
+        if not futuras:
+            texto += "Nenhuma"
+        else:
+            for mes, valor in futuras.items():
+                texto += f"{mes} → {CurrencyFormatter.format(valor)}\n"
+
+        self.futuras_label.setText(texto)
+
+    def _render_tabela(self, dados):
 
         self.table.setRowCount(0)
-
         for item in dados:
             row = self.table.rowCount()
             self.table.insertRow(row)
@@ -253,29 +276,26 @@ class PainelFatura(QWidget):
             valor = float(item.get("Valor", 0))
             pago = item.get("Paga")
 
-            status = "Pago" if pago else "Aberto"
-
             cor = (
                 ThemeManager.get_color("success")
                 if pago
                 else ThemeManager.get_color("danger")
             )
 
+            status = "Pago" if pago else "Aberto"
+
             descricao = item.get("Descricao", "")
 
-            parcela = item.get("Parcela")
-            total_parcelas = item.get("TotalParcelas")
+            if item.get("Parcela_Atual") and item.get("Num_Parcelas"):
+                descricao += f" ({item['Parcela_Atual']}/{item['Num_Parcelas']})"
 
-            if parcela and total_parcelas:
-                descricao = f"{descricao} ({parcela}/{total_parcelas})"
+            self.table.setItem(row, 0, QTableWidgetItem(
+                DateFormatter.iso_to_br(item.get("Data", ""))
+            ))
 
-            self.table.setItem(
-                row, 0, QTableWidgetItem(DateFormatter.iso_to_br(item.get("Data", "")))
-            )
+            
             self.table.setItem(row, 1, QTableWidgetItem(descricao))
-            self.table.setItem(
-                row, 2, QTableWidgetItem(str(item.get("Categoria", "")))
-            )
+            self.table.setItem(row, 2, QTableWidgetItem(str(item.get("Categoria", ""))))
 
             valor_item = QTableWidgetItem(CurrencyFormatter.format(valor))
             valor_item.setForeground(QColor(cor))
@@ -285,21 +305,6 @@ class PainelFatura(QWidget):
             status_item = QTableWidgetItem(status)
             status_item.setForeground(QColor(cor))
             self.table.setItem(row, 4, status_item)
-
-    # ======================================================
-    # RESUMO
-    # ======================================================
-    def _atualizar_resumo(self, dados):
-
-        total = sum(float(d.get("Valor", 0)) for d in dados)
-        abertos = sum(float(d.get("Valor", 0)) for d in dados if not d.get("Paga"))
-        pagos = sum(float(d.get("Valor", 0)) for d in dados if d.get("Paga"))
-
-        self.resumo_label.setText(
-            f"Total: {CurrencyFormatter.format(total)} | "
-            f"Abertos: {CurrencyFormatter.format(abertos)} | "
-            f"Pagos: {CurrencyFormatter.format(pagos)}"
-        )
 
     # ======================================================
     # AÇÕES
@@ -335,7 +340,6 @@ class PainelFatura(QWidget):
             )
 
             QMessageBox.information(self, "Sucesso", "Fatura paga com sucesso")
-
             self._carregar()
 
         except Exception as e:
@@ -359,8 +363,6 @@ class PainelFatura(QWidget):
 
         try:
             self.controller.exportar_fatura_pdf(self.cartao, dados, caminho)
-
             QMessageBox.information(self, "Sucesso", "PDF exportado")
-
         except Exception as e:
             QMessageBox.critical(self, "Erro", str(e))

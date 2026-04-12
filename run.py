@@ -14,9 +14,9 @@ logger = logging.getLogger(__name__)
 
 
 def aplicar_tema(app, tema):
-    """
+    
     Aplica tema com fallback seguro
-    """
+    
     try:
         style = get_theme(tema)
 

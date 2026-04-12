@@ -129,3 +129,18 @@ class FaturaController:
             mes,
             ano
         )
+
+
+    def get_painel_cartao(self, id_cartao, mes, ano, page, limit, status):
+
+        id_usuario = self.session.get_user_id()
+
+        return self.service.get_painel_cartao(
+            id_cartao=id_cartao,
+            id_usuario=id_usuario,
+            page=page,
+            limit=limit,
+            status=status
+        )
+
+   

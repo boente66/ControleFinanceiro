@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" role="img" aria-label="Pay">
+  <title>Pay</title>
+  <rect x="1.5" y="4.5" width="21" height="15" rx="2" fill="#F5F7FA" stroke="#D1D5DB"/>
+  <!-- cartão / carteira -->
+  <rect x="3.5" y="7" width="14" height="9" rx="1.2" fill="#FFFFFF" stroke="#E6E9EF"/>
+  <rect x="3.5" y="11" width="9" height="2" rx="0.8" fill="#EFF6FF"/>
+  <!-- moeda -->
+  <circle cx="19" cy="12" r="3.2" fill="#10B981" stroke="#059669"/>
+  <text x="19" y="12.6" font-family="DejaVu Sans, Arial, sans-serif" font-size="3.2" font-weight="700" fill="#ffffff" text-anchor="middle" alignment-baseline="middle">PAY</text>
+  <!-- detalhe do cartão -->
+  <rect x="14.2" y="7.6" width="1.6" height="1.2" rx="0.3" fill="#F3F4F6"/>
+</svg>

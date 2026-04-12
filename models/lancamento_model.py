@@ -171,14 +171,17 @@ class LancamentoModel(Database):
     def get_lancamentos_por_fatura(self, id_cartao, mes, ano, id_usuario):
 
         sql = """
-            SELECT *
-            FROM lancamentos
-            WHERE ID_Cartao = ?
-              AND ID_Usuario = ?
-              AND Competencia_Mes = ?
-              AND Competencia_Ano = ?
-            ORDER BY Data
-        """
+SELECT l.*,
+       c.Nome AS Categoria
+FROM lancamentos l
+LEFT JOIN categorias c
+    ON c.ID_Categoria = l.ID_Categoria
+WHERE l.ID_Cartao = ?
+  AND l.ID_Usuario = ?
+  AND l.Competencia_Mes = ?
+  AND l.Competencia_Ano = ?
+ORDER BY l.Data
+""".strip()
 
         return self.fetch_all(
             sql,
@@ -312,3 +315,16 @@ class LancamentoModel(Database):
         return self.fetch_one(sql, (
             id_cartao, descricao, mes, ano, id_usuario
         )) is not None
+
+
+
+
+    def get_lancamentos_por_cartao(self, id_cartao, id_usuario):
+
+        sql = """
+            SELECT * FROM lancamentos WHERE ID_Cartao = ?
+            AND ID_Usuario = ?
+            ORDER BY Data
+            """
+
+        return self.fetch_all(sql, (id_cartao, id_usuario))

@@ -59,7 +59,9 @@ CREATE TABLE IF NOT EXISTS usuarios (
     CPF TEXT,                                                          
     Email TEXT UNIQUE,
     Login TEXT UNIQUE,
-    Senha TEXT NOT NULL,    
+    Senha TEXT NOT NULL,
+    Telefone TEXT,
+    Celular TEXT,
     Nivel_Acesso TEXT CHECK (Nivel_Acesso IN ('admin','usuario')),
     Tema TEXT DEFAULT 'Claro',
     Idioma TEXT DEFAULT 'pt_BR'

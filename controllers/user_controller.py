@@ -1,10 +1,18 @@
 import re
+from core.session import Session
 from services.user_services import UserService
 
 
 class UserController:
     def __init__(self):
         self.service = UserService()
+
+    def _get_usuario_id(self):
+        usuario = Session.get_usuario()
+        if not usuario:
+            raise RuntimeError("Usuário não autenticado.")
+        return usuario["ID_Usuario"]
+        
 
     # =============================
     # AUTENTICAÇÃO
@@ -33,7 +41,8 @@ class UserController:
     # =============================
     # SENHA (DIRETA – ADMIN)
     # =============================
-    def change_password(self, id_usuario, nova_senha) -> bool:
+    def change_password(self, nova_senha) -> bool:
+        id_usuario = self._get_usuario_id()
         return self.service.change_password(id_usuario, nova_senha)
     # =============================
     # RECUPERAÇÃO DE SENHA (TOKEN)
@@ -53,9 +62,12 @@ class UserController:
     # =============================
     # PREFERÊNCIAS
     # =============================
-    def get_preferences(self, id_usuario):
+    def get_preferences(self):
+        id_usuario = self._get_usuario_id()
         return self.service.get_preferences(id_usuario)
-    def update_preferences(self, id_usuario, tema, idioma) -> bool:
+
+    def update_preferences(self, tema, idioma) -> bool:
+        id_usuario = self._get_usuario_id()
         return self.service.update_preferences(id_usuario, tema, idioma)
     def request_password_reset(self, login_ou_email):
         return self.service.request_password_reset(login_ou_email)

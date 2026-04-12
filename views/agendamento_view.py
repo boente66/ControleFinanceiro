@@ -217,6 +217,24 @@ class AgendamentoView(QWidget):
         rows = self.table.selectionModel().selectedRows()
         return [int(self.table.item(r.row(), 0).text()) for r in rows]
 
+    def _create_cards(self):
+        layout = QHBoxLayout()
+
+        def card(titulo, valor):
+            box = QVBoxLayout()
+            box.addWidget(QLabel(titulo))
+            box.addWidget(QLabel(CurrencyFormatter.format(valor)))
+
+            w = QWidget()
+            w.setLayout(box)
+            return w
+
+        layout.addWidget(card("Total a Pagar", self.total_pagar))
+        layout.addWidget(card("Total a Receber", self.total_receber))
+        layout.addWidget(card("Previsto", self.total_previsto))
+
+        return layout
+
     # ==================================================
     # LOAD
     # ==================================================

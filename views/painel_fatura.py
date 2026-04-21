@@ -39,7 +39,7 @@ class PainelFatura(QWidget):
         self.page = 0
         self.limit = 50
         self.filtro_status = "Todos"
-
+        self._icon_cache = {}
         hoje = datetime.today()
         self.mes_atual = hoje.month
         self.ano_atual = hoje.year

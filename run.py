@@ -9,59 +9,58 @@ from core.themes import get_theme
 from views.login_dialog import LoginDialog
 from views.main_view import MainView
 
-
 logger = logging.getLogger(__name__)
 
 
-def aplicar_tema(app, tema):
-    
-     # Aplica tema com fallback seguro
-    
+def aplicar_tema(tema, app=None):
     try:
+        app = app or QApplication.instance()
+
+        if not isinstance(app, QApplication):
+            logger.error(f"App inválido: {type(app)}")
+            return
+
         style = get_theme(tema)
 
         if isinstance(style, str) and style.strip():
             app.setStyleSheet(style)
         else:
-            logger.warning(f"Tema inválido retornado: {tema}")
+            logger.warning(f"Tema inválido: {tema}")
             app.setStyleSheet("")
 
     except Exception:
         logger.exception("Erro ao aplicar tema")
-        app.setStyleSheet("")
+        if isinstance(app, QApplication):
+            app.setStyleSheet("")
 
 
 def main():
     app = QApplication(sys.argv)
 
-    # ==============================
-    # CONFIGURAÇÕES
-    # ==============================
+    # CONFIG
     config = carregar_config()
     Session.load_config(config)
 
-    # ==============================
     # TEMA INICIAL
-    # ==============================
-    tema = config.get("tema", "Claro")
-    aplicar_tema(app, tema)
+    tema = Session.get_config("tema", "Claro")
+    aplicar_tema(tema, app)
 
-    # 🔥 REATIVIDADE DO TEMA
-    Session.on_tema_change(lambda novo: aplicar_tema(app, novo))
+    # 🔥 CALLBACK SEGURO
+    def on_theme_change(novo_tema):
+        aplicar_tema(novo_tema, app)
 
-    # ==============================
+    Session.on_tema_change(on_theme_change)
+
     # LOGIN
-    # ==============================
     login = LoginDialog()
 
     if login.exec_() == QDialog.Accepted:
         usuario = login.usuario_logado
 
         if not usuario:
-            logger.error("Login retornou sem usuário")
+            logger.error("Login sem usuário")
             sys.exit(0)
 
-        # garante sessão
         Session.set_usuario(usuario)
 
         try:
@@ -73,7 +72,6 @@ def main():
 
         sys.exit(app.exec_())
 
-    # cancelado
     sys.exit(0)
 
 

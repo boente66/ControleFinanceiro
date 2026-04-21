@@ -71,15 +71,37 @@ class FaturaController:
         )
 
     def criar_cartao(self, dados: dict):
+        """
+        Cria um novo cartão de crédito.
+        """
+        dados_formatados = { 
+            "Nome": dados.get("nome"),
+            "Limite": dados.get("limite"),
+            "Dia_Fechamento": dados.get("dia_fechamento"),
+            "Dia_Vencimento": dados.get("dia_vencimento"),
+            "Ativo": dados.get("ativo", 1)
+        }
+
         return self.service.criar_cartao(
-            dados,
+            dados_formatados,
             self.get_id_usuario()
         )
 
     def editar_cartao(self, id_cartao, dados: dict):
+        """
+        Edita um cartão de crédito existente.
+        """
+        dados_formatados = {
+            "Nome": dados.get("nome"),
+            "Limite": dados.get("limite"),
+            "Dia_Fechamento": dados.get("dia_fechamento"),
+            "Dia_Vencimento": dados.get("dia_vencimento"),
+            "Ativo": dados.get("ativo", 1)
+        }
+
         return self.service.editar_cartao(
             id_cartao,
-            dados,
+            dados_formatados,
             self.get_id_usuario()
         )
 

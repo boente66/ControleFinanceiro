@@ -236,3 +236,10 @@ class ScheduleService:
         except Exception as e:
             logger.error("Erro ao obter próximos agendamentos: %s", e, exc_info=True)
             return []
+
+    def get_all_schedules(self, user_id: int):
+        try:
+            return self.schedule_model.get_all_schedules(user_id)
+        except Exception as e:
+            logger.error("Erro ao obter todos os agendamentos: %s", e, exc_info=True)
+            return []

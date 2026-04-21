@@ -16,7 +16,7 @@ class Session:
     usuario = None
 
     _config_padrao = {
-        "idioma": "pt",     # 🔥 PADRÃO CORRETO
+        "idioma": "pt",
         "tema": "Claro",
         "moeda": "BRL"
     }
@@ -28,7 +28,7 @@ class Session:
     _tema_listeners = []
 
     # ---------------------------------------
-    # NORMALIZAÇÃO 🔥 (NOVA)
+    # NORMALIZAÇÃO
     # ---------------------------------------
     _idioma_map = {
         "Português": "pt",
@@ -39,9 +39,26 @@ class Session:
         "es": "es"
     }
 
+    _tema_map = {
+        "Claro": "Claro",
+        "Escuro": "Escuro",
+        "Verde": "Verde",
+        "claro": "Claro",
+        "escuro": "Escuro",
+        "verde": "Verde",
+    }
+
     @classmethod
     def _normalize_idioma(cls, valor):
         return cls._idioma_map.get(valor, "pt")
+
+    @classmethod
+    def _normalize_tema(cls, valor):
+        if not isinstance(valor, str):
+            return "Claro"
+
+        valor = valor.strip()
+        return cls._tema_map.get(valor, "Claro")
 
     # ---------------------------------------
     # USUÁRIO
@@ -53,13 +70,13 @@ class Session:
         if not usuario:
             return
 
-        # 🔥 normaliza antes de aplicar
         if "Idioma" in usuario:
             idioma = cls._normalize_idioma(usuario["Idioma"])
             cls.set_config("idioma", idioma, notify=False)
 
         if "Tema" in usuario:
-            cls.set_config("tema", usuario["Tema"], notify=False)
+            tema = cls._normalize_tema(usuario["Tema"])
+            cls.set_config("tema", tema, notify=False)
 
     @classmethod
     def get_usuario(cls):
@@ -74,9 +91,11 @@ class Session:
         if chave not in cls._config_padrao:
             return
 
-        # 🔥 NORMALIZA IDIOMA
         if chave == "idioma":
             valor = cls._normalize_idioma(valor)
+
+        elif chave == "tema":
+            valor = cls._normalize_tema(valor)
 
         cls.configuracoes[chave] = valor
 
@@ -97,11 +116,20 @@ class Session:
                 if chave == "idioma":
                     valor = cls._normalize_idioma(valor)
 
+                elif chave == "tema":
+                    valor = cls._normalize_tema(valor)
+
                 cls.configuracoes[chave] = valor
 
     @classmethod
     def get_config(cls, chave: str, default=None):
-        return cls.configuracoes.get(chave, default)
+        valor = cls.configuracoes.get(chave, default)
+
+        # 🔥 proteção extra
+        if chave == "tema":
+            return cls._normalize_tema(valor)
+
+        return valor
 
     @classmethod
     def reset_config(cls):
@@ -135,6 +163,7 @@ class Session:
     def _notify_tema(cls, tema):
         for callback in list(cls._tema_listeners):
             try:
-                callback(tema)
+                if callable(callback):
+                    callback(tema)
             except Exception:
                 pass

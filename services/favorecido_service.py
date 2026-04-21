@@ -21,44 +21,59 @@ class FavorecidoService:
         return fav
 
     # ---------------------------------------------------------
-    # CRIAR (EXPLÍCITO)
+    # CRIAR (AJUSTADO PARA PF/PJ)
     # ---------------------------------------------------------
     def criar(self, dados, id_usuario):
-        nome = dados.get("Nome")
+        nome = (dados.get("Nome") or "").strip()
         tipo = dados.get("Tipo")
-        cpf = dados.get("CPF")
-        telefone = dados.get("Telefone")
 
         if not nome:
             raise ValueError("Nome é obrigatório.")
 
-        if tipo not in ("Pessoa Física", "Pessoa Jurídica"):
-            raise ValueError("Tipo inválido.")
+        if tipo not in ("PF", "PJ"):
+            raise ValueError("Tipo inválido. Use PF ou PJ.")
+
+        # 🔍 evitar duplicidade por nome
+        existente = self.model.get_favorecido_by_name(nome, id_usuario)
+        if existente:
+            return existente["ID_Favorecido"]
 
         payload = {
             "Nome": nome,
             "Tipo": tipo,
-            "CPF": cpf,
-            "Telefone": telefone,
-            "ID_Usuario": id_usuario
+            "Telefone": dados.get("Telefone")
         }
 
-        return self.model.add_favorecido(payload)
+        # PF
+        if tipo == "PF":
+            cpf = dados.get("CPF")
+            if not cpf:
+                raise ValueError("CPF é obrigatório para Pessoa Física.")
+            payload["CPF"] = cpf
+
+        # PJ
+        elif tipo == "PJ":
+            cnpj = dados.get("CNPJ")
+            if not cnpj:
+                raise ValueError("CNPJ é obrigatório para Pessoa Jurídica.")
+
+            payload["CNPJ"] = cnpj
+            payload["Razao_Social"] = dados.get("Razao_Social")
+
+        return self.model.add_favorecido(payload, id_usuario)
 
     # ---------------------------------------------------------
-    # ATUALIZAR
+    # ATUALIZAR (AJUSTADO)
     # ---------------------------------------------------------
     def atualizar(self, id_favorecido, dados, id_usuario):
         fav = self.model.get_favorecido_by_id(id_favorecido, id_usuario)
         if not fav:
             raise ValueError("Favorecido não encontrado.")
 
-        nome = dados.get("Nome", fav["Nome"])
-        cpf = dados.get("CPF", fav["CPF"])
-        telefone = dados.get("Telefone", fav["Telefone"])
-
         return self.model.update_favorecido(
-            id_favorecido, nome, cpf, telefone
+            id_favorecido,
+            dados,
+            id_usuario
         )
 
     # ---------------------------------------------------------
@@ -72,7 +87,7 @@ class FavorecidoService:
         return self.model.delete_favorecido(id_favorecido, id_usuario)
 
     # ---------------------------------------------------------
-    # 🔑 RESOLVER (IA / IMPORTAÇÃO)
+    # 🔑 RESOLVER (IMPORTAÇÃO / IA)
     # ---------------------------------------------------------
     def resolver_favorecido(self, dados, id_usuario):
         """
@@ -85,35 +100,33 @@ class FavorecidoService:
         cpf = dados.get("CPF")
         cnpj = dados.get("CNPJ")
 
-        # nada informado
         if not nome and not cpf and not cnpj:
             return None
 
-        # 1️⃣ tenta localizar existente
-        favorecido = self.model.buscar_favorecido(
-            nome=nome,
-            cpf=cpf,
-            cnpj=cnpj,
-            id_usuario=id_usuario
-        )
+        # 🔍 tenta encontrar existente (precisa existir no model)
+        favorecido = self.model.get_favorecido_by_name(nome, id_usuario)
 
         if favorecido:
             return favorecido["ID_Favorecido"]
 
-        # 2️⃣ só cria se houver documento
-        if cnpj:
-            tipo = "Pessoa Jurídica"
-        elif cpf:
-            tipo = "Pessoa Física"
+        # só cria com documento válido
+        if cpf:
+            tipo = "PF"
+        elif cnpj:
+            tipo = "PJ"
         else:
-            # só nome → NÃO cria automaticamente
             return None
 
         payload = {
             "Nome": nome,
             "Tipo": tipo,
-            "CPF": cpf,
-            "ID_Usuario": id_usuario
+            "Telefone": dados.get("Telefone")
         }
 
-        return self.model.add_favorecido(payload)
+        if tipo == "PF":
+            payload["CPF"] = cpf
+        else:
+            payload["CNPJ"] = cnpj
+            payload["Razao_Social"] = dados.get("Razao_Social")
+
+        return self.model.add_favorecido(payload, id_usuario)

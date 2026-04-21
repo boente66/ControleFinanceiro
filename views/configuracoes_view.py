@@ -1,14 +1,13 @@
 import logging
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QComboBox,
-    QPushButton, QMessageBox, QApplication
+    QPushButton, QMessageBox
 )
 
-from core.session import Session
 from core.theme_manager import ThemeManager
 from core.themes import available_themes
 from core.translator_app import TranslatorApp
-from controllers.user_controller import UserController
+from controllers.configuracoes_controller import ConfiguracoesController
 
 logger = logging.getLogger(__name__)
 
@@ -18,15 +17,15 @@ class ConfiguracoesView(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.controller = UserController()
+        # 🔥 CONTROLLER CORRETO
+        self.controller = ConfiguracoesController()
 
-        # 🔥 título base (auto traduzido)
         self.setWindowTitle("Configurações")
 
         self._init_ui()
         self._load_config()
 
-        # 🔥 ativa tradução automática global
+        # 🔥 tradução automática
         TranslatorApp.enable_auto_translation(self)
 
     # ==================================================
@@ -51,13 +50,18 @@ class ConfiguracoesView(QWidget):
         self.idioma_combo = QComboBox()
         self.layout.addWidget(self.idioma_combo)
 
-        idiomas = ["Português", "Inglês", "Espanhol"]
+        # 🔥 PADRÃO INTERNO (CORRETO)
+        idiomas = [
+            ("Português", "pt"),
+            ("Inglês", "en"),
+            ("Espanhol", "es"),
+        ]
 
         self.idioma_combo.blockSignals(True)
         self.idioma_combo.clear()
 
-        for i in idiomas:
-            self.idioma_combo.addItem(i, i)
+        for label, code in idiomas:
+            self.idioma_combo.addItem(label, code)
 
         self.idioma_combo.blockSignals(False)
 
@@ -113,8 +117,8 @@ class ConfiguracoesView(QWidget):
             return
 
         try:
-            # 🔥 troca instantânea global
-            TranslatorApp.set_language(idioma)
+            # 🔥 AGORA CORRETO
+            self.controller.set_idioma(idioma)
         except Exception:
             logger.exception("Erro ao trocar idioma")
 
@@ -123,8 +127,7 @@ class ConfiguracoesView(QWidget):
             return
 
         try:
-            # 🔥 aplicação correta (ThemeManager já resolve app internamente)
-            ThemeManager.definir_tema(tema)
+            self.controller.set_tema(tema)
         except Exception:
             logger.exception("Erro ao trocar tema")
 
@@ -133,18 +136,15 @@ class ConfiguracoesView(QWidget):
     # ==================================================
     def _load_config(self):
 
-        idioma = Session.get_config("idioma", "Português")
-        tema = ThemeManager.tema_atual()
-        moeda = Session.get_config("moeda", "BRL")
+        config = self.controller.obter_configuracoes()
 
-        # 🔥 evita disparar eventos durante load
         self.idioma_combo.blockSignals(True)
         self.tema_combo.blockSignals(True)
         self.moeda_combo.blockSignals(True)
 
-        self._set_combo_by_data(self.idioma_combo, idioma)
-        self.tema_combo.setCurrentText(tema)
-        self._set_combo_by_data(self.moeda_combo, moeda)
+        self._set_combo_by_data(self.idioma_combo, config.get("idioma"))
+        self.tema_combo.setCurrentText(config.get("tema"))
+        self._set_combo_by_data(self.moeda_combo, config.get("moeda"))
 
         self.idioma_combo.blockSignals(False)
         self.tema_combo.blockSignals(False)
@@ -168,16 +168,10 @@ class ConfiguracoesView(QWidget):
         moeda = self.moeda_combo.currentData()
 
         try:
-            # 🔥 persistência local
-            Session.set_config("idioma", idioma)
-            Session.set_config("moeda", moeda)
-            Session.set_config("tema", tema)
-
-            # 🔥 persistência backend
-            self.controller.update_preferences(
-                tema=tema,
-                idioma=idioma
-            )
+            # 🔥 CENTRALIZADO NO CONTROLLER
+            self.controller.set_idioma(idioma)
+            self.controller.set_tema(tema)
+            self.controller.set_moeda(moeda)
 
             QMessageBox.information(
                 self,

@@ -145,3 +145,11 @@ class ReconhecimentoService:
                 return True
 
         return False
+
+
+    def is_comprovante(self, texto):
+
+        if "comprovante" in texto:
+            return True
+
+        return False

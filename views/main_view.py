@@ -3,7 +3,7 @@ import os
 
 from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QDialog, QLabel, QFrame
+    QPushButton, QDialog, QLabel, QFrame, QApplication
 )
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QIcon
@@ -182,7 +182,6 @@ class MainView(QMainWindow):
             btn = QPushButton(texto)
             btn.setObjectName("menuButton")
             btn.setCursor(Qt.PointingHandCursor)
-
             btn.setIcon(self._icon(icon_name))
             btn.setIconSize(QSize(16, 16))
             btn.setContentsMargins(30, 8, 10, 8)
@@ -291,9 +290,11 @@ class MainView(QMainWindow):
     # ==================================================
     # TEMA
     # ==================================================
+
     def aplicar_tema(self):
         try:
-            tema = Session.get_config("tema", "Claro")
-            ThemeManager.aplicar_tema(tema)
+           tema = Session.get_config("tema", "Claro")
+           app = QApplication.instance()
+           ThemeManager.aplicar_tema(app, tema)
         except Exception:
-            logger.exception("Erro ao aplicar tema")
+         logger.exception("Erro ao aplicar tema")

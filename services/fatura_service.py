@@ -88,7 +88,6 @@ class FaturaService:
             id_cartao, mes, ano, id_usuario
         )
 
-        # 🔥 AQUI É O AJUSTE
         for l in lancamentos:
             id_cat = l.get("ID_Categoria")
 
@@ -100,10 +99,10 @@ class FaturaService:
             else:
                 l["Categoria"] = "Sem categoria"
 
-        # 🔥 CACHE JÁ COM DADOS PRONTOS
         self._set_cache(cache_key, lancamentos)
 
         return lancamentos
+
     def obter_fatura_paginada(self, id_cartao, mes, ano, id_usuario, limit=50, offset=0):
 
         fatura = self.obter_fatura(id_cartao, mes, ano, id_usuario)
@@ -173,15 +172,25 @@ class FaturaService:
 
         total = sum(float(l["Valor"]) for l in fatura if not l.get("Paga"))
 
+        if total <= 0:
+            raise ValueError("Nenhum valor em aberto para pagamento.")
+
         conta = self.transaction_model.get_account_by_id(id_conta, id_usuario)
+
+        if not conta:
+            raise ValueError("Conta não encontrada.")
 
         if float(conta["Saldo_Atual"]) < total:
             raise ValueError("Saldo insuficiente.")
 
+        cartao = self.buscar_cartao_por_id(id_cartao, id_usuario)
+
+        descricao = f"Pagamento Fatura {mes:02d}/{ano} - {cartao.get('Nome', '')}"
+
         categoria_id = self._get_categoria_pagamento_fatura(id_usuario)
 
         transacao_id = self.transaction_model.add_transaction({
-            "Descricao": "Pagamento de Fatura",
+            "Descricao": descricao,
             "Valor": -abs(total),
             "Data": date.today().isoformat(),
             "Tipo": "Despesa",
@@ -200,6 +209,9 @@ class FaturaService:
         self._clear_cache()
         return True
 
+    # ============================================================
+    # CATEGORIA
+    # ============================================================
     def _get_categoria_pagamento_fatura(self, id_usuario):
 
         categoria = self.category_model.get_by_nome(
@@ -217,7 +229,7 @@ class FaturaService:
         })
 
     # ============================================================
-    # PAINEL (🔥 PRINCIPAL)
+    # PAINEL
     # ============================================================
     def get_painel_cartao(self, id_cartao, id_usuario, page=0, limit=50, status="Todos"):
 

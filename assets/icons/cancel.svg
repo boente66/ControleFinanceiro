@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" role="img" aria-label="Cancelar">
+  <title>Cancelar</title>
+  <circle cx="12" cy="12" r="10" fill="#FEF2F2" stroke="#FCA5A5"/>
+  <path d="M8 8 L16 16 M16 8 L8 16" stroke="#B91C1C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

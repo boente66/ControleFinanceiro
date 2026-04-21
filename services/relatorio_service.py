@@ -1,11 +1,13 @@
 from models.relatorio_model import RelatorioModel
 from utilitarios.name_format import NameFormat
 from utilitarios.currency_formatter import CurrencyFormatter
+from services.user_services import UserService
 
 
 class RelatorioService:
     def __init__(self):
         self.model = RelatorioModel()
+        self.usuario = UserService()
 
     # ============================================================
     # RELATÓRIO DIÁRIO
@@ -39,18 +41,18 @@ class RelatorioService:
     # ============================================================
     # GERA TEXTO FORMATADO PARA PDF
     # ============================================================
-    def gerar_texto_informe(self, usuario, ano):
+    def gerar_texto_informe(self, id_usuario, ano):
         # ---------------------------
         #  Resolve ID do usuário
         # ---------------------------
-        if isinstance(usuario, dict):
-            id_usuario = usuario.get("ID_Usuario")
-            nome = usuario.get("Nome", "")
-            cpf = usuario.get("CPF", "")
-        else:
-            id_usuario = getattr(usuario, "ID_Usuario", usuario)
-            nome = getattr(usuario, "Nome", "")
-            cpf = getattr(usuario, "CPF", "")
+
+        usuarios = self.usuario.get_user_by_id(id_usuario)
+
+        if not usuarios:
+            raise ValueError("Usuário não encontrado.")
+
+        nome = usuarios.get("Nome", "")
+        cpf = usuarios.get("CPF", "")
 
         dados = self.informe_rendimentos(ano, id_usuario)
 

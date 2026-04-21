@@ -1,5 +1,5 @@
 # =========================================================
-# SISTEMA DE TEMAS PROFISSIONAL (COMPLETO FINAL)
+# SISTEMA DE TEMAS PROFISSIONAL (VERSÃO FINAL CORRIGIDA)
 # =========================================================
 
 from core.session import Session
@@ -22,45 +22,68 @@ QToolTip {
 """
 
 # =========================================================
-# TOKENS
+# TOKENS (🔥 MELHORADOS)
 # =========================================================
 V = {
+    # background
     "bg_light": "#f4f6f9",
     "bg_dark": "#0f1720",
 
+    # panels
     "panel_light": "#ffffff",
     "panel_dark": "#121214",
 
     "card_light": "#ffffff",
     "card_dark": "#1a1a1a",
 
+    # sidebar
     "sidebar_dark": "#111827",
     "sidebar_dark_green": "#14532d",
+    "sidebar_dark_blue": "#1e3a8a",
 
+    # border
     "border_light": "#e6e9ee",
     "border_dark": "#2a2f3a",
 
-    "text_light": "#111827",
+    # 🔥 hierarquia de texto
+    "text_strong": "#0f172a",
+    "text_normal": "#1f2937",
+    "text_soft": "#6b7280",
     "text_dark": "#e6eef8",
+    "text_sidebar": "#a5a8af73",
 
+    # primary
     "primary_blue": "#2563eb",
     "primary_dark": "#3aa0ff",
 
+    # green
     "green": "#16a34a",
     "green_hover": "#15803d",
 
+    # status
     "success": "#22c55e",
     "danger": "#ef4444",
     "warning": "#f59e0b",
 
+    # highlight
     "highlight_light": "#f3f4f6",
     "highlight_dark": "#222831",
 }
 
 # =========================================================
+# VALIDAÇÃO
+# =========================================================
+def _validate(tokens, required):
+    for k in required:
+        if k not in tokens:
+            raise ValueError(f"Token ausente no tema: {k}")
+
+# =========================================================
 # COMPONENTES
 # =========================================================
 def _sidebar(tokens):
+    _validate(tokens, ["sidebar", "primary", "text"])
+
     return f"""
 QWidget#sidebar {{
     background-color: {tokens['sidebar']};
@@ -68,14 +91,14 @@ QWidget#sidebar {{
 
 QPushButton#menuButton {{
     background: transparent;
-    color: white;
+    color: {tokens['text']};
     text-align: left;
     padding: 10px 15px;
     border: none;
 }}
 
 QPushButton#menuButton:hover {{
-    background-color: rgba(255,255,255,0.08);
+    background-color: {tokens.get('hover', 'rgba(255,255,255,0.08)')};
 }}
 
 QPushButton#menuButton[active="true"] {{
@@ -84,11 +107,10 @@ QPushButton#menuButton[active="true"] {{
 }}
 
 QLabel#sidebarUser {{
-    color: #cbd5e1;
+    color: {tokens['text']};
     font-weight: bold;
 }}
 """
-
 
 def _buttons(primary, hover):
     return f"""
@@ -104,11 +126,11 @@ QPushButton:hover {{
 }}
 """
 
-
-def _inputs(bg, border):
+def _inputs(bg, border, text):
     return f"""
 QLineEdit, QComboBox {{
     background: {bg};
+    color: {text};
     border: 1px solid {border};
     padding: 6px;
     border-radius: 6px;
@@ -116,12 +138,13 @@ QLineEdit, QComboBox {{
 
 QComboBox QAbstractItemView {{
     background-color: {bg};
-    selection-background-color: {border};
+    color: {text};
 }}
 """
 
-
 def _cards(tokens):
+    _validate(tokens, ["card", "text", "primary", "border"])
+
     return f"""
 QFrame#card {{
     background-color: {tokens['card']};
@@ -133,7 +156,6 @@ QFrame#card {{
 QLabel#cardTitle {{
     font-size: 12px;
     color: {tokens['text']};
-    opacity: 0.7;
 }}
 
 QLabel#cardValue {{
@@ -142,7 +164,6 @@ QLabel#cardValue {{
     color: {tokens['primary']};
 }}
 """
-
 
 def _groupbox(tokens):
     return f"""
@@ -160,7 +181,6 @@ QGroupBox::title {{
 }}
 """
 
-
 def _table(tokens):
     return f"""
 QTableWidget {{
@@ -170,8 +190,13 @@ QTableWidget {{
     gridline-color: {tokens['highlight']};
 }}
 
+QTableWidget::item {{
+    color: {tokens['text']};
+}}
+
 QHeaderView::section {{
     background-color: {tokens['highlight']};
+    color: {tokens['text']};
     padding: 8px;
     border: none;
 }}
@@ -181,7 +206,6 @@ QTableWidget::item:selected {{
     color: white;
 }}
 """
-
 
 def _progress(color):
     return f"""
@@ -196,19 +220,26 @@ QProgressBar::chunk {{
 }}
 """
 
-
 def _labels(tokens):
     return f"""
-QLabel#positivo {{ color: {tokens['success']}; font-weight: bold; }}
-QLabel#negativo {{ color: {tokens['danger']}; font-weight: bold; }}
-QLabel#warning {{ color: {tokens['warning']}; font-weight: bold; }}
+QLabel {{
+    color: {tokens['text_normal']};
+}}
 
 QLabel#pageTitle {{
     font-size: 18px;
     font-weight: bold;
+    color: {tokens['text_strong']};
 }}
-"""
 
+QLabel#secondary {{
+    color: {tokens['text_soft']};
+}}
+
+QLabel#positivo {{ color: {tokens['success']}; font-weight: bold; }}
+QLabel#negativo {{ color: {tokens['danger']}; font-weight: bold; }}
+QLabel#warning {{ color: {tokens['warning']}; font-weight: bold; }}
+"""
 
 # =========================================================
 # 🎨 TEMA CLARO
@@ -217,39 +248,37 @@ def tema_claro():
     return BASE + f"""
 QWidget {{
     background-color: {V['bg_light']};
-    color: {V['text_light']};
+    color: {V['text_normal']};
 }}
 
 {_sidebar({
     "sidebar": V['sidebar_dark'],
-    "primary": V['primary_blue']
+    "primary": V['primary_blue'],
+    "text": V['text_sidebar'],
 })}
 
 {_buttons(V['primary_blue'], "#1d4ed8")}
-{_inputs(V['panel_light'], V['border_light'])}
+{_inputs(V['panel_light'], V['border_light'], V['text_normal'])}
 {_progress(V['green'])}
 
 {_cards({
     "card": V['card_light'],
-    "text": V['text_light'],
+    "text": V['text_normal'],
     "primary": V['primary_blue'],
     "border": V['border_light']
 })}
 
-{_groupbox({
-    "border": V['border_light']
-})}
+{_groupbox({"border": V['border_light']})}
 
 {_table({
     "card": V['card_light'],
-    "text": V['text_light'],
+    "text": V['text_normal'],
     "highlight": V['highlight_light'],
     "primary": V['primary_blue']
 })}
 
 {_labels(V)}
 """
-
 
 # =========================================================
 # 🌙 TEMA ESCURO
@@ -263,11 +292,12 @@ QWidget {{
 
 {_sidebar({
     "sidebar": "#1f2330",
-    "primary": V['primary_dark']
+    "primary": V['primary_dark'],
+    "text": V['text_dark'],
 })}
 
 {_buttons(V['primary_dark'], "#2a6ef6")}
-{_inputs(V['panel_dark'], V['border_dark'])}
+{_inputs(V['panel_dark'], V['border_dark'], V['text_dark'])}
 {_progress("#0ea5e9")}
 
 {_cards({
@@ -277,9 +307,7 @@ QWidget {{
     "border": V['border_dark']
 })}
 
-{_groupbox({
-    "border": V['border_dark']
-})}
+{_groupbox({"border": V['border_dark']})}
 
 {_table({
     "card": V['card_dark'],
@@ -291,7 +319,6 @@ QWidget {{
 {_labels(V)}
 """
 
-
 # =========================================================
 # 💚 TEMA VERDE
 # =========================================================
@@ -299,39 +326,37 @@ def tema_verde():
     return BASE + f"""
 QWidget {{
     background-color: {V['bg_light']};
-    color: {V['text_light']};
+    color: {V['text_normal']};
 }}
 
 {_sidebar({
     "sidebar": V['sidebar_dark_green'],
-    "primary": V['green']
+    "primary": V['green'],
+    "text": V['text_sidebar'],
 })}
 
 {_buttons(V['green'], V['green_hover'])}
-{_inputs("white", V['green'])}
+{_inputs("white", V['green'], V['text_normal'])}
 {_progress(V['green'])}
 
 {_cards({
     "card": V['card_light'],
-    "text": V['text_light'],
+    "text": V['text_normal'],
     "primary": V['green'],
     "border": V['border_light']
 })}
 
-{_groupbox({
-    "border": V['border_light']
-})}
+{_groupbox({"border": V['border_light']})}
 
 {_table({
     "card": V['card_light'],
-    "text": V['text_light'],
+    "text": V['text_normal'],
     "highlight": V['highlight_light'],
     "primary": V['green']
 })}
 
 {_labels(V)}
 """
-
 
 # =========================================================
 # REGISTRO
@@ -351,20 +376,16 @@ def get_theme(nome: str = None) -> str:
     nome = nome or Session.get_config("tema", DEFAULT_THEME)
     return THEMES.get(nome, tema_claro)()
 
-
 def apply_theme(app, nome: str = None):
     nome = nome or DEFAULT_THEME
     Session.set_config("tema", nome)
     app.setStyleSheet(get_theme(nome))
 
-
 def current_theme():
     return Session.get_config("tema", DEFAULT_THEME)
 
-
 def available_themes():
     return list(THEMES.keys())
-
 
 def register_theme(nome: str, builder):
     if nome and callable(builder):

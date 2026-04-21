@@ -1,11 +1,20 @@
 import unicodedata
 
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
-    QPushButton, QLabel, QLineEdit, QMessageBox, QDialog,
-    QAbstractItemView
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QTableWidget,
+    QTableWidgetItem,
+    QPushButton,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QDialog,
+    QAbstractItemView,
+    QComboBox,
 )
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QIcon
 
 from views.FavorecidoDialog import FavorecidoDialog
@@ -23,14 +32,26 @@ class FavorecidoView(QWidget):
         self.controller = FavorecidoController()
 
         self.setMinimumSize(820, 600)
-
-        # 🔥 título base
         self.setWindowTitle("Favorecidos")
+
+        # 🔥 estado
+        self.data_original = []
+        self.data_filtrada = []
+        self.state = {
+            "busca": "",
+            "tipo": "ALL",
+            "ordem": "AZ",
+        }
+
+        # 🔥 debounce busca
+        self.search_timer = QTimer()
+        self.search_timer.setInterval(300)
+        self.search_timer.setSingleShot(True)
+        self.search_timer.timeout.connect(self.apply_filter)
 
         self._init_ui()
         self.load_favorecidos()
 
-        # 🔥 tradução automática global
         TranslatorApp.enable_auto_translation(self)
 
     # =====================================================
@@ -48,59 +69,64 @@ class FavorecidoView(QWidget):
         # ---------- BOTÕES ----------
         button_layout = QHBoxLayout()
 
-        self.add_btn = QPushButton("Adicionar")
-        self.add_btn.setObjectName("primaryButton")
-        self.add_btn.setIcon(self._icon("add"))
-        self.add_btn.clicked.connect(self.open_add_favorecido_dialog)
+        def btn(texto, icon, fn, style):
+            b = QPushButton(texto)
+            b.setObjectName(style)
+            b.setIcon(self._icon(icon))
+            b.clicked.connect(fn)
+            return b
 
-        self.edit_btn = QPushButton("Editar")
-        self.edit_btn.setObjectName("primaryButton")
-        self.edit_btn.setIcon(self._icon("edit"))
-        self.edit_btn.clicked.connect(self.edit_favorecido)
+        self.add_btn = btn(
+            "Adicionar", "add", self.open_add_favorecido_dialog, "primaryButton"
+        )
+        self.edit_btn = btn("Editar", "edit", self.edit_favorecido, "primaryButton")
+        self.delete_btn = btn(
+            "Excluir", "delete", self.delete_favorecido, "deleteButton"
+        )
 
-        self.delete_btn = QPushButton("Excluir")
-        self.delete_btn.setObjectName("deleteButton")
-        self.delete_btn.setIcon(self._icon("delete"))
-        self.delete_btn.clicked.connect(self.delete_favorecido)
-
-        for btn in (self.add_btn, self.edit_btn, self.delete_btn):
-            button_layout.addWidget(btn)
+        for b in (self.add_btn, self.edit_btn, self.delete_btn):
+            button_layout.addWidget(b)
 
         button_layout.addStretch()
         main_layout.addLayout(button_layout)
 
-        # ---------- BUSCA ----------
-        search_layout = QHBoxLayout()
+        # ---------- BUSCA + FILTRO ----------
+        filtro_layout = QHBoxLayout()
 
         self.search_label = QLabel("Buscar:")
 
         self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText(
-            "Nome, tipo, CPF/CNPJ, contato..."
-        )
-        self.search_input.textChanged.connect(self.apply_filter)
+        self.search_input.setPlaceholderText("Nome, tipo, CPF/CNPJ, contato...")
+        self.search_input.textChanged.connect(self._on_busca_change)
 
-        search_layout.addWidget(self.search_label)
-        search_layout.addWidget(self.search_input)
+        self.tipo_filtro = QComboBox()
+        self.tipo_filtro.addItem("Todos", "ALL")
+        self.tipo_filtro.addItem("Pessoa Física", "PF")
+        self.tipo_filtro.addItem("Pessoa Jurídica", "PJ")
+        self.tipo_filtro.currentIndexChanged.connect(self._on_tipo_change)
 
-        main_layout.addLayout(search_layout)
+        filtro_layout.addWidget(self.search_label)
+        filtro_layout.addWidget(self.search_input)
+        filtro_layout.addWidget(QLabel("Tipo:"))
+        filtro_layout.addWidget(self.tipo_filtro)
+
+        main_layout.addLayout(filtro_layout)
 
         # ---------- TABELA ----------
         self.table = QTableWidget()
         self.table.setColumnCount(4)
-        self.table.setHorizontalHeaderLabels(
-            ["Nome", "Tipo", "CPF/CNPJ", "Contato"]
-        )
+        self.table.setHorizontalHeaderLabels(["Nome", "Tipo", "CPF/CNPJ", "Contato"])
 
         self.table.horizontalHeader().setStretchLastSection(True)
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.table.setSortingEnabled(True)
         self.table.doubleClicked.connect(self.edit_favorecido)
 
         main_layout.addWidget(self.table)
 
     # =====================================================
-    # ICON UTIL
+    # ICON
     # =====================================================
     def _icon(self, nome: str):
         caminho = IonPath.resource("assets", "icons", f"{nome}.svg")
@@ -115,32 +141,82 @@ class FavorecidoView(QWidget):
 
         text = str(text).lower().strip()
         text = unicodedata.normalize("NFD", text)
-        text = "".join(
-            c for c in text if unicodedata.category(c) != "Mn"
-        )
+        text = "".join(c for c in text if unicodedata.category(c) != "Mn")
         return text.replace(" ", "")
+
+    # =====================================================
+    # LOAD
+    # =====================================================
+    def load_favorecidos(self):
+        self.data_original = self.controller.listar_favorecidos()
+        self.apply_filter()
 
     # =====================================================
     # FILTRO
     # =====================================================
     def apply_filter(self):
 
-        termo = self.normalize(self.search_input.text())
+        termo = self.normalize(self.state["busca"])
+        tipo_filtro = self.state["tipo"]
+        ordem = self.state["ordem"]
 
-        for row in range(self.table.rowCount()):
+        filtrados = []
 
-            if not termo:
-                self.table.setRowHidden(row, False)
+        for fav in self.data_original:
+
+            nome = fav.get("Nome", "")
+            tipo = fav.get("Tipo", "")
+            doc = fav.get("CPF") or fav.get("CNPJ") or ""
+            tel = fav.get("Telefone_PF") or fav.get("Telefone_PJ") or ""
+
+            texto = self.normalize(nome + tipo + doc + tel)
+
+            if termo and termo not in texto:
                 continue
 
-            linha_texto = ""
+            if tipo_filtro != "ALL":
+                if tipo_filtro == "PF" and tipo != "Pessoa Física":
+                    continue
+                if tipo_filtro == "PJ" and tipo != "Pessoa Jurídica":
+                    continue
 
-            for col in range(self.table.columnCount()):
-                item = self.table.item(row, col)
-                texto = item.text() if item else ""
-                linha_texto += self.normalize(texto)
+            filtrados.append(fav)
 
-            self.table.setRowHidden(row, termo not in linha_texto)
+        if ordem == "AZ":
+            filtrados.sort(key=lambda x: self.normalize(x.get("Nome", "")))
+        elif ordem == "ZA":
+            filtrados.sort(key=lambda x: self.normalize(x.get("Nome", "")), reverse=True)
+
+        self.data_filtrada = filtrados
+        self._render_table()
+
+    # =====================================================
+    # RENDER
+    # =====================================================
+    def _render_table(self):
+
+        self.table.setRowCount(0)
+
+        if not self.data_filtrada:
+            self.table.setRowCount(1)
+            self.table.setItem(0, 0, QTableWidgetItem("Nenhum registro encontrado"))
+            self.table.setSpan(0, 0, 1, 4)
+            return
+
+        for row, fav in enumerate(self.data_filtrada):
+
+            self.table.insertRow(row)
+
+            tipo = fav.get("Tipo", "")
+            icone = "👤" if tipo == "Pessoa Física" else "🏢"
+
+            nome_item = QTableWidgetItem(f"{icone} {fav.get('Nome', '')}")
+            nome_item.setData(Qt.UserRole, fav.get("ID_Favorecido"))
+
+            self.table.setItem(row, 0, nome_item)
+            self.table.setItem(row, 1, QTableWidgetItem(tipo))
+            self.table.setItem(row, 2, QTableWidgetItem(fav.get("CPF") or fav.get("CNPJ") or ""))
+            self.table.setItem(row, 3, QTableWidgetItem(fav.get("Telefone_PF") or fav.get("Telefone_PJ") or ""))
 
     # =====================================================
     # SELEÇÃO
@@ -153,59 +229,14 @@ class FavorecidoView(QWidget):
             QMessageBox.warning(
                 self,
                 TranslatorApp.get("Aviso"),
-                TranslatorApp.get("Nenhum favorecido selecionado.")
+                TranslatorApp.get("Nenhum favorecido selecionado."),
             )
             return None
 
         item = self.table.item(row, 0)
         id_fav = item.data(Qt.UserRole) if item else None
 
-        return {
-            "Nome": self.table.item(row, 0).text() if self.table.item(row, 0) else "",
-            "Tipo": self.table.item(row, 1).text() if self.table.item(row, 1) else "",
-            "CPF/CNPJ": self.table.item(row, 2).text() if self.table.item(row, 2) else "",
-            "Contato": self.table.item(row, 3).text() if self.table.item(row, 3) else "",
-            "ID_Favorecido": id_fav,
-        }
-
-    # =====================================================
-    # CARREGAR
-    # =====================================================
-    def load_favorecidos(self):
-
-        self.table.setRowCount(0)
-
-        favorecidos = self.controller.listar_favorecidos()
-
-        if not favorecidos:
-            self.table.setRowCount(1)
-            self.table.setItem(
-                0,
-                0,
-                QTableWidgetItem("Nenhum registro encontrado")
-            )
-            self.table.setSpan(0, 0, 1, 4)
-            return
-
-        for row, fav in enumerate(favorecidos):
-
-            self.table.insertRow(row)
-
-            nome_item = QTableWidgetItem(fav.get("Nome", ""))
-            nome_item.setData(Qt.UserRole, fav.get("ID_Favorecido"))
-
-            self.table.setItem(row, 0, nome_item)
-            self.table.setItem(row, 1, QTableWidgetItem(fav.get("Tipo", "")))
-            self.table.setItem(
-                row, 2,
-                QTableWidgetItem(fav.get("CPF") or fav.get("CNPJ") or "")
-            )
-            self.table.setItem(
-                row, 3,
-                QTableWidgetItem(
-                    fav.get("Telefone_PF") or fav.get("Telefone_PJ") or ""
-                )
-            )
+        return {"ID_Favorecido": id_fav}
 
     # =====================================================
     # AÇÕES
@@ -223,10 +254,7 @@ class FavorecidoView(QWidget):
         if not selecionado:
             return
 
-        dialog = FavorecidoDialog(
-            parent=self,
-            favorecido=selecionado
-        )
+        dialog = FavorecidoDialog(parent=self, favorecido=selecionado)
 
         if dialog.exec_() == QDialog.Accepted:
             self.load_favorecidos()
@@ -240,15 +268,13 @@ class FavorecidoView(QWidget):
         confirm = QMessageBox.question(
             self,
             TranslatorApp.get("Confirmar Exclusão"),
-            f"{TranslatorApp.get('Deseja realmente excluir')} '{selecionado['Nome']}'?",
-            QMessageBox.Yes | QMessageBox.No
+            TranslatorApp.get("Deseja realmente excluir este favorecido?"),
+            QMessageBox.Yes | QMessageBox.No,
         )
 
         if confirm == QMessageBox.Yes:
 
-            sucesso = self.controller.remover_favorecido(
-                selecionado["ID_Favorecido"]
-            )
+            sucesso = self.controller.remover_favorecido(selecionado["ID_Favorecido"])
 
             if sucesso:
                 self.load_favorecidos()
@@ -256,5 +282,16 @@ class FavorecidoView(QWidget):
                 QMessageBox.warning(
                     self,
                     TranslatorApp.get("Erro"),
-                    TranslatorApp.get("Não foi possível excluir o favorecido.")
+                    TranslatorApp.get("Não foi possível excluir o favorecido."),
                 )
+
+    # =====================================================
+    # STATE
+    # =====================================================
+    def _on_busca_change(self):
+        self.state["busca"] = self.search_input.text()
+        self.search_timer.start()
+
+    def _on_tipo_change(self):
+        self.state["tipo"] = self.tipo_filtro.currentData()
+        self.apply_filter()

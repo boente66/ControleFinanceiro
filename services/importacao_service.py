@@ -255,3 +255,24 @@ class ImportacaoService:
         descricao = re.sub(r"\s+", " ", descricao)
 
         return descricao.strip()
+
+
+    def importar_comprovante_pdf(self, caminho_arquivo: str) -> Optional[bytes]:
+
+        if not caminho_arquivo:
+            raise ValueError("Arquivo não informado.")
+
+        if not os.path.exists(caminho_arquivo):
+            raise FileNotFoundError("Arquivo não encontrado.")
+
+        extensao = os.path.splitext(caminho_arquivo)[1].lower()
+
+        if extensao != ".pdf":
+            raise ValueError("Apenas arquivos PDF são suportados para comprovantes.")
+
+        try:
+            return self.pdf_service.ler_bytes(caminho_arquivo)
+
+        except Exception:
+            logger.exception("Erro ao ler comprovante PDF")
+            raise

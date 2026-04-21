@@ -1,13 +1,14 @@
 import logging
+import os
 import re
 
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
-    QPushButton, QMessageBox, QComboBox, QFileDialog,
+    QPushButton, QMessageBox, QComboBox, QInputDialog, QFileDialog,
     QDateEdit, QSpinBox, QTextEdit
 )
 from PyQt5.QtCore import QDate
-
+from PyQt5.QtGui import QIcon
 from core.translator_app import TranslatorApp
 
 from controllers.favorecido_controller import FavorecidoController
@@ -15,6 +16,9 @@ from controllers.category_controller import CategoryController
 from controllers.main_controller import MainController
 from controllers.fatura_controller import FaturaController
 from controllers.ia_import_controller import IAImportController
+from utilitarios.ion_path import IonPath
+from views import FavorecidoDialog
+from views.categoria_dialog import CategoriaDialog
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +39,7 @@ class TransactionDialog(QDialog):
         self.import_controller = IAImportController()
 
         self.setMinimumWidth(820)
+        self._icon_cache = {}
 
         self._build_ui()
         self._carregar_favorecidos()
@@ -68,22 +73,44 @@ class TransactionDialog(QDialog):
         l1.addWidget(self.data_edit, 1)
         layout.addLayout(l1)
 
-        # LINHA 2
+        # ==================================================
+        # LINHA 2 (🔥 AQUI FOI CORRIGIDO)
+        # ==================================================
         l2 = QHBoxLayout()
 
+        # -------- FAVORECIDO --------
         self.lbl_favorecido = QLabel("Favorecido")
         self.favorecido_combo = QComboBox()
 
-        self.lbl_categoria = QLabel("Categoria")
-        self.categoria_combo = QComboBox()
+        self.btn_novo_fav = QPushButton("")
+        self.btn_novo_fav.setIcon(self._icon("add"))
+        self.btn_novo_fav.setFixedSize(28, 28)
+        self.btn_novo_fav.clicked.connect(self._novo_favorecido)
+
+        fav_layout = QHBoxLayout()
+        fav_layout.addWidget(self.favorecido_combo)
+        fav_layout.addWidget(self.btn_novo_fav)
 
         bloco1 = QVBoxLayout()
         bloco1.addWidget(self.lbl_favorecido)
-        bloco1.addWidget(self.favorecido_combo)
+        bloco1.addLayout(fav_layout)
+
+        # -------- CATEGORIA --------
+        self.lbl_categoria = QLabel("Categoria")
+        self.categoria_combo = QComboBox()
+
+        self.btn_nova_categoria = QPushButton("")
+        self.btn_nova_categoria.setIcon(self._icon("add"))
+        self.btn_nova_categoria.setFixedSize(28, 28)
+        self.btn_nova_categoria.clicked.connect(self._nova_categoria)
+
+        cat_layout = QHBoxLayout()
+        cat_layout.addWidget(self.categoria_combo)
+        cat_layout.addWidget(self.btn_nova_categoria)
 
         bloco2 = QVBoxLayout()
         bloco2.addWidget(self.lbl_categoria)
-        bloco2.addWidget(self.categoria_combo)
+        bloco2.addLayout(cat_layout)
 
         l2.addLayout(bloco1)
         l2.addLayout(bloco2)
@@ -142,9 +169,11 @@ class TransactionDialog(QDialog):
         botoes = QHBoxLayout()
 
         self.cancelar_btn = QPushButton("Cancelar")
+        self.cancelar_btn.setIcon(self._icon("cancel"))
         self.cancelar_btn.clicked.connect(self.reject)
 
         self.salvar_btn = QPushButton("Salvar")
+        self.salvar_btn.setIcon(self._icon("save"))
         self.salvar_btn.clicked.connect(self.salvar)
 
         botoes.addStretch()
@@ -167,36 +196,36 @@ class TransactionDialog(QDialog):
         self.valor_edit.setText(f"{valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
         self.valor_edit.blockSignals(False)
 
-    # ======================================================
-    # 🧠 AUTO CATEGORIA
-    # ======================================================
-    def _auto_categoria(self):
-        texto = self.descricao_edit.text().lower()
-
-        mapa = {
-            "uber": "Transporte",
-            "99": "Transporte",
-            "mercado": "Alimentação",
-            "ifood": "Alimentação",
-            "netflix": "Assinaturas",
-            "energia": "Contas",
-        }
-
-        for chave, categoria in mapa.items():
-            if chave in texto:
-                index = self.categoria_combo.findText(categoria)
-                if index >= 0:
-                    self.categoria_combo.setCurrentIndex(index)
+    
 
     # ======================================================
-    # DADOS
+    # ICONES
     # ======================================================
-    def _carregar_favorecidos(self):
-        self.favorecido_combo.clear()
-        self.favorecido_combo.addItem("Nenhum", None)
+    def _icon(self, nome):
+        if nome in self._icon_cache:
+            return self._icon_cache[nome]
 
-        for f in self.favorecido_controller.listar_favorecidos() or []:
-            self.favorecido_combo.addItem(f["Nome"], f["ID_Favorecido"])
+        try:
+            path = IonPath.resource("assets", "icons", f"{nome}.svg")
+            icon = QIcon(path) if os.path.exists(path) else QIcon()
+            self._icon_cache[nome] = icon
+            return icon
+
+        except Exception:
+            logger.exception(f"Erro ao carregar ícone: {nome}")
+            return QIcon()
+
+    def _novo_favorecido(self):
+        dialog = FavorecidoDialog(self)
+        if dialog.exec_() == QDialog.Accepted:
+            self._carregar_favorecidos()
+            self.favorecido_combo.setCurrentText(dialog.nome_edit.text())
+
+    def _nova_categoria(self):
+        dialog = CategoriaDialog(self)
+        if dialog.exec_() == QDialog.Accepted:
+            self._carregar_categorias()
+            self.categoria_combo.setCurrentText(dialog.nome_edit.text())
 
     def _carregar_categorias(self):
         self.categoria_combo.clear()
@@ -204,6 +233,13 @@ class TransactionDialog(QDialog):
 
         for c in self.category_controller.get_all_categories() or []:
             self.categoria_combo.addItem(c["Nome"], c["ID_Categoria"])
+
+    def _carregar_favorecidos(self):
+        self.favorecido_combo.clear()
+        self.favorecido_combo.addItem("Nenhum", None)
+
+        for f in self.favorecido_controller.listar_favorecidos() or []:
+            self.favorecido_combo.addItem(f["Nome"], f["ID_Favorecido"])
 
     # ======================================================
     # IMPORTAÇÃO
@@ -260,7 +296,7 @@ class TransactionDialog(QDialog):
             else:
                 dados["ID_Cartao"] = self.id_contexto
                 dados["Parcelas"] = int(self.parcelas_spin.value())
-                self.fatura_controller.registrar_despesa_cartao(dados, self.usuario_id)
+                self.fatura_controller.registrar_despesa_cartao(dados)
 
             self.accept()
 

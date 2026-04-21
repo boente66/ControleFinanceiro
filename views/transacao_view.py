@@ -195,9 +195,9 @@ class TransacaoView(QWidget):
 
         for cartao in cartoes:
             texto = (
-                f"{cartao.get('nome', 'Cartão')}\n"
+                f"{cartao.get('Nome', 'Cartão')}\n"
                 f"{TranslatorApp.get('Vencimento')}: "
-                f"{cartao.get('dia_vencimento', '--')}"
+                f"{cartao.get('Dia_vencimento', '--')}"
             )
 
             item = QListWidgetItem(texto)

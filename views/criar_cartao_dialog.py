@@ -127,7 +127,7 @@ class CriarCartaoDialog(QDialog):
         }
 
         try:
-            self.controller.adicionar_cartao(dados)
+            self.controller.criar_cartao(dados)
 
             QMessageBox.information(
                 self,

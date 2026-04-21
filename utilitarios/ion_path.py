@@ -188,3 +188,7 @@ class IonPath:
             "platform": platform.system(),
             "frozen": getattr(sys, "frozen", False),
         }
+
+    def recourse_paths(*paths) -> list:
+        get_base_path = getattr(sys, '_MEIPASS', os.path.abspath("."))
+        return os.path.join(get_base_path, *paths)

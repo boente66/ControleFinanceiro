@@ -26,12 +26,11 @@ class ThemeManager:
             css = get_theme(nome_tema)
             app = app or QApplication.instance()
 
-            if app is None:
-                logger.error("Nenhuma instância QApplication ativa.")
-                return False
+            if not isinstance(app, QApplication):
+                raise TypeError(f"Aplicação inválida: {type(app)}")
+            
 
-            app.setStyleSheet("")
-            app.setStyleSheet(css)
+            app.setStyleSheet(css or "")
 
             logger.info(f"[Theme] Tema aplicado: {nome_tema}")
             return True
@@ -46,7 +45,7 @@ class ThemeManager:
     @staticmethod
     def _normalizar(nome: str) -> str:
         if not isinstance(nome, str):
-            return ThemeManager.tema_atual()
+            return ThemeManager.DEFAUT
 
         nome = nome.strip()
 
@@ -62,16 +61,24 @@ class ThemeManager:
     def tema_atual() -> str:
         usuario = Session.get_usuario()
 
-        if usuario and usuario.get("Tema"):
-            return usuario["Tema"]
+        tema = None
 
-        return Session.get_config("tema", ThemeManager.DEFAULT)
+        if isinstance(usuario, dict):
+            tema = usuario.get("Tema")
+        if not isinstance(tema, str) or not tema.strip():
+            tema = Session.get_config("tema", ThemeManager.DEFAULT)
+
+        if tema not in THEMES:
+            tema = ThemeManager.DEFAULT
+
+        return tema
 
     @staticmethod
     def definir_tema(nome_tema: str, app: QApplication = None) -> bool:
         nome_tema = ThemeManager._normalizar(nome_tema)
 
         usuario = Session.get_usuario()
+
 
         if usuario:
             usuario["Tema"] = nome_tema

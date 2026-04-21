@@ -83,3 +83,25 @@ class IAImportController:
         except Exception:
             logger.exception("Erro ao salvar lançamentos importados")
             raise
+    
+    def importar_comprovante_pdf(self, caminho_arquivo: str, id_conta: int) -> Optional[bytes]:
+        id_usuario = self.get_id_usuario()
+
+        if not caminho_arquivo:
+            raise ValueError("Arquivo não informado.")
+
+        if not id_usuario or not id_conta:
+            raise ValueError("Usuário ou conta inválidos.")
+
+        try:
+            comprovante = self.import_service.importar_comprovante_pdf(
+                caminho_arquivo=caminho_arquivo,
+                id_usuario=id_usuario,
+                id_conta=id_conta
+            )
+
+            return comprovante
+
+        except Exception:
+            logger.exception("Erro ao importar comprovante PDF")
+            raise

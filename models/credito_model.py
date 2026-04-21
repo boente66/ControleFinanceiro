@@ -20,7 +20,7 @@ class CreditoModel(Database):
     # ============================================================
     def add_cartao(self, dados: dict):
         try:
-            self.execute_query(
+            cartao_id = self.execute_insert(
                 """
                 INSERT INTO credito (
                     Nome,
@@ -40,8 +40,12 @@ class CreditoModel(Database):
                 ),
             )
 
+            if not cartao_id:
+                raise DatabaseError("Falha ao obter ID do cartão inserido.")
+
             cartao = self.fetch_one(
-                "SELECT * FROM credito WHERE ID_Cartao = last_insert_rowid()"
+                "SELECT * FROM credito WHERE ID_Cartao = ?",
+                (cartao_id,)
             )
 
             if not cartao:

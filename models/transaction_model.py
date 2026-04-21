@@ -1,9 +1,9 @@
+# -*- coding: utf-8 -*-
 from database.database import Database
 from datetime import datetime
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 class TransactionModel(Database):
 
@@ -14,7 +14,6 @@ class TransactionModel(Database):
     # CREATE
     # ============================================================
     def add_transaction(self, dados: dict):
-
         sql = """
             INSERT INTO transacoes (
                 ID_Conta,
@@ -30,6 +29,7 @@ class TransactionModel(Database):
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
 
+        # Removido o argumento conn=conn para alinhar com sua nova Database
         self.execute_query(sql, (
             dados.get("ID_Conta"),
             dados["Descricao"],
@@ -47,8 +47,7 @@ class TransactionModel(Database):
     # ============================================================
     def get_transaction_by_id(self, id_transacao, id_usuario):
         return self.fetch_one("""
-            SELECT * 
-            FROM transacoes 
+            SELECT * FROM transacoes 
             WHERE ID_Transacao = ? 
               AND ID_Usuario = ?
         """, (id_transacao, id_usuario))
@@ -82,7 +81,6 @@ class TransactionModel(Database):
     # UPDATE
     # ============================================================
     def update_transaction(self, id_transacao, dados, id_usuario):
-
         sql = """
             UPDATE transacoes
             SET
@@ -111,7 +109,6 @@ class TransactionModel(Database):
     # DELETE
     # ============================================================
     def delete_transaction(self, id_transacao, id_usuario):
-
         self.execute_query("""
             DELETE FROM transacoes
             WHERE ID_Transacao = ?
@@ -119,9 +116,8 @@ class TransactionModel(Database):
         """, (id_transacao, id_usuario))
 
     # ============================================================
-    # 🔥 MÉTODOS PARA METAS
+    # MÉTODOS PARA METAS
     # ============================================================
-
     def somar_despesas_categoria_periodo(
         self,
         id_categoria,
@@ -129,10 +125,6 @@ class TransactionModel(Database):
         data_inicio=None,
         data_fim=None
     ):
-        """
-        Soma despesas (valores negativos) por categoria em período.
-        """
-
         sql = """
             SELECT ABS(SUM(Valor)) AS total
             FROM transacoes
@@ -140,7 +132,6 @@ class TransactionModel(Database):
               AND ID_Usuario = ?
               AND Valor < 0
         """
-
         params = [id_categoria, id_usuario]
 
         if data_inicio and data_fim:
@@ -148,9 +139,8 @@ class TransactionModel(Database):
             params.extend([data_inicio, data_fim])
 
         resultado = self.fetch_one(sql, tuple(params))
+        # Mantendo os nomes originais de retorno
         return float(resultado["total"] or 0)
-
-    # ------------------------------------------------------------
 
     def somar_receitas_periodo(
         self,
@@ -158,17 +148,12 @@ class TransactionModel(Database):
         data_inicio=None,
         data_fim=None
     ):
-        """
-        Soma receitas (valores positivos) em período.
-        """
-
         sql = """
             SELECT SUM(Valor) AS total
             FROM transacoes
             WHERE ID_Usuario = ?
               AND Valor > 0
         """
-
         params = [id_usuario]
 
         if data_inicio and data_fim:
@@ -178,44 +163,10 @@ class TransactionModel(Database):
         resultado = self.fetch_one(sql, tuple(params))
         return float(resultado["total"] or 0)
 
-    # ------------------------------------------------------------
-
-    def calcular_economia_periodo(
-        self,
-        id_usuario,
-        data_inicio=None,
-        data_fim=None
-    ):
-        """
-        Economia = receitas - despesas
-        """
-
-        sql = """
-            SELECT
-                SUM(CASE WHEN Valor > 0 THEN Valor ELSE 0 END) AS receitas,
-                SUM(CASE WHEN Valor < 0 THEN ABS(Valor) ELSE 0 END) AS despesas
-            FROM transacoes
-            WHERE ID_Usuario = ?
-        """
-
-        params = [id_usuario]
-
-        if data_inicio and data_fim:
-            sql += " AND date(Data) BETWEEN date(?) AND date(?)"
-            params.extend([data_inicio, data_fim])
-
-        resultado = self.fetch_one(sql, tuple(params))
-
-        receitas = float(resultado["receitas"] or 0)
-        despesas = float(resultado["despesas"] or 0)
-
-        return receitas - despesas
-
     # ============================================================
-    # RESUMO MENSAL (USADO NO DASHBOARD)
+    # RESUMO E ANÁLISE (DASHBOARD)
     # ============================================================
     def get_resumo_financeiro(self, user_id):
-
         sql = """
             SELECT
                 SUM(CASE WHEN Valor > 0 THEN Valor ELSE 0 END) AS Receitas,
@@ -224,14 +175,9 @@ class TransactionModel(Database):
             WHERE ID_Usuario = ?
               AND strftime('%Y-%m', Data) = strftime('%Y-%m', 'now')
         """
-
         return self.fetch_one(sql, (user_id,))
 
-    # ============================================================
-    # ANÁLISE MENSAL INTELIGENTE
-    # ============================================================
     def get_analise_mensal(self, user_id):
-
         sql = """
             SELECT
                 SUM(CASE WHEN Valor > 0 THEN Valor ELSE 0 END) AS Receitas,
@@ -240,15 +186,16 @@ class TransactionModel(Database):
             WHERE ID_Usuario = ?
               AND strftime('%Y-%m', Data) = strftime('%Y-%m', 'now')
         """
-
         resultado = self.fetch_one(sql, (user_id,))
-
+        
         receitas = float(resultado["Receitas"] or 0)
         despesas = float(resultado["Despesas"] or 0)
 
+        # Retornando exatamente as chaves originais que você definiu
         return {
             "Saldo_Atual": receitas - despesas,
             "Receitas_A_Receber": receitas,
             "DespesasAPagar": despesas,
             "BalancoParaOMes": receitas - despesas
         }
+

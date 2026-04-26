@@ -36,6 +36,7 @@ class ConfiguracoesController:
     # ==================================================
     def set_idioma(self, idioma):
         try:
+            print("Definindo idioma:", idioma)
             Session.set_config("idioma", idioma)
             return True
         except Exception:

@@ -194,10 +194,12 @@ class TransacaoView(QWidget):
         cartoes = self.fatura_controller.get_all_cartoes()
 
         for cartao in cartoes:
+            nome = cartao.get("Nome")
+            dia_vencimento = cartao.get("Dia_Vencimento")
+
             texto = (
-                f"{cartao.get('Nome', 'Cartão')}\n"
-                f"{TranslatorApp.get('Vencimento')}: "
-                f"{cartao.get('Dia_vencimento', '--')}"
+                f"{nome}\n"
+                f"{TranslatorApp.get('Vencimento')}: {dia_vencimento}"
             )
 
             item = QListWidgetItem(texto)

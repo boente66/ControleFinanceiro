@@ -5,6 +5,7 @@ import logging
 from core.config import carregar_config
 from core.session import Session
 from core.themes import get_theme
+from core.translator_app import TranslatorApp  # 🔥 IMPORTANTE
 
 from views.login_dialog import LoginDialog
 from views.main_view import MainView
@@ -37,21 +38,34 @@ def aplicar_tema(tema, app=None):
 def main():
     app = QApplication(sys.argv)
 
+    # ==============================
     # CONFIG
+    # ==============================
     config = carregar_config()
     Session.load_config(config)
 
+    # ==============================
+    # 🔥 CONECTA TRADUÇÃO
+    # ==============================
+    Session.on_idioma_change(TranslatorApp.set_language)
+
+    # 🔥 aplica idioma inicial
+    TranslatorApp.set_language(Session.get_config("idioma", "pt"))
+
+    # ==============================
     # TEMA INICIAL
+    # ==============================
     tema = Session.get_config("tema", "Claro")
     aplicar_tema(tema, app)
 
-    # 🔥 CALLBACK SEGURO
     def on_theme_change(novo_tema):
         aplicar_tema(novo_tema, app)
 
     Session.on_tema_change(on_theme_change)
 
+    # ==============================
     # LOGIN
+    # ==============================
     login = LoginDialog()
 
     if login.exec_() == QDialog.Accepted:

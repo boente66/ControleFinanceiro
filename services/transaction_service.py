@@ -139,7 +139,7 @@ class TransactionService:
         id_transacao = dados.get("ID_Transacao")
         id_usuario = dados.get("ID_Usuario")
 
-        trans = self.transaction_model.get_transaction_by_id(id_transacao)
+        trans = self.transaction_model.get_transaction_by_id(id_transacao, id_usuario)
 
         if not trans:
             raise ValueError("Transação não encontrada.")
@@ -252,8 +252,8 @@ class TransactionService:
             id_usuario
         )
 
-    def get_transaction_by_id(self, id_transacao):
-        return self.transaction_model.get_transaction_by_id(id_transacao)
+    def get_transaction_by_id(self, id_transacao,id_usuario):
+        return self.transaction_model.get_transaction_by_id(id_transacao,id_usuario)
 
     def get_resumo_financeiro(self, user_id):
         return self.transaction_model.get_resumo_financeiro(user_id)

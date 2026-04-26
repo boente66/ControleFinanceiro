@@ -155,7 +155,7 @@ class FaturaController:
 
     def get_painel_cartao(self, id_cartao, mes, ano, page, limit, status):
 
-        id_usuario = self.session.get_user_id()
+        id_usuario = self.get_id_usuario()
 
         return self.service.get_painel_cartao(
             id_cartao=id_cartao,

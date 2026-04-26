@@ -265,6 +265,16 @@ BEGIN INSERT INTO pessoa_juridica(ID_Favorecido) VALUES (NEW.ID_Favorecido); END
         finally:
             conn.close()
 
+
+    def begin(self):
+        self.connect().execute("BEGIN")
+
+    def commit(self):
+        self.connect().commit()
+
+    def rollback(self):
+        self.connect().rollback()
+
 # =====================================================
 # ERROR HANDLING
 # =====================================================

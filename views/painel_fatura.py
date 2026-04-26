@@ -7,9 +7,8 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
     QTableWidget, QTableWidgetItem, QHeaderView,
     QAbstractItemView, QFileDialog, QDialog,
-    QToolButton, QMessageBox, QPushButton
+    QToolButton, QMessageBox, QPushButton, QInputDialog
 )
-from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor, QIcon
 
 from controllers.fatura_controller import FaturaController
@@ -17,11 +16,12 @@ from controllers.account_controller import AccountController
 
 from core.theme_manager import ThemeManager
 from core.translator_app import TranslatorApp
+from core.session import Session
 
 from utilitarios.currency_formatter import CurrencyFormatter
 from utilitarios.date_formatter import DateFormatter
-
 from utilitarios.ion_path import IonPath
+
 from views.TransactionDialog import TransactionDialog
 
 logger = logging.getLogger(__name__)
@@ -40,6 +40,10 @@ class PainelFatura(QWidget):
         self.limit = 50
         self.filtro_status = "Todos"
         self._icon_cache = {}
+
+        # 🔒 proteção contra loop
+        self._updating = False
+
         hoje = datetime.today()
         self.mes_atual = hoje.month
         self.ano_atual = hoje.year
@@ -48,31 +52,42 @@ class PainelFatura(QWidget):
 
         self._init_ui()
 
-        TranslatorApp.bind(self._on_translate, self)
+        # 🔥 tradução correta (SEM loop)
+        TranslatorApp.enable_auto_translation(self)
+
+        # 🔥 evento controlado
+        Session.on_idioma_change(self._on_idioma_changed)
 
     # ======================================================
-    # REATIVIDADE
+    # EVENTOS SEGUROS
     # ======================================================
-    def _on_translate(self, *_):
-        self._carregar()
+    def _on_idioma_changed(self, *_):
+
+        if self._updating:
+            return
+
+        self._updating = True
+
+        try:
+            self._recarregar_meses()
+
+            if self.cartao:
+                self._carregar()
+
+        finally:
+            self._updating = False
 
     # ======================================================
-    #  ICONE
+    # ICONES
     # ======================================================
     def _icon(self, nome):
         if nome in self._icon_cache:
             return self._icon_cache[nome]
 
-        try:
-            path = IonPath.resource("assets", "icons", f"{nome}.svg")
-            icon = QIcon(path) if os.path.exists(path) else QIcon()
-            self._icon_cache[nome] = icon
-            return icon
-
-        except Exception:
-            logger.exception(f"Erro ao carregar ícone: {nome}")
-            return QIcon()
-
+        path = IonPath.resource("assets", "icons", f"{nome}.svg")
+        icon = QIcon(path) if os.path.exists(path) else QIcon()
+        self._icon_cache[nome] = icon
+        return icon
 
     # ======================================================
     # UI
@@ -100,15 +115,16 @@ class PainelFatura(QWidget):
 
         self.btn_lancar = btn("+ Lançar", self.add_transaction)
         self.btn_lancar.setIcon(self._icon("add"))
+
         self.btn_pagar = btn("Pagar", self.pagar_fatura)
         self.btn_pagar.setIcon(self._icon("pay"))
+
         self.btn_exportar = btn("PDF", self.exportar_pdf)
         self.btn_exportar.setIcon(self._icon("pdf"))
 
         toolbar.addWidget(self.btn_lancar)
         toolbar.addWidget(self.btn_pagar)
         toolbar.addWidget(self.btn_exportar)
-
         toolbar.addStretch()
 
         self.filtro_combo = QComboBox()
@@ -126,14 +142,18 @@ class PainelFatura(QWidget):
         filtros = QHBoxLayout()
 
         self.mes_combo = QComboBox()
-        self.mes_combo.addItems([str(i) for i in range(1, 13)])
+        for i in range(1, 13):
+            self.mes_combo.addItem(DateFormatter.map_nome_mes(i), i)
+
         self.mes_combo.setCurrentIndex(self.mes_atual - 1)
         self.mes_combo.currentIndexChanged.connect(self._reset_paginacao)
 
         self.ano_combo = QComboBox()
-        self.ano_combo.addItems(
-            [str(self.ano_atual - 1), str(self.ano_atual), str(self.ano_atual + 1)]
-        )
+        self.ano_combo.addItems([
+            str(self.ano_atual - 1),
+            str(self.ano_atual),
+            str(self.ano_atual + 1)
+        ])
         self.ano_combo.setCurrentText(str(self.ano_atual))
         self.ano_combo.currentIndexChanged.connect(self._reset_paginacao)
 
@@ -170,14 +190,30 @@ class PainelFatura(QWidget):
 
         layout.addLayout(paginacao)
 
-        # RESUMO
         self.resumo_label = QLabel()
         layout.addWidget(self.resumo_label)
 
-        # FUTURAS
         self.futuras_label = QLabel()
         self.futuras_label.setObjectName("muted")
         layout.addWidget(self.futuras_label)
+
+    # ======================================================
+    # MESES
+    # ======================================================
+    def _recarregar_meses(self):
+        mes_atual = self.mes_combo.currentData()
+
+        self.mes_combo.blockSignals(True)
+        self.mes_combo.clear()
+
+        for i in range(1, 13):
+            self.mes_combo.addItem(DateFormatter.map_nome_mes(i), i)
+
+        index = self.mes_combo.findData(mes_atual)
+        if index >= 0:
+            self.mes_combo.setCurrentIndex(index)
+
+        self.mes_combo.blockSignals(False)
 
     # ======================================================
     # CONTROLE
@@ -205,14 +241,14 @@ class PainelFatura(QWidget):
             self._carregar()
 
     # ======================================================
-    # DADOS (100% CONTROLADOS)
+    # CARREGAR
     # ======================================================
     def _carregar(self):
 
-        if not self.cartao:
+        if not self.cartao or self._updating:
             return
 
-        mes = int(self.mes_combo.currentText())
+        mes = int(self.mes_combo.currentData())
         ano = int(self.ano_combo.currentText())
 
         painel = self.controller.get_painel_cartao(
@@ -224,7 +260,7 @@ class PainelFatura(QWidget):
             status=self.filtro_status
         ) or {}
 
-        self._render_header(painel.get("resumo", {}))
+        self._render_header(painel.get("resumo", {}), mes, ano)
         self._render_tabela(painel.get("lancamentos", []))
         self._render_resumo(painel.get("fatura", {}))
         self._render_futuras(painel.get("futuras", {}))
@@ -233,21 +269,24 @@ class PainelFatura(QWidget):
         total_paginas = max(1, (total // self.limit) + 1)
 
         self.label_page.setText(f"{self.page + 1} / {total_paginas}")
-        self.nome_cartao_label.setText(self.cartao.get("Nome", ""))
 
     # ======================================================
     # RENDER
     # ======================================================
-    def _render_header(self, resumo):
+    def _render_header(self, resumo, mes, ano):
+        nome_mes = DateFormatter.map_nome_mes(mes)
+
+        self.nome_cartao_label.setText(
+            f"{self.cartao.get('Nome', '')} - {nome_mes} {ano}"
+        )
 
         self.info_label.setText(
             f"Limite: {CurrencyFormatter.format(resumo.get('limite', 0))} | "
-            f"Devedor: {CurrencyFormatter.format(resumo.get('saldo_devedor', 0))} | "
+            f"Usado: {CurrencyFormatter.format(resumo.get('saldo_devedor', 0))} | "
             f"Disponível: {CurrencyFormatter.format(resumo.get('disponivel', 0))}"
         )
 
     def _render_resumo(self, fatura):
-
         self.resumo_label.setText(
             f"Fatura: {CurrencyFormatter.format(fatura.get('total', 0))} | "
             f"Abertos: {CurrencyFormatter.format(fatura.get('abertos', 0))} | "
@@ -269,6 +308,7 @@ class PainelFatura(QWidget):
     def _render_tabela(self, dados):
 
         self.table.setRowCount(0)
+
         for item in dados:
             row = self.table.rowCount()
             self.table.insertRow(row)
@@ -276,12 +316,7 @@ class PainelFatura(QWidget):
             valor = float(item.get("Valor", 0))
             pago = item.get("Paga")
 
-            cor = (
-                ThemeManager.get_color("success")
-                if pago
-                else ThemeManager.get_color("danger")
-            )
-
+            cor = ThemeManager.get_color("success") if pago else ThemeManager.get_color("danger")
             status = "Pago" if pago else "Aberto"
 
             descricao = item.get("Descricao", "")
@@ -293,13 +328,11 @@ class PainelFatura(QWidget):
                 DateFormatter.iso_to_br(item.get("Data", ""))
             ))
 
-            
             self.table.setItem(row, 1, QTableWidgetItem(descricao))
             self.table.setItem(row, 2, QTableWidgetItem(str(item.get("Categoria", ""))))
 
             valor_item = QTableWidgetItem(CurrencyFormatter.format(valor))
             valor_item.setForeground(QColor(cor))
-
             self.table.setItem(row, 3, valor_item)
 
             status_item = QTableWidgetItem(status)
@@ -320,26 +353,59 @@ class PainelFatura(QWidget):
 
     def pagar_fatura(self):
 
-        mes = int(self.mes_combo.currentText())
+        mes = int(self.mes_combo.currentData())
         ano = int(self.ano_combo.currentText())
 
-        contas = self.account_controller.get_all_accounts()
+        fatura = self.controller.obter_fatura_mes(
+            self.cartao["ID_Cartao"], mes, ano
+        )
 
+        total = sum(float(l["Valor"]) for l in fatura if not l.get("Paga"))
+
+        if total <= 0:
+            QMessageBox.information(self, "Info", "Nenhum valor em aberto")
+            return
+
+        contas = self.account_controller.get_all_accounts()
         if not contas:
             QMessageBox.warning(self, "Erro", "Nenhuma conta disponível")
             return
 
-        conta_id = contas[0]["ID_Conta"]
+        nomes = [c["Nome_Conta"] for c in contas]
+
+        nome, ok = QInputDialog.getItem(
+            self,
+            "Pagar Fatura",
+            f"Total: {CurrencyFormatter.format(total)}\nSelecione a conta:",
+            nomes,
+            0,
+            False
+        )
+
+        if not ok:
+            return
+
+        conta = next(c for c in contas if c["Nome_Conta"] == nome)
+
+        confirm = QMessageBox.question(
+            self,
+            "Confirmar",
+            f"Pagar {CurrencyFormatter.format(total)} de {nome}?",
+            QMessageBox.Yes | QMessageBox.No
+        )
+
+        if confirm != QMessageBox.Yes:
+            return
 
         try:
             self.controller.pagar_fatura(
-                id_cartao=self.cartao["ID_Cartao"],
-                id_conta=conta_id,
-                mes=mes,
-                ano=ano
+                self.cartao["ID_Cartao"],
+                conta["ID_Conta"],
+                mes,
+                ano
             )
 
-            QMessageBox.information(self, "Sucesso", "Fatura paga com sucesso")
+            QMessageBox.information(self, "Sucesso", "Fatura paga")
             self._carregar()
 
         except Exception as e:
@@ -348,13 +414,13 @@ class PainelFatura(QWidget):
     def exportar_pdf(self):
 
         caminho, _ = QFileDialog.getSaveFileName(
-            self, "Salvar PDF", "", "PDF Files (*.pdf)"
+            self, "Salvar PDF", "", "PDF (*.pdf)"
         )
 
         if not caminho:
             return
 
-        mes = int(self.mes_combo.currentText())
+        mes = int(self.mes_combo.currentData())
         ano = int(self.ano_combo.currentText())
 
         dados = self.controller.listar_lancamentos_fatura(

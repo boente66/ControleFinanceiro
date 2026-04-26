@@ -1,6 +1,7 @@
 from PyQt5.QtCore import QDate, QLocale
 from datetime import datetime, date
 import re
+from core.session import Session
 
 
 class DateFormatter:
@@ -123,3 +124,81 @@ class DateFormatter:
             return True
         except Exception:
             return False
+
+
+    @staticmethod
+    def map_nome_mes(mes: int) -> str:
+        idioma = Session.set_config("idioma","pt")
+        meses = {
+            "pt": [
+                "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+            ],
+            "en": [
+                "January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December"
+            ],
+            "es": [
+                "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+            ]
+        }
+        lista = meses.get(idioma, meses["pt"])
+
+        return lista[mes - 1] if 1 <= mes <= 12 else "Mês Inválido"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

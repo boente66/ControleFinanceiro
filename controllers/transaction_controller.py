@@ -31,7 +31,7 @@ class TransactionController:
     def get_transaction_by_id(self, id_transacao):
         id_usuario = self._get_usuario_id()
 
-        trans = self.service.get_transaction_by_id(id_transacao)
+        trans = self.service.get_transaction_by_id(id_transacao, id_usuario)
 
         if not trans:
             return None

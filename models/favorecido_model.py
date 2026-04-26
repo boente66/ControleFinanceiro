@@ -107,7 +107,7 @@ class FavorecidoModel(Database):
 
         try:
             # 🔥 TRANSAÇÃO
-            self.connection.execute("BEGIN")
+            self.connect().execute("BEGIN")
 
             # 1️⃣ inserir base
             self.execute_query(

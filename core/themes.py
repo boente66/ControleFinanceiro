@@ -53,7 +53,7 @@ V = {
     "text_sidebar": "#a5a8af73",
 
     # primary
-    "primary_blue": "#2563eb",
+    "primary_blue": "#25bdeb",
     "primary_dark": "#3aa0ff",
 
     # green
@@ -257,7 +257,7 @@ QWidget {{
     "text": V['text_sidebar'],
 })}
 
-{_buttons(V['primary_blue'], "#1d4ed8")}
+{_buttons(V['primary_blue'], "#1643be")}
 {_inputs(V['panel_light'], V['border_light'], V['text_normal'])}
 {_progress(V['green'])}
 
@@ -296,7 +296,7 @@ QWidget {{
     "text": V['text_dark'],
 })}
 
-{_buttons(V['primary_dark'], "#2a6ef6")}
+{_buttons(V['primary_dark'], "#2a6ef6e2")}
 {_inputs(V['panel_dark'], V['border_dark'], V['text_dark'])}
 {_progress("#0ea5e9")}
 

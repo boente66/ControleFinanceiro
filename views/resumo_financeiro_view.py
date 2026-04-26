@@ -235,7 +235,8 @@ class ResumoFinanceiroView(QWidget):
 
                 self.cartoes_layout.addWidget(texto)
 
-        except Exception:
+        except Exception as e:
+            print(f"Erro ao carregar cartões: {e}")
             self.cartoes_layout.addWidget(
                 QLabel(TranslatorApp.get("Erro ao carregar cartões"))
             )

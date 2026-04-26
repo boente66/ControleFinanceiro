@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 import weakref
+from wsgiref import headers
 from PyQt5 import sip
 from PyQt5.QtWidgets import QWidget, QTableWidget
+
+from services.argos_service import ArgosService
 
 
 class TranslatorApp:
@@ -18,6 +21,7 @@ class TranslatorApp:
     # ======================================================
     @classmethod
     def set_language(cls, lang):
+        print("Definindo idioma:", lang)
         cls._current_lang = lang
         cls.translate_all()
 
@@ -27,7 +31,6 @@ class TranslatorApp:
 
     # ======================================================
     # TRADUÇÃO
-    # ======================================================
     @classmethod
     def get(cls, texto: str) -> str:
 
@@ -35,7 +38,41 @@ class TranslatorApp:
             return ""
 
         lang_dict = cls._translations.get(cls._current_lang, {})
-        return lang_dict.get(texto, texto)
+
+        # 🔹 1. tenta dicionário local
+        if texto in lang_dict:
+            return lang_dict[texto]
+
+        # 🔹 2. fallback Argos
+        try:
+            traduzido = ArgosService.traduzir(
+                texto,
+                origem="pt",
+                destino=cls._current_lang
+            )
+
+            # 🔥 salva no cache dinâmico
+            cls._translations.setdefault(cls._current_lang, {})
+            cls._translations[cls._current_lang][texto] = traduzido
+
+            return traduzido
+
+        except Exception:
+            return texto
+
+    @classmethod
+    def table_headers(cls, table, headers):
+        """
+        Define e traduz cabeçalho da tabela com cache inteligente
+        """
+        try:
+            translated = []
+            for h in headers:
+                translated.append(cls.get(h))
+            table.setHorizontalHeaderLabels(translated)
+            cls._original_texts[table, "headers"] = headers
+        except Exception:
+            pass
 
     # ======================================================
     # AUTO TRANSLATION
@@ -86,18 +123,12 @@ class TranslatorApp:
         # 🔹 TABELAS
         if isinstance(widget, QTableWidget):
             try:
-                headers = []
+                key = (widget, "headers")
 
-                for i in range(widget.columnCount()):
-                    item = widget.horizontalHeaderItem(i)
-                    if item:
-                        headers.append(item.text())
-                    else:
-                        headers.append("")
+                original = cls._original_texts.get(key)
 
-                widget.setHorizontalHeaderLabels(
-                    [cls.get(h) for h in headers]
-                )
+                if headers:
+                    widget.setHorizontalHeaderLabels([cls.get(h) for h in headers])
             except Exception:
                 pass
 

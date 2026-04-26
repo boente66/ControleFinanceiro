@@ -45,7 +45,7 @@ class ThemeManager:
     @staticmethod
     def _normalizar(nome: str) -> str:
         if not isinstance(nome, str):
-            return ThemeManager.DEFAUT
+            return ThemeManager.DEFAULT
 
         nome = nome.strip()
 

@@ -25,7 +25,7 @@ class FavorecidoService:
     # ---------------------------------------------------------
     def criar(self, dados, id_usuario):
         nome = (dados.get("Nome") or "").strip()
-        tipo = dados.get("Tipo")
+        tipo = (dados.get("Tipo") or "").strip().upper()
 
         if not nome:
             raise ValueError("Nome é obrigatório.")

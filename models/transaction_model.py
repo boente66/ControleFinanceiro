@@ -5,6 +5,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class TransactionModel(Database):
 
     def __init__(self):
@@ -29,36 +30,49 @@ class TransactionModel(Database):
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
 
-        # Removido o argumento conn=conn para alinhar com sua nova Database
         self.execute_query(sql, (
             dados.get("ID_Conta"),
-            dados["Descricao"],
-            dados["Valor"],
-            dados["Data"],
-            dados["Tipo"],
+            dados.get("Descricao"),
+            dados.get("Valor"),
+            dados.get("Data"),
+            dados.get("Tipo"),
             dados.get("ID_Categoria"),
             dados.get("ID_Favorecido"),
             dados.get("Notas"),
-            dados["ID_Usuario"]
+            dados.get("ID_Usuario")
         ))
 
     # ============================================================
     # READ
     # ============================================================
-    def get_transaction_by_id(self, id_transacao, id_usuario):
-        return self.fetch_one("""
-            SELECT * FROM transacoes 
-            WHERE ID_Transacao = ? 
-              AND ID_Usuario = ?
-        """, (id_transacao, id_usuario))
-
     def get_transactions_by_account(self, id_conta, id_usuario):
         return self.fetch_all("""
-            SELECT *
-            FROM transacoes
-            WHERE ID_Conta = ?
-              AND ID_Usuario = ?
-            ORDER BY date(Data) DESC, ID_Transacao DESC
+            SELECT
+                t.ID_Transacao,
+                t.Descricao,
+                t.Valor,
+                t.Data,
+                t.Tipo,
+                t.Notas,
+
+                t.ID_Categoria,
+                t.ID_Favorecido,
+
+                COALESCE(c.Nome, '') AS Categoria,
+                COALESCE(f.Nome, '') AS Favorecido
+
+            FROM transacoes t
+
+            LEFT JOIN categorias c 
+                ON c.ID_Categoria = t.ID_Categoria
+
+            LEFT JOIN favorecidos f 
+                ON f.ID_Favorecido = t.ID_Favorecido
+
+            WHERE t.ID_Conta = ?
+              AND t.ID_Usuario = ?
+
+            ORDER BY date(t.Data) DESC, t.ID_Transacao DESC
         """, (id_conta, id_usuario))
 
     def get_transactions_by_account_periodo(
@@ -69,13 +83,47 @@ class TransactionModel(Database):
         id_usuario
     ):
         return self.fetch_all("""
-            SELECT *
-            FROM transacoes
-            WHERE ID_Conta = ?
-              AND ID_Usuario = ?
-              AND date(Data) BETWEEN date(?) AND date(?)
-            ORDER BY date(Data) DESC, ID_Transacao DESC
+            SELECT
+                t.ID_Transacao,
+                t.Descricao,
+                t.Valor,
+                t.Data,
+                t.Tipo,
+                t.Notas,
+
+                t.ID_Categoria,
+                t.ID_Favorecido,
+
+                COALESCE(c.Nome, '') AS Categoria,
+                COALESCE(f.Nome, '') AS Favorecido
+
+            FROM transacoes t
+
+            LEFT JOIN categorias c 
+                ON c.ID_Categoria = t.ID_Categoria
+
+            LEFT JOIN favorecidos f 
+                ON f.ID_Favorecido = t.ID_Favorecido
+
+            WHERE t.ID_Conta = ?
+              AND t.ID_Usuario = ?
+              AND date(t.Data) BETWEEN date(?) AND date(?)
+
+            ORDER BY date(t.Data) DESC, t.ID_Transacao DESC
         """, (id_conta, id_usuario, data_inicio, data_fim))
+
+    def get_transaction_by_id(self, id_transacao, id_usuario):
+        return self.fetch_one("""
+            SELECT
+                t.*,
+                COALESCE(c.Nome, '') AS Categoria,
+                COALESCE(f.Nome, '') AS Favorecido
+            FROM transacoes t
+            LEFT JOIN categorias c ON c.ID_Categoria = t.ID_Categoria
+            LEFT JOIN favorecidos f ON f.ID_Favorecido = t.ID_Favorecido
+            WHERE t.ID_Transacao = ?
+              AND t.ID_Usuario = ?
+        """, (id_transacao, id_usuario))
 
     # ============================================================
     # UPDATE
@@ -95,9 +143,9 @@ class TransactionModel(Database):
         """
 
         self.execute_query(sql, (
-            dados["Descricao"],
-            dados["Valor"],
-            dados["Data"],
+            dados.get("Descricao"),
+            dados.get("Valor"),
+            dados.get("Data"),
             dados.get("ID_Categoria"),
             dados.get("ID_Favorecido"),
             dados.get("Notas"),
@@ -139,7 +187,6 @@ class TransactionModel(Database):
             params.extend([data_inicio, data_fim])
 
         resultado = self.fetch_one(sql, tuple(params))
-        # Mantendo os nomes originais de retorno
         return float(resultado["total"] or 0)
 
     def somar_receitas_periodo(
@@ -164,7 +211,7 @@ class TransactionModel(Database):
         return float(resultado["total"] or 0)
 
     # ============================================================
-    # RESUMO E ANÁLISE (DASHBOARD)
+    # RESUMO E ANÁLISE
     # ============================================================
     def get_resumo_financeiro(self, user_id):
         sql = """
@@ -186,16 +233,15 @@ class TransactionModel(Database):
             WHERE ID_Usuario = ?
               AND strftime('%Y-%m', Data) = strftime('%Y-%m', 'now')
         """
+
         resultado = self.fetch_one(sql, (user_id,))
-        
+
         receitas = float(resultado["Receitas"] or 0)
         despesas = float(resultado["Despesas"] or 0)
 
-        # Retornando exatamente as chaves originais que você definiu
         return {
             "Saldo_Atual": receitas - despesas,
             "Receitas_A_Receber": receitas,
             "DespesasAPagar": despesas,
             "BalancoParaOMes": receitas - despesas
         }
-

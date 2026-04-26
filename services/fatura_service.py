@@ -148,6 +148,12 @@ class FaturaService:
         resumo = self.get_resumo_cartao(id_cartao, id_usuario)
         return resumo.get("disponivel", 0.0)
 
+    def calcular_fatura_mes(self, id_cartao, mes, ano, id_usuario):
+
+        fatura = self.obter_fatura(id_cartao, mes, ano, id_usuario)
+
+        return sum(float(l["Valor"]) for l in fatura if not l.get("Paga"))
+
     def verificar_limite(self, id_cartao, id_usuario):
 
         resumo = self.get_resumo_cartao(id_cartao, id_usuario)

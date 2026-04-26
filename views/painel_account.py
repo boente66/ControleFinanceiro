@@ -27,7 +27,6 @@ from controllers.favorecido_controller import FavorecidoController
 from controllers.ia_import_controller import IAImportController
 from controllers.ia_export_controller import IAExportController
 
-from core.translator_binding import TranslatorBinding
 from views.TransactionDialog import TransactionDialog
 from views.TransferDialog import TransferDialog
 from views.editar_transacao_dialog import EditTransactionDialog
@@ -295,7 +294,6 @@ class PainelAccount(QWidget):
             self.table.setItem(r, 2, QTableWidgetItem(t.get("Descricao", "")))
             self.table.setItem(r, 3, QTableWidgetItem(str(t.get("Favorecido", ""))))
             self.table.setItem(r, 4, QTableWidgetItem(str(t.get("Categoria", ""))))
-
             valor = float(t["Valor"])
 
             if valor > 0:

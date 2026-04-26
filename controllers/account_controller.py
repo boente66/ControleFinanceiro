@@ -71,3 +71,25 @@ class AccountController:
             id_conta,
             self.get_usuario_id()
         )
+
+
+    # -------------------------------------------
+    # SALDO DA CONTA
+    # ------------------------------------------
+
+    def get_account_balance(self, id_conta):
+        return self.service.obter_saldo(
+            id_conta,
+            self.get_usuario_id()
+        )
+     
+
+    # =================================
+    # RECALCULAR SALDO
+    # =================================
+    
+    def recalcular_saldo(self, id_conta):
+        return self.service.atualiza_saldo(
+            id_conta,
+            self.get_usuario_id()
+        )

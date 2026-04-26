@@ -36,10 +36,10 @@ class AjustarSaldoDialog(QDialog):
         self.setWindowTitle("Ajustar Saldo da Conta")
 
         # 🔥 tradução automática global
-        TranslatorApp.enable_auto_translation(self)
+        TranslatorApp.bind(self._atualizar_textos,self)
 
-        # 🔥 garante atualização dinâmica do nome da conta ao trocar idioma
-        TranslatorApp.auto(self.lbl_conta, self._get_conta_text)
+    def _atualizar_textos(self):
+            self.lbl_conta.setText(TranslatorApp.get("Ajustar Saldo da Conta"))
 
     # --------------------------------------------------
     # UI

@@ -1,6 +1,7 @@
 import logging
 from models.account_model import AccountModel
 from database.database import DatabaseError
+from models.transaction_model import TransactionModel
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +15,7 @@ class AccountService:
 
     def __init__(self):
         self.model = AccountModel()
+        self.transaction_model = TransactionModel()
 
     # --------------------------------------------------
     # UTIL
@@ -183,3 +185,26 @@ class AccountService:
         except DatabaseError as e:
             logger.exception("Erro ao deletar conta")
             raise RuntimeError("Erro ao excluir conta") from e
+        
+    # =================================
+    # ATUALIZAR SALDO
+    # =================================
+    
+    def atualiza_saldo(self,id_conta,id_usuario):
+        saldo = self.transaction_model.get_account_saldo(id_conta, id_usuario)
+
+        valor = float(saldo.get("Saldo_Atual", 0))
+
+        self.model.definir_saldo(
+            id_conta=id_conta,
+            valor=valor,
+            id_usuario=id_usuario
+        )
+    
+    # =================================
+    # OBTER SALDO 
+    # =================================
+
+    def obter_saldo(self, id_conta, id_usuario):
+        saldo = self.transaction_model.get_account_saldo(id_conta, id_usuario)
+        return float(saldo.get("Saldo_Atual", 0))

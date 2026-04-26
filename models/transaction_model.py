@@ -245,3 +245,11 @@ class TransactionModel(Database):
             "DespesasAPagar": despesas,
             "BalancoParaOMes": receitas - despesas
         }
+     
+    def get_account_saldo(self, id_conta,id_usuario):
+        return self.fetch_one("""
+            SELECT Saldo_Atual
+            FROM contas
+            WHERE ID_Conta = ?
+              AND ID_Usuario = ?
+        """, (id_conta, id_usuario))

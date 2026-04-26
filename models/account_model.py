@@ -131,15 +131,29 @@ class AccountModel(Database):
 
 
 
+    def definir_saldo(self, id_conta, valor, id_usuario):
+        sql = """
+            UPDATE contas
+            SET Saldo_Atual = ?
+            WHERE ID_Conta = ?
+              AND ID_Usuario = ?
+        """
+        try:
+            self.execute_query(sql, (valor, id_conta, id_usuario))
+        except Exception as e:
+            logger.exception(f"Erro ao definir saldo da conta {id_conta} para o usuário {id_usuario}")
+            raise DatabaseError(str(e))
+
     def update_saldo(self, id_conta, valor, id_usuario):
-         sql = """
-             UPDATE contas
-             SET Saldo_Atual = Saldo_Atual + ?
-             WHERE ID_Conta = ?
-               AND ID_Usuario = ?
-         """
-         try:
-             self.execute_query(sql, (valor, id_conta, id_usuario))
-         except Exception as e:
-             logger.exception(f"Erro ao atualizar saldo da conta {id_conta} para o usuário {id_usuario}")
-             raise DatabaseError(str(e))
+        sql = """
+            UPDATE contas
+            SET Saldo_Atual = Saldo_Atual + ?
+            WHERE ID_Conta = ?
+              AND ID_Usuario = ?
+        """
+        try:
+            self.execute_query(sql, (valor, id_conta, id_usuario))
+        except Exception as e:
+            logger.exception(f"Erro ao atualizar saldo da conta {id_conta} para o usuário {id_usuario}")
+            raise DatabaseError(str(e))
+

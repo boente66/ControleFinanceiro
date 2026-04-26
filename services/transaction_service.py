@@ -115,7 +115,7 @@ class TransactionService:
     # ============================================================
     def excluir_transacao(self, id_transacao, id_usuario):
 
-        trans = self.transaction_model.get_transaction_by_id(id_transacao)
+        trans = self.transaction_model.get_transaction_by_id(id_transacao,id_usuario)
 
         if not trans:
             raise ValueError("Transação não encontrada.")
@@ -127,7 +127,7 @@ class TransactionService:
         id_conta = trans["ID_Conta"]
 
         self.account_model.update_saldo(id_conta, -valor, id_usuario)
-        self.transaction_model.delete_transaction(id_transacao)
+        self.transaction_model.delete_transaction(id_transacao,id_usuario)
 
         return True
 

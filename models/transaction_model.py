@@ -66,7 +66,7 @@ class TransactionModel(Database):
             LEFT JOIN categorias c 
                 ON c.ID_Categoria = t.ID_Categoria
 
-            LEFT JOIN favorecidos f 
+            LEFT JOIN favorecido f 
                 ON f.ID_Favorecido = t.ID_Favorecido
 
             WHERE t.ID_Conta = ?
@@ -102,7 +102,7 @@ class TransactionModel(Database):
             LEFT JOIN categorias c 
                 ON c.ID_Categoria = t.ID_Categoria
 
-            LEFT JOIN favorecidos f 
+            LEFT JOIN favorecido f 
                 ON f.ID_Favorecido = t.ID_Favorecido
 
             WHERE t.ID_Conta = ?
@@ -120,7 +120,7 @@ class TransactionModel(Database):
                 COALESCE(f.Nome, '') AS Favorecido
             FROM transacoes t
             LEFT JOIN categorias c ON c.ID_Categoria = t.ID_Categoria
-            LEFT JOIN favorecidos f ON f.ID_Favorecido = t.ID_Favorecido
+            LEFT JOIN favorecido f ON f.ID_Favorecido = t.ID_Favorecido
             WHERE t.ID_Transacao = ?
               AND t.ID_Usuario = ?
         """, (id_transacao, id_usuario))

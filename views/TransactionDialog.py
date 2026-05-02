@@ -3,12 +3,10 @@ import logging
 import os
 import re
 
-from PyQt5.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
-    QPushButton, QMessageBox, QComboBox, QDateEdit, QSpinBox
-)
+from PyQt5.QtWidgets import QDialog, QMessageBox
 from PyQt5.QtCore import QDate
 from PyQt5.QtGui import QIcon
+from PyQt5 import uic
 
 from core.translator_app import TranslatorApp
 
@@ -31,12 +29,13 @@ class TransactionDialog(QDialog):
     def __init__(self, parent=None, contexto=None, id_contexto=None):
         super().__init__(parent)
 
-        if not contexto or not id_contexto:
+        if contexto is None or id_contexto is None:
             raise ValueError("Contexto inválido")
 
         self.contexto = contexto
         self.id_contexto = id_contexto
 
+        # controllers
         self.main_controller = MainController()
         self.fatura_controller = FaturaController()
         self.favorecido_controller = FavorecidoController()
@@ -45,121 +44,95 @@ class TransactionDialog(QDialog):
 
         self._icon_cache = {}
 
-        self.setWindowTitle("Adicionar nova Transação")
+        # ======================================================
+        # 🔥 LOAD UI SEGURO
+        # ======================================================
+        try:
+            if self.contexto == "cartao":
+                path = IonPath.load_ui("views", "ui", "fatura_dialog.ui")
+            elif self.contexto == "conta":
+                path = IonPath.load_ui("views", "ui", "TransactionDialog.ui")
+
+            if not os.path.exists(path):
+                raise FileNotFoundError(f"UI não encontrado: {path}")
+
+            uic.loadUi(path, self)
+
+        except Exception as e:
+            logger.exception("Erro ao carregar UI")
+            QMessageBox.critical(self, "Erro", f"Falha ao carregar interface:\n{e}")
+            raise
+
+        # ======================================================
+        # 🔥 VALIDAÇÃO CRÍTICA
+        # ======================================================
+        if not hasattr(self, "descricao_edit"):
+            raise RuntimeError("UI carregou mas widgets não foram encontrados")
+
         self.setMinimumWidth(820)
 
-        self._build_ui()
+        # setup
+        self._configurar_ui()
         self._carregar_favorecidos()
         self._carregar_categorias()
 
         TranslatorApp.enable_auto_translation(self)
 
-        self.valor_edit.textChanged.connect(self._formatar_moeda)
-        self.tipo_combo.currentIndexChanged.connect(self._update_label)
+        self._conectar_eventos()
 
-        self._update_label()
         self.descricao_edit.setFocus()
 
     # ======================================================
-    # UI
+    # CONFIG UI
     # ======================================================
-    def _build_ui(self):
-        layout = QVBoxLayout(self)
+    def _configurar_ui(self):
 
-        # TIPO
-        self.tipo_combo = QComboBox()
-        self.tipo_combo.addItem("Despesa", "Despesa")
-        self.tipo_combo.addItem("Receita", "Receita")
-        layout.addWidget(self.tipo_combo)
+        if hasattr(self, "tipo_combo"):
+            self.tipo_combo.clear()
+            self.tipo_combo.addItem("Despesa", "Despesa")
+            self.tipo_combo.addItem("Receita", "Receita")
 
-        # DESCRIÇÃO + DATA
-        l1 = QHBoxLayout()
+        if hasattr(self, "data_edit"):
+            self.data_edit.setDate(QDate.currentDate())
 
-        self.descricao_edit = QLineEdit()
-        self.descricao_edit.setPlaceholderText("Descrição")
-
-        self.data_edit = QDateEdit(QDate.currentDate())
-        self.data_edit.setCalendarPopup(True)
-
-        l1.addWidget(self.descricao_edit, 3)
-        l1.addWidget(self.data_edit, 1)
-        layout.addLayout(l1)
-
-        # FAVORECIDO + CATEGORIA
-        l2 = QHBoxLayout()
-
-        self.lbl_favorecido = QLabel("Pagar para")
-        self.favorecido_combo = QComboBox()
-
-        btn_fav = QPushButton("")
-        btn_fav.setIcon(self._icon("add"))
-        btn_fav.setFixedSize(28, 28)
-        btn_fav.clicked.connect(self._novo_favorecido)
-
-        fav_layout = QHBoxLayout()
-        fav_layout.addWidget(self.favorecido_combo)
-        fav_layout.addWidget(btn_fav)
-
-        bloco1 = QVBoxLayout()
-        bloco1.addWidget(self.lbl_favorecido)
-        bloco1.addLayout(fav_layout)
-
-        self.lbl_categoria = QLabel("Categoria")
-        self.categoria_combo = QComboBox()
-
-        btn_cat = QPushButton("")
-        btn_cat.setIcon(self._icon("add"))
-        btn_cat.setFixedSize(28, 28)
-        btn_cat.clicked.connect(self._nova_categoria)
-
-        cat_layout = QHBoxLayout()
-        cat_layout.addWidget(self.categoria_combo)
-        cat_layout.addWidget(btn_cat)
-
-        bloco2 = QVBoxLayout()
-        bloco2.addWidget(self.lbl_categoria)
-        bloco2.addLayout(cat_layout)
-
-        l2.addLayout(bloco1)
-        l2.addLayout(bloco2)
-
-        layout.addLayout(l2)
-
-        # VALOR
-        self.valor_edit = QLineEdit()
-        self.valor_edit.setPlaceholderText("0,00")
-        layout.addWidget(self.valor_edit)
-
-        # CARTÃO
-        if self.contexto == "cartao":
-            self.tipo_combo.setCurrentIndex(0)
-            self.tipo_combo.setEnabled(False)
-
-            self.parcelas_spin = QSpinBox()
+        if self.contexto == "cartao" and hasattr(self, "parcelas_spin"):
             self.parcelas_spin.setRange(1, 36)
-            layout.addWidget(self.parcelas_spin)
 
-        # BOTÕES
-        btns = QHBoxLayout()
+    # ======================================================
+    # EVENTOS
+    # ======================================================
+    def _conectar_eventos(self):
 
-        cancelar = QPushButton("Cancelar")
-        cancelar.clicked.connect(self.reject)
+        if hasattr(self, "btn_salvar"):
+            self.btn_salvar.clicked.connect(self.salvar)
 
-        salvar = QPushButton("Salvar")
-        salvar.clicked.connect(self.salvar)
+        if hasattr(self, "btn_cancelar"):
+            self.btn_cancelar.clicked.connect(self.reject)
 
-        btns.addStretch()
-        btns.addWidget(cancelar)
-        btns.addWidget(salvar)
+        if hasattr(self, "valor_edit"):
+            self.valor_edit.textChanged.connect(self._formatar_moeda)
 
-        layout.addLayout(btns)
+        if hasattr(self, "tipo_combo"):
+            self.tipo_combo.currentIndexChanged.connect(self._update_label)
+
+        if hasattr(self, "btn_add_fav"):
+            self.btn_add_fav.setIcon(self._icon("add"))
+            self.btn_add_fav.clicked.connect(self._novo_favorecido)
+
+        if hasattr(self, "btn_add_cat"):
+            self.btn_add_cat.setIcon(self._icon("add"))
+            self.btn_add_cat.clicked.connect(self._nova_categoria)
 
     # ======================================================
     # LABEL DINÂMICO
     # ======================================================
     def _update_label(self):
+
+        if not hasattr(self, "lbl_favorecido"):
+            return
+
         if self.contexto == "cartao":
-            self.lbl_favorecido.setText("Favorecido")
+            self.lbl_favorecido.setText("Estabelecimento")
             return
 
         tipo = self.tipo_combo.currentData()
@@ -206,6 +179,10 @@ class TransactionDialog(QDialog):
     # LOAD
     # ======================================================
     def _carregar_categorias(self):
+
+        if not hasattr(self, "categoria_combo"):
+            return
+
         self.categoria_combo.clear()
         self.categoria_combo.addItem("Nenhum", None)
 
@@ -219,6 +196,10 @@ class TransactionDialog(QDialog):
                 self.categoria_combo.addItem(nome, cid)
 
     def _carregar_favorecidos(self):
+
+        if not hasattr(self, "favorecido_combo"):
+            return
+
         self.favorecido_combo.clear()
         self.favorecido_combo.addItem("Nenhum", None)
 
@@ -258,9 +239,8 @@ class TransactionDialog(QDialog):
                 raise ValueError("Valor inválido")
 
             valor = float(texto_valor.replace(".", "").replace(",", "."))
-            tipo = self.tipo_combo.currentData()
+            tipo = self.tipo_combo.currentData() if hasattr(self, "tipo_combo") else "Despesa"
 
-            # REGRA DE SINAL
             if self.contexto == "conta":
                 valor = abs(valor) if tipo == "Receita" else -abs(valor)
             else:
@@ -278,7 +258,6 @@ class TransactionDialog(QDialog):
                 dados["ID_Conta"] = self.id_contexto
                 dados["Tipo"] = tipo
                 self.main_controller.inserir_lancamento(dados)
-
             else:
                 dados["ID_Cartao"] = self.id_contexto
                 dados["Parcelas"] = int(self.parcelas_spin.value())

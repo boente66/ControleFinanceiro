@@ -1,227 +1,115 @@
+# -*- coding: utf-8 -*-
+import logging
+
 from PyQt5.QtWidgets import (
-    QDialog, QVBoxLayout, QFormLayout, QLineEdit, QComboBox,
-    QDialogButtonBox, QMessageBox
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel,
+    QLineEdit, QPushButton, QComboBox, QMessageBox
 )
 
-from controllers.favorecido_controller import FavorecidoController
-from utilitarios.name_format import NameFormat
 from core.translator_app import TranslatorApp
+from utilitarios.name_format import NameFormat
+from form.favorecido_form import FavorecidoForm
+
+logger = logging.getLogger(__name__)
 
 
 class FavorecidoDialog(QDialog):
 
-    def __init__(self, parent=None, favorecido=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.controller = FavorecidoController()
-        self.favorecido = favorecido
-
-        # 🔥 título base
-        self.setWindowTitle("Favorecido")
+        self.setWindowTitle("Novo Favorecido")
         self.setMinimumWidth(400)
 
-        layout = QVBoxLayout(self)
-        self.form_layout = QFormLayout()
+        self._build_ui()
+        self._trocar_tipo()
 
-        # ================= TIPO =================
-        self.type_combo = QComboBox()
-        self.type_combo.addItem("Pessoa Física", "Pessoa Física")
-        self.type_combo.addItem("Pessoa Jurídica", "Pessoa Jurídica")
-        self.type_combo.currentIndexChanged.connect(self.update_fields)
-        self.form_layout.addRow("Tipo:", self.type_combo)
-
-        # ================= PESSOA FÍSICA =================
-        self.name_input = QLineEdit()
-        self.form_layout.addRow("Nome:", self.name_input)
-
-        self.cpf_input = QLineEdit()
-        self.form_layout.addRow("CPF:", self.cpf_input)
-
-        self.telefone_pf_input = QLineEdit()
-        self.form_layout.addRow("Telefone:", self.telefone_pf_input)
-
-        # ================= PESSOA JURÍDICA =================
-        self.fantasia_input = QLineEdit()
-        self.form_layout.addRow("Nome Fantasia:", self.fantasia_input)
-
-        self.razao_input = QLineEdit()
-        self.form_layout.addRow("Razão Social:", self.razao_input)
-
-        self.cnpj_input = QLineEdit()
-        self.form_layout.addRow("CNPJ:", self.cnpj_input)
-
-        self.telefone_pj_input = QLineEdit()
-        self.form_layout.addRow("Telefone:", self.telefone_pj_input)
-
-        layout.addLayout(self.form_layout)
-
-        self.update_fields()
-
-        # ================= BOTÕES =================
-        self.button_box = QDialogButtonBox(
-            QDialogButtonBox.Save | QDialogButtonBox.Cancel
-        )
-        layout.addWidget(self.button_box)
-
-        self.button_box.button(QDialogButtonBox.Save).setText("Salvar")
-        self.button_box.button(QDialogButtonBox.Cancel).setText("Cancelar")
-
-        self.button_box.accepted.connect(self.save_favorecido)
-        self.button_box.rejected.connect(self.reject)
-
-        if self.favorecido:
-            self.load_favorecido_data()
-
-        # 🔥 tradução automática global
         TranslatorApp.enable_auto_translation(self)
 
-    # =========================================================
-    # CARREGAR DADOS PARA EDIÇÃO
-    # =========================================================
-    def load_favorecido_data(self):
+    def _build_ui(self):
+        layout = QVBoxLayout(self)
 
-        tipo = self.favorecido.get("Tipo")
+        self.tipo_combo = QComboBox()
+        self.tipo_combo.addItem("Pessoa Física", "PF")
+        self.tipo_combo.addItem("Pessoa Jurídica", "PJ")
+        self.tipo_combo.currentIndexChanged.connect(self._trocar_tipo)
 
-        index = self.type_combo.findData(tipo)
-        if index >= 0:
-            self.type_combo.setCurrentIndex(index)
+        layout.addWidget(QLabel("Tipo"))
+        layout.addWidget(self.tipo_combo)
 
-        self.update_fields()
+        self.nome_label = QLabel("Nome")
+        self.nome_edit = QLineEdit()
 
-        if tipo == "Pessoa Física":
-            self.name_input.setText(self.favorecido.get("Nome", ""))
-            self.cpf_input.setText(self.favorecido.get("CPF", ""))
-            self.telefone_pf_input.setText(
-                self.favorecido.get("Telefone_PF", "")
-            )
+        layout.addWidget(self.nome_label)
+        layout.addWidget(self.nome_edit)
+
+        self.doc_label = QLabel("CPF")
+        self.doc_edit = QLineEdit()
+
+        layout.addWidget(self.doc_label)
+        layout.addWidget(self.doc_edit)
+
+        self.tel_label = QLabel("Telefone")
+        self.tel_edit = QLineEdit()
+
+        layout.addWidget(self.tel_label)
+        layout.addWidget(self.tel_edit)
+
+        btns = QHBoxLayout()
+
+        cancelar = QPushButton("Cancelar")
+        cancelar.clicked.connect(self.reject)
+
+        salvar = QPushButton("Salvar")
+        salvar.clicked.connect(self.salvar)
+
+        btns.addStretch()
+        btns.addWidget(cancelar)
+        btns.addWidget(salvar)
+
+        layout.addLayout(btns)
+
+        self.doc_edit.editingFinished.connect(self._formatar_documento)
+        self.tel_edit.editingFinished.connect(self._formatar_telefone)
+
+    def _trocar_tipo(self):
+        tipo = self.tipo_combo.currentData()
+        self.doc_edit.clear()
+
+        if tipo == "PF":
+            self.nome_label.setText("Nome")
+            self.doc_label.setText("CPF")
         else:
-            self.fantasia_input.setText(
-                self.favorecido.get("Nome_Fantasia", "")
-            )
-            self.razao_input.setText(
-                self.favorecido.get("Razao_Social", "")
-            )
-            self.cnpj_input.setText(
-                self.favorecido.get("CNPJ", "")
-            )
-            self.telefone_pj_input.setText(
-                self.favorecido.get("Telefone_PJ", "")
-            )
+            self.nome_label.setText("Razão Social")
+            self.doc_label.setText("CNPJ")
 
-    # =========================================================
-    # CONTROLAR CAMPOS VISÍVEIS
-    # =========================================================
-    def update_fields(self):
+    def _formatar_documento(self):
+        texto = self.doc_edit.text()
+        tipo = self.tipo_combo.currentData()
 
-        tipo = self.type_combo.currentData()
-        is_fisica = tipo == "Pessoa Física"
+        if tipo == "PF":
+            self.doc_edit.setText(NameFormat.formatCPF(texto))
+        else:
+            self.doc_edit.setText(NameFormat.formatCNPJ(texto))
 
-        self._set_field_visibility(
-            self.name_input,
-            self.cpf_input,
-            self.telefone_pf_input,
-            visible=is_fisica
+    def _formatar_telefone(self):
+        texto = self.tel_edit.text()
+        self.tel_edit.setText(NameFormat.formatTelefone(texto))
+
+    def get_dados(self):
+        form = FavorecidoForm(
+            tipo=self.tipo_combo.currentData(),
+            nome=self.nome_edit.text(),
+            documento=self.doc_edit.text(),
+            telefone=self.tel_edit.text()
         )
 
-        self._set_field_visibility(
-            self.fantasia_input,
-            self.razao_input,
-            self.cnpj_input,
-            self.telefone_pj_input,
-            visible=not is_fisica
-        )
+        form.validar()
+        return form.to_dict()
 
-    def _set_field_visibility(self, *fields, visible):
-        for field in fields:
-            field.setVisible(visible)
-            label = self.form_layout.labelForField(field)
-            if label:
-                label.setVisible(visible)
-
-    # =========================================================
-    # SALVAR
-    # =========================================================
-    def save_favorecido(self):
-
+    def salvar(self):
         try:
-            tipo = self.type_combo.currentData()
-
-            # ================= PF =================
-            if tipo == "Pessoa Física":
-
-                nome = self.name_input.text().strip()
-                cpf_raw = self.cpf_input.text().strip()
-                telefone = self.telefone_pf_input.text().strip()
-
-                if not nome or not cpf_raw:
-                    raise ValueError("Nome e CPF são obrigatórios.")
-
-                cpf = NameFormat.formatCPF(cpf_raw)
-
-                data = {
-                    "Tipo": tipo,
-                    "Nome": nome,
-                    "CPF": cpf,
-                    "Telefone_PF": telefone
-                }
-
-            # ================= PJ =================
-            else:
-
-                fantasia = self.fantasia_input.text().strip()
-                razao = self.razao_input.text().strip()
-                cnpj_raw = self.cnpj_input.text().strip()
-                telefone = self.telefone_pj_input.text().strip()
-
-                if not fantasia or not razao or not cnpj_raw:
-                    raise ValueError(
-                        "Nome Fantasia, Razão Social e CNPJ são obrigatórios."
-                    )
-
-                cnpj = NameFormat.formatCNPJ(cnpj_raw)
-
-                data = {
-                    "Tipo": tipo,
-                    "Nome_Fantasia": fantasia,
-                    "Razao_Social": razao,
-                    "CNPJ": cnpj,
-                    "Telefone_PJ": telefone
-                }
-
-            # ================= EDIÇÃO =================
-            if self.favorecido:
-
-                idfav = self.favorecido["ID_Favorecido"]
-
-                sucesso = self.controller.atualizar_favorecido(idfav, data)
-
-                if not sucesso:
-                    raise ValueError("Falha ao atualizar favorecido.")
-
-                QMessageBox.information(
-                    self,
-                    TranslatorApp.get("Sucesso"),
-                    TranslatorApp.get("Favorecido atualizado com sucesso!")
-                )
-                self.accept()
-                return
-
-            # ================= CRIAÇÃO =================
-            sucesso = self.controller.adicionar_favorecido(data)
-
-            if not sucesso:
-                raise ValueError("Falha ao criar favorecido.")
-
-            QMessageBox.information(
-                self,
-                TranslatorApp.get("Sucesso"),
-                TranslatorApp.get("Favorecido criado com sucesso!")
-            )
+            self.dados = self.get_dados()
             self.accept()
-
         except Exception as e:
-            QMessageBox.critical(
-                self,
-                TranslatorApp.get("Erro"),
-                f"{TranslatorApp.get('Erro ao salvar favorecido')}:\n{e}"
-            )
+            QMessageBox.warning(self, "Erro", str(e))

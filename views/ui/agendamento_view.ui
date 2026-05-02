@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>AgendamentoView</class>
+ <widget class="QWidget" name="AgendamentoView">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>863</width>
+    <height>792</height>
+   </rect>
+  </property>
+  <layout class="QHBoxLayout" name="mainLayout">
+   <item>
+    <widget class="QFrame" name="sidebar">
+     <layout class="QVBoxLayout" name="sidebarLayout">
+      <item>
+       <widget class="QPushButton" name="btn_all">
+        <property name="text">
+         <string>Todos</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btn_receber">
+        <property name="text">
+         <string>Receber</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btn_pagar">
+        <property name="text">
+         <string>Pagar</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btn_transfer">
+        <property name="text">
+         <string>Transferência</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="spacer_sidebar">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>0</width>
+          <height>0</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <layout class="QVBoxLayout" name="containerLayout">
+     <item>
+      <layout class="QHBoxLayout" name="toolbarLayout">
+       <item>
+        <widget class="QPushButton" name="btn_add">
+         <property name="text">
+          <string>Novo</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btn_edit">
+         <property name="text">
+          <string>Editar</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btn_exec">
+         <property name="text">
+          <string>Executar</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btn_cancel">
+         <property name="text">
+          <string>Cancelar</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="spacer_toolbar">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QComboBox" name="combo_tipo"/>
+       </item>
+       <item>
+        <widget class="QComboBox" name="combo_status"/>
+       </item>
+       <item>
+        <widget class="QComboBox" name="combo_favorecido"/>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="search_input"/>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <widget class="QSplitter" name="main_splitter">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+       <widget class="QWidget" name="topWidget">
+        <layout class="QVBoxLayout" name="topLayout">
+         <item>
+          <widget class="QTableWidget" name="table"/>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="cardsLayout">
+           <item>
+            <widget class="QLabel" name="lbl_pagar">
+             <property name="text">
+              <string>Total a Pagar: R$ 0,00</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="lbl_receber">
+             <property name="text">
+              <string>Total a Receber: R$ 0,00</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="lbl_total">
+             <property name="text">
+              <string>Total: R$ 0,00</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QSplitter" name="bottom_splitter">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <widget class="QGroupBox" name="fatura_group">
+         <property name="title">
+          <string>💳 Fatura Prevista</string>
+         </property>
+         <layout class="QVBoxLayout">
+          <item>
+           <widget class="QComboBox" name="cartao_filter"/>
+          </item>
+          <item>
+           <widget class="QTableWidget" name="table_cartao">
+            <column>
+             <property name="text">
+              <string>Data da compra </string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Descrição</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Favorecido </string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Categoria</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Parcelamento</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Valor</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Status</string>
+             </property>
+            </column>
+           </widget>
+          </item>
+          <item>
+           <widget class="QScrollBar" name="horizontalScrollBar">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="lbl_total_fatura">
+            <property name="text">
+             <string>TOTAL PREVISTO: R$ 0,00</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QGroupBox" name="historico_group">
+         <property name="title">
+          <string>📊 Histórico</string>
+         </property>
+         <layout class="QVBoxLayout">
+          <item>
+           <widget class="QTableWidget" name="table_hist"/>
+          </item>
+         </layout>
+        </widget>
+       </widget>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

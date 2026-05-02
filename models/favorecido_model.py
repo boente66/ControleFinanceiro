@@ -4,39 +4,55 @@ from database.database import Database, DatabaseError
 class FavorecidoModel(Database):
 
     # =========================================================
-    # LISTAR (COM JOIN COMPLETO)
+    # UTIL
+    # =========================================================
+    def _somente_numeros(self, valor):
+        if not valor:
+            return None
+        return "".join(filter(str.isdigit, str(valor)))
+
+    # =========================================================
+    # LISTAR
     # =========================================================
     def get_all_favorecidos(self, id_usuario):
         return self.fetch_all("""
-             SELECT 
-                 f.ID_Favorecido,
-                 f.Nome,
-                 f.Tipo,
+            SELECT 
+                f.ID_Favorecido,
+                f.Nome,
+                f.Tipo,
 
-                 pf.CPF,
-                 pj.CNPJ,
-                 pj.Razao_Social,
+                COALESCE(pf.Telefone, pj.Telefone) AS Telefone,
 
-                 COALESCE(pf.CPF, pj.CNPJ) AS Documento,
-                 COALESCE(pf.Telefone, pj.Telefone) AS Telefone
+                pf.CPF,
+                pj.CNPJ,
+                pj.Razao_Social,
 
-             FROM favorecido f
-             LEFT JOIN pessoa_fisica pf 
-                  ON pf.ID_Favorecido = f.ID_Favorecido
-             LEFT JOIN pessoa_juridica pj 
-                  ON pj.ID_Favorecido = f.ID_Favorecido
-             WHERE f.ID_Usuario = ?
-             ORDER BY f.Nome ASC
-          """, (id_usuario,))
+                COALESCE(pf.CPF, pj.CNPJ) AS Documento
+
+            FROM favorecido f
+
+            LEFT JOIN pessoa_fisica pf 
+                ON pf.ID_Favorecido = f.ID_Favorecido
+
+            LEFT JOIN pessoa_juridica pj 
+                ON pj.ID_Favorecido = f.ID_Favorecido
+
+            WHERE f.ID_Usuario = ?
+            ORDER BY f.Nome ASC
+        """, (id_usuario,))
 
     # =========================================================
     # OBTER POR ID
     # =========================================================
     def get_favorecido_by_id(self, id_favorecido, id_usuario):
-        return self.fetch_one(
-            """
+        return self.fetch_one("""
             SELECT 
-                f.*,
+                f.ID_Favorecido,
+                f.Nome,
+                f.Tipo,
+
+                COALESCE(pf.Telefone, pj.Telefone) AS Telefone,
+
                 pf.CPF,
                 pj.CNPJ,
                 pj.Razao_Social,
@@ -53,101 +69,118 @@ class FavorecidoModel(Database):
 
             WHERE f.ID_Favorecido = ? 
               AND f.ID_Usuario = ?
-            """,
-            (id_favorecido, id_usuario)
-        )
+        """, (id_favorecido, id_usuario))
 
     # =========================================================
-    # BUSCAR POR NOME (ANTI DUPLICIDADE)
+    # BUSCAR POR NOME
     # =========================================================
     def get_favorecido_by_name(self, nome, id_usuario):
-        return self.fetch_one(
-            """
+        return self.fetch_one("""
             SELECT ID_Favorecido, Nome
             FROM favorecido
             WHERE Nome = ? AND ID_Usuario = ?
-            """,
-            (nome, id_usuario)
-        )
+        """, (nome, id_usuario))
+
+    # =========================================================
+    # BUSCAR POR CPF
+    # =========================================================
+    def get_favorecido_by_cpf(self, cpf, id_usuario):
+        cpf = self._somente_numeros(cpf)
+        return self.fetch_one("""
+            SELECT f.ID_Favorecido, f.Nome
+            FROM favorecido f
+            INNER JOIN pessoa_fisica pf 
+                ON pf.ID_Favorecido = f.ID_Favorecido
+            WHERE pf.CPF = ? AND f.ID_Usuario = ?
+        """, (cpf, id_usuario))
+
+    # =========================================================
+    # BUSCAR POR CNPJ
+    # =========================================================
+    def get_favorecido_by_cnpj(self, cnpj, id_usuario):
+        cnpj = self._somente_numeros(cnpj)
+        return self.fetch_one("""
+            SELECT f.ID_Favorecido, f.Nome
+            FROM favorecido f
+            INNER JOIN pessoa_juridica pj 
+                ON pj.ID_Favorecido = f.ID_Favorecido
+            WHERE pj.CNPJ = ? AND f.ID_Usuario = ?
+        """, (cnpj, id_usuario))
 
     # =========================================================
     # OBTER TIPO
     # =========================================================
     def get_tipo(self, id_favorecido, id_usuario):
-        row = self.fetch_one(
-            """
+        row = self.fetch_one("""
             SELECT Tipo
             FROM favorecido
             WHERE ID_Favorecido = ? AND ID_Usuario = ?
-            """,
-            (id_favorecido, id_usuario)
-        )
+        """, (id_favorecido, id_usuario))
+
         return row["Tipo"] if row else None
 
     # =========================================================
-    # INSERIR (COM VALIDAÇÃO + TRANSAÇÃO)
+    # INSERIR
     # =========================================================
     def add_favorecido(self, dados, id_usuario):
+        nome = (dados.get("Nome") or "").strip()
+        cpf = self._somente_numeros(dados.get("CPF"))
+        cnpj = self._somente_numeros(dados.get("CNPJ"))
+        telefone = self._somente_numeros(dados.get("Telefone"))  # 🔥 CORRIGIDO
 
-        nome = dados.get("Nome")
-        tipo = dados.get("Tipo")
+        if cpf and not cnpj:
+            tipo = "PF"
+        elif cnpj and not cpf:
+            tipo = "PJ"
+        else:
+            tipo = (dados.get("Tipo") or "").strip().upper()
 
         if not nome:
             raise ValueError("Nome é obrigatório.")
 
         if tipo not in ("PF", "PJ"):
-            raise ValueError("Tipo inválido (PF ou PJ).")
+            raise ValueError("Tipo inválido. Informe CPF ou CNPJ corretamente.")
 
-        # valida documento
-        if tipo == "PF" and not dados.get("CPF"):
+        if tipo == "PF" and not cpf:
             raise ValueError("CPF é obrigatório para Pessoa Física.")
 
-        if tipo == "PJ" and not dados.get("CNPJ"):
+        if tipo == "PJ" and not cnpj:
             raise ValueError("CNPJ é obrigatório para Pessoa Jurídica.")
 
         try:
-            # 🔥 TRANSAÇÃO
-            self.connect().execute("BEGIN")
+            self.connection.execute("BEGIN")
 
-            # 1️⃣ inserir base
-            self.execute_query(
-                """
-                INSERT INTO favorecido (Nome, Tipo, Telefone, ID_Usuario)
-                VALUES (?, ?, ?, ?)
-                """,
-                (
-                    nome,
-                    tipo,
-                    dados.get("Telefone"),
-                    id_usuario
-                )
-            )
+            self.execute_query("""
+                INSERT INTO favorecido (Nome, Tipo, ID_Usuario)
+                VALUES (?, ?, ?)
+            """, (
+                nome,
+                tipo,
+                id_usuario
+            ))
 
             row = self.fetch_one("SELECT last_insert_rowid() AS id")
             id_favorecido = row["id"]
 
-            # 2️⃣ inserir específico
             if tipo == "PF":
-                self.execute_query(
-                    """
-                    INSERT INTO pessoa_fisica (ID_Favorecido, CPF)
-                    VALUES (?, ?)
-                    """,
-                    (id_favorecido, dados.get("CPF"))
-                )
-
-            elif tipo == "PJ":
-                self.execute_query(
-                    """
-                    INSERT INTO pessoa_juridica (ID_Favorecido, CNPJ, Razao_Social)
+                self.execute_query("""
+                    INSERT INTO pessoa_fisica (ID_Favorecido, CPF, Telefone)
                     VALUES (?, ?, ?)
-                    """,
-                    (
-                        id_favorecido,
-                        dados.get("CNPJ"),
-                        dados.get("Razao_Social")
-                    )
-                )
+                """, (
+                    id_favorecido,
+                    cpf,
+                    telefone
+                ))
+            else:
+                self.execute_query("""
+                    INSERT INTO pessoa_juridica (ID_Favorecido, CNPJ, Razao_Social, Telefone)
+                    VALUES (?, ?, ?, ?)
+                """, (
+                    id_favorecido,
+                    cnpj,
+                    dados.get("Razao_Social"),
+                    telefone
+                ))
 
             self.connection.commit()
             return id_favorecido
@@ -157,58 +190,57 @@ class FavorecidoModel(Database):
             raise DatabaseError(str(e))
 
     # =========================================================
-    # ATUALIZAR (SEGURO)
+    # ATUALIZAR
     # =========================================================
     def update_favorecido(self, id_favorecido, dados, id_usuario):
-
         try:
             tipo = self.get_tipo(id_favorecido, id_usuario)
             if not tipo:
                 raise ValueError("Favorecido não encontrado.")
 
+            cpf = self._somente_numeros(dados.get("CPF"))
+            cnpj = self._somente_numeros(dados.get("CNPJ"))
+            telefone = self._somente_numeros(dados.get("Telefone"))  # 🔥 CORRIGIDO
+
             self.connection.execute("BEGIN")
 
-            # base
-            self.execute_query(
-                """
+            self.execute_query("""
                 UPDATE favorecido
-                SET Nome = ?, Telefone = ?
+                SET Nome = COALESCE(?, Nome)
                 WHERE ID_Favorecido = ? AND ID_Usuario = ?
-                """,
-                (
-                    dados.get("Nome"),
-                    dados.get("Telefone"),
-                    id_favorecido,
-                    id_usuario
-                )
-            )
+            """, (
+                dados.get("Nome"),
+                id_favorecido,
+                id_usuario
+            ))
 
-            # PF
             if tipo == "PF":
-                if "CPF" in dados:
-                    self.execute_query(
-                        """
-                        UPDATE pessoa_fisica
-                        SET CPF = ?
-                        WHERE ID_Favorecido = ?
-                        """,
-                        (dados.get("CPF"), id_favorecido)
-                    )
-
-            # PJ
-            elif tipo == "PJ":
-                self.execute_query(
-                    """
-                    UPDATE pessoa_juridica
-                    SET CNPJ = ?, Razao_Social = ?
+                self.execute_query("""
+                    UPDATE pessoa_fisica
+                    SET 
+                        CPF = COALESCE(?, CPF),
+                        Telefone = COALESCE(?, Telefone)
                     WHERE ID_Favorecido = ?
-                    """,
-                    (
-                        dados.get("CNPJ"),
-                        dados.get("Razao_Social"),
-                        id_favorecido
-                    )
-                )
+                """, (
+                    cpf,
+                    telefone,
+                    id_favorecido
+                ))
+
+            elif tipo == "PJ":
+                self.execute_query("""
+                    UPDATE pessoa_juridica
+                    SET 
+                        CNPJ = COALESCE(?, CNPJ),
+                        Razao_Social = COALESCE(?, Razao_Social),
+                        Telefone = COALESCE(?, Telefone)
+                    WHERE ID_Favorecido = ?
+                """, (
+                    cnpj,
+                    dados.get("Razao_Social"),
+                    telefone,
+                    id_favorecido
+                ))
 
             self.connection.commit()
             return True, "Favorecido atualizado."
@@ -218,18 +250,30 @@ class FavorecidoModel(Database):
             raise DatabaseError(str(e))
 
     # =========================================================
-    # DELETE (COM SEGURANÇA)
+    # DELETE
     # =========================================================
     def delete_favorecido(self, id_favorecido, id_usuario):
         try:
-            self.execute_query(
-                """
+            self.connection.execute("BEGIN")
+
+            self.execute_query("""
+                DELETE FROM pessoa_fisica
+                WHERE ID_Favorecido = ?
+            """, (id_favorecido,))
+
+            self.execute_query("""
+                DELETE FROM pessoa_juridica
+                WHERE ID_Favorecido = ?
+            """, (id_favorecido,))
+
+            self.execute_query("""
                 DELETE FROM favorecido
                 WHERE ID_Favorecido = ? AND ID_Usuario = ?
-                """
-                ,
-                (id_favorecido, id_usuario)
-            )
+            """, (id_favorecido, id_usuario))
+
+            self.connection.commit()
             return True
+
         except Exception as e:
+            self.connection.rollback()
             raise DatabaseError(str(e))

@@ -13,10 +13,12 @@ from PyQt5.QtWidgets import (
     QApplication,
 )
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QIcon
 
 from controllers.account_controller import AccountController
 from controllers.fatura_controller import FaturaController
 
+from utilitarios.ion_path import IonPath
 from views.criar_conta_dialog import CriarContaDialog
 from views.editar_conta_dialog import EditarContaDialog
 from views.criar_cartao_dialog import CriarCartaoDialog, EditCartaoDialog
@@ -26,6 +28,7 @@ from views.painel_account import PainelAccount
 from views.painel_fatura import PainelFatura
 
 from utilitarios.currency_formatter import CurrencyFormatter
+import os
 
 from core.translator_app import TranslatorApp
 
@@ -46,6 +49,7 @@ class TransacaoView(QWidget):
 
         self.main_layout = QHBoxLayout(self)
 
+        self._icon_cache = {}
         self._montar_painel_esquerdo()
         self._montar_area_painel()
 
@@ -65,6 +69,23 @@ class TransacaoView(QWidget):
         self.carregar_contas()
         self.carregar_cartoes()
 
+
+    # ==========================================================
+    # ICONES
+    # ==========================================================
+    def _icon(self, nome):
+        if nome in self._icon_cache:
+            return self._icon_cache[nome]
+
+        try:
+            path = IonPath.resource("assets", "icons", f"{nome}.svg")
+            icon = QIcon(path) if os.path.exists(path) else QIcon()
+            self._icon_cache[nome] = icon
+            return icon
+
+        except Exception:
+            logger.exception(f"Erro ao carregar ícone: {nome}")
+            return QIcon()
     # ==========================================================
     # PAINEL ESQUERDO
     # ==========================================================
@@ -197,10 +218,7 @@ class TransacaoView(QWidget):
             nome = cartao.get("Nome")
             dia_vencimento = cartao.get("Dia_Vencimento")
 
-            texto = (
-                f"{nome}\n"
-                f"{TranslatorApp.get('Vencimento')}: {dia_vencimento}"
-            )
+            texto = f"{nome} (Vencimento: {dia_vencimento})"
 
             item = QListWidgetItem(texto)
             item.setData(Qt.UserRole, cartao.get("ID_Cartao"))
@@ -314,7 +332,7 @@ class TransacaoView(QWidget):
         )
 
         if confirm == QMessageBox.Yes:
-            self.fatura_controller.delete_cartao(item.data(Qt.UserRole))
+            self.fatura_controller.excluir_cartao(item.data(Qt.UserRole))
             self.carregar_cartoes()
             self._trocar_painel(QWidget())
 
@@ -345,7 +363,8 @@ class TransacaoView(QWidget):
         label = QLabel(titulo)
         label.setStyleSheet("font-size: 15px; font-weight: bold;")
 
-        btn = QPushButton("+")
+        btn = QPushButton("")
+        btn.setIcon(self._icon("add"))
         btn.setFixedSize(24, 24)
         btn.clicked.connect(callback_novo)
 

@@ -2,6 +2,7 @@ import os
 import sys
 import platform
 import logging
+from PyQt5 import uic
 
 logger = logging.getLogger(__name__)
 
@@ -192,3 +193,19 @@ class IonPath:
     def recourse_paths(*paths) -> list:
         get_base_path = getattr(sys, '_MEIPASS', os.path.abspath("."))
         return os.path.join(get_base_path, *paths)
+
+    @classmethod
+    def load_ui(cls,widget,*paths):
+        "Carregar UI com caminho seguro + seguro"
+
+        path = cls.recourse_paths(*paths)
+
+        if not os.path.exist(path):
+            raise FileNotFoundError(f"UI não encontrado: {path}")
+
+        try:
+            uic.loadUi(path, widget)
+        except Exception as e:
+            raise RuntimeError(f"Erro ao carregar UI:{path} \n {e}")
+
+        return path

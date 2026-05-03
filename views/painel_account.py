@@ -27,7 +27,7 @@ from controllers.favorecido_controller import FavorecidoController
 from controllers.ia_import_controller import IAImportController
 from controllers.ia_export_controller import IAExportController
 
-from views.TransactionDialog import TransactionDialog
+from views.TransactionDialogConta import TransactionDialogConta
 from views.TransferDialog import TransferDialog
 from views.editar_transacao_dialog import EditTransactionDialog
 
@@ -325,10 +325,18 @@ class PainelAccount(QWidget):
     # AÇÕES
     # ==================================================
     def add_transaction(self):
-        dlg = TransactionDialog(self, "conta", self.conta["ID_Conta"])
-        if dlg.exec_():
-            self.carregar_historico()
+      if not self.conta:
+         QMessageBox.warning(self, "Erro", "Nenhuma conta 
+     selecionada")
+        return
 
+      dlg = TransactionDialogConta(
+        parent=self,
+        id_conta=self.conta.get("ID_Conta")
+        )
+
+      if dlg.exec_():
+         self.carregar_historico()
     def transfer_transaction(self):
         dlg = TransferDialog(self)
         if dlg.exec_():

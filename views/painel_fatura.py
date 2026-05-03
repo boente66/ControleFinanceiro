@@ -22,7 +22,7 @@ from utilitarios.currency_formatter import CurrencyFormatter
 from utilitarios.date_formatter import DateFormatter
 from utilitarios.ion_path import IonPath
 
-from views.TransactionDialog import TransactionDialog
+from views.FaturaDialog import FaturaDialog
 
 logger = logging.getLogger(__name__)
 
@@ -343,13 +343,12 @@ class PainelFatura(QWidget):
     # AÇÕES
     # ======================================================
     def add_transaction(self):
-        dialog = TransactionDialog(
-            parent=self,
-            contexto="cartao",
-            id_contexto=self.cartao["ID_Cartao"]
-        )
-        if dialog.exec_() == QDialog.Accepted:
-            self._carregar()
+     dialog = FaturaDialog(
+        parent=self,
+        id_cartao=self.cartao["ID_Cartao"]
+     )
+     if dialog.exec_() == QDialog.Accepted:
+        self._carregar()
 
     def pagar_fatura(self):
 

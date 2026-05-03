@@ -1,10 +1,7 @@
 # ========================
 # AMBIENTE VIRTUAL
 # ========================
-financeiro/
-venv/
-source/
-build-env/
+assistente/
 
 # ========================
 # VARIÁVEIS SENSÍVEIS

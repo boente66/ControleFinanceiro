@@ -1,5 +1,3 @@
-# services/pdf_service.py
-
 from utilitarios.makepdf import MakePDF
 
 
@@ -15,11 +13,20 @@ class PdfService:
 
         return MakePDF.ler_pdf(caminho_arquivo)
 
-    def gerar_pdf(self, caminho_arquivo: str, titulo: str, conteudo: str) -> bool:
-        return MakePDF.gerar_pdf(caminho_arquivo, titulo, conteudo)
+    def gerar_pdf(
+        self,
+        caminho_arquivo: str,
+        titulo: str,
+        conteudo: str
+    ) -> bool:
+        return MakePDF.gerar_pdf(
+            caminho_arquivo,
+            titulo,
+            conteudo
+        )
 
     def ler_bytes(self, caminho_arquivo: str) -> bytes | None:
         if not caminho_arquivo:
             return None
 
-        return MakePDF.ler_pdf(caminho_arquivo)
+        return MakePDF.ler_bytes(caminho_arquivo)

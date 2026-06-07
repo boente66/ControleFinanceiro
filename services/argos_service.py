@@ -1,9 +1,6 @@
 import threading
 import logging
 
-import argostranslate.package
-import argostranslate.translate
-
 from PyQt5.QtCore import QTimer
 
 logger = logging.getLogger(__name__)
@@ -17,13 +14,27 @@ class ArgosService:
 
     MAX_CACHE = 5000
 
+    @classmethod
+    def _backend(cls):
+        try:
+            from argostranslate import package, translate
+        except ImportError as exc:
+            raise RuntimeError(
+                "Nao foi possivel carregar a dependencia opcional "
+                "'argostranslate'. A traducao automatica ficara indisponivel "
+                "ate o ambiente ser reinstalado."
+            ) from exc
+
+        return package, translate
+
     # ==================================================
     # DETECTAR SE MODELO EXISTE
     # ==================================================
     @classmethod
     def _is_installed(cls, origem, destino):
         try:
-            installed = argostranslate.translate.get_installed_languages()
+            _, translate = cls._backend()
+            installed = translate.get_installed_languages()
 
             for lang in installed:
                 if lang.code == origem:
@@ -76,23 +87,28 @@ class ArgosService:
 
         with cls._lock:
             try:
+                package, _ = cls._backend()
                 logger.info(f"[Argos] Instalando modelo {origem}->{destino}")
 
-                argostranslate.package.update_package_index()
-                packages = argostranslate.package.get_available_packages()
+                package.update_package_index()
+                packages = package.get_available_packages()
 
                 pkg = next(
-                    (p for p in packages
-                     if p.from_code == origem and p.to_code == destino),
+                    (
+                        p for p in packages
+                        if p.from_code == origem and p.to_code == destino
+                    ),
                     None
                 )
 
                 if not pkg:
-                    logger.warning(f"[Argos] Modelo não encontrado {origem}->{destino}")
+                    logger.warning(
+                        f"[Argos] Modelo não encontrado {origem}->{destino}"
+                    )
                     return False
 
                 path = pkg.download()
-                argostranslate.package.install_from_path(path)
+                package.install_from_path(path)
 
                 cls._installed_pairs.add((origem, destino))
 
@@ -104,7 +120,7 @@ class ArgosService:
                 return False
 
     # ==================================================
-    # TRADUÇÃO PRINCIPAL (Controller decide idioma)
+    # TRADUÇÃO PRINCIPAL
     # ==================================================
     @classmethod
     def traduzir(cls, texto, origem, destino):
@@ -119,7 +135,9 @@ class ArgosService:
             return cls._cache[key]
 
         try:
-            # 🔥 evita verificar toda hora
+            _, translate = cls._backend()
+
+            # evita verificar toda hora
             if (origem, destino) not in cls._installed_pairs:
 
                 if not cls._is_installed(origem, destino):
@@ -128,8 +146,10 @@ class ArgosService:
 
                 cls._installed_pairs.add((origem, destino))
 
-            resultado = argostranslate.translate.translate(
-                texto, origem, destino
+            resultado = translate.translate(
+                texto,
+                origem,
+                destino
             )
 
             # controle de cache
@@ -151,15 +171,26 @@ class ArgosService:
     def traduzir_async(cls, texto, callback, origem, destino):
 
         def worker():
-            resultado = cls.traduzir(texto, origem, destino)
+            resultado = cls.traduzir(
+                texto,
+                origem,
+                destino
+            )
 
             try:
-                # 🔥 volta pra thread principal (PyQt safe)
-                QTimer.singleShot(0, lambda: callback(resultado))
+                # volta pra thread principal (PyQt safe)
+                QTimer.singleShot(
+                    0,
+                    lambda: callback(resultado)
+                )
+
             except Exception:
                 logger.exception("[Argos] Erro no callback async")
 
-        threading.Thread(target=worker, daemon=True).start()
+        threading.Thread(
+            target=worker,
+            daemon=True
+        ).start()
 
     # ==================================================
     # PRÉ-CARREGAMENTO
@@ -170,7 +201,11 @@ class ArgosService:
         pares = pares or [("pt", "en")]
 
         for origem, destino in pares:
-            cls.ensure_model(origem, destino, background=True)
+            cls.ensure_model(
+                origem,
+                destino,
+                background=True
+            )
 
     # ==================================================
     # LIMPAR CACHE
@@ -186,8 +221,10 @@ class ArgosService:
     @classmethod
     def listar_idiomas_instalados(cls):
         try:
-            langs = argostranslate.translate.get_installed_languages()
+            _, translate = cls._backend()
+            langs = translate.get_installed_languages()
             return [lang.code for lang in langs]
+
         except Exception:
             logger.exception("[Argos] Erro ao listar idiomas")
             return []

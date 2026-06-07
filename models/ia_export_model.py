@@ -1,6 +1,5 @@
 # models/ia_export_model.py
 
-import pandas as pd
 from utilitarios.makepdf import MakePDF
 
 
@@ -16,15 +15,34 @@ class IAExportModel:
         self.data = data
 
     def export_to_csv(self, file_path: str) -> bool:
+        try:
+            import pandas as pd
+        except ImportError as exc:
+            raise RuntimeError(
+                "Dependência 'pandas' ausente. Instale o ambiente completo "
+                "para exportar CSV."
+            ) from exc
+
         df = pd.DataFrame(self.data)
         df.to_csv(file_path, index=False)
         return True
 
     def export_to_xlsx(self, file_path: str) -> bool:
+        try:
+            import pandas as pd
+        except ImportError as exc:
+            raise RuntimeError(
+                "Dependência 'pandas' ausente. Instale o ambiente completo "
+                "para exportar XLSX."
+            ) from exc
+
         df = pd.DataFrame(self.data)
         df.to_excel(file_path, index=False)
         return True
 
     def export_to_pdf(self, file_path: str, titulo: str) -> bool:
-        MakePDF.exportar_tabela(self.data, titulo, file_path)
-        return True
+        linhas = []
+        for item in self.data:
+            linhas.append(" | ".join(f"{k}: {v}" for k, v in item.items()))
+
+        return MakePDF.gerar_pdf(file_path, titulo, "\n".join(linhas))

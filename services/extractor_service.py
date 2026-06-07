@@ -1,6 +1,5 @@
 import os
-import pandas as pd
-from services.pdf_service import PdfService
+from services.infrastructure.pdf_service import PdfService
 
 
 class ExtractorService:
@@ -16,10 +15,26 @@ class ExtractorService:
             return self.pdf_service.ler_texto(caminho_arquivo)
 
         elif extensao == ".csv":
+            try:
+                import pandas as pd
+            except ImportError as exc:
+                raise RuntimeError(
+                    "Dependência 'pandas' ausente. Instale o ambiente "
+                    "completo para extrair arquivos CSV."
+                ) from exc
+
             df = pd.read_csv(caminho_arquivo)
             return df.to_string(index=False)
 
         elif extensao in (".xlsx", ".xls"):
+            try:
+                import pandas as pd
+            except ImportError as exc:
+                raise RuntimeError(
+                    "Dependência 'pandas' ausente. Instale o ambiente "
+                    "completo para extrair arquivos XLSX."
+                ) from exc
+
             df = pd.read_excel(caminho_arquivo)
             return df.to_string(index=False)
 

@@ -169,6 +169,9 @@ class AccountService:
             logger.exception("Erro ao ajustar saldo")
             raise RuntimeError("Erro ao ajustar saldo") from e
 
+    def atualizar_saldo(self, id_conta, novo_saldo, id_usuario):
+        return self.ajustar_saldo(id_conta, novo_saldo, id_usuario)
+
     # --------------------------------------------------
     # EXCLUIR
     # --------------------------------------------------

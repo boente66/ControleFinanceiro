@@ -23,7 +23,10 @@ class UserController:
     # REGISTRO
     # =============================
     def register_user(self, user_data: dict) -> bool:
-        return self.service.register_user(user_data)
+        return self.service.register_user(
+            user_data,
+            Session.get_usuario()
+        )
     # =============================
     # CONSULTAS
     # =============================
@@ -38,6 +41,21 @@ class UserController:
 
     def get_all_users(self):
         return self.service.get_all_users()
+    # =============================
+    # ATUALIZAÇÃO / EXCLUSÃO
+    # =============================
+    def update_user(self, id_usuario, user_data: dict) -> bool:
+        return self.service.update_user(
+            id_usuario,
+            user_data,
+            Session.get_usuario()
+        )
+
+    def delete_user(self, id_usuario) -> bool:
+        return self.service.delete_user(
+            id_usuario,
+            Session.get_usuario()
+        )
     # =============================
     # SENHA (DIRETA – ADMIN)
     # =============================

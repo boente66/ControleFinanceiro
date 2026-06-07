@@ -30,7 +30,7 @@ class TransactionModel(Database):
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
 
-        self.execute_query(sql, (
+        cur = self.execute_query(sql, (
             dados.get("ID_Conta"),
             dados.get("Descricao"),
             dados.get("Valor"),
@@ -41,6 +41,7 @@ class TransactionModel(Database):
             dados.get("Notas"),
             dados.get("ID_Usuario")
         ))
+        return cur.lastrowid
 
     # ============================================================
     # READ
@@ -209,6 +210,48 @@ class TransactionModel(Database):
 
         resultado = self.fetch_one(sql, tuple(params))
         return float(resultado["total"] or 0)
+
+    def calcular_economia_periodo(
+        self,
+        id_usuario,
+        data_inicio=None,
+        data_fim=None
+    ):
+        sql = """
+            SELECT SUM(Valor) AS total
+            FROM transacoes
+            WHERE ID_Usuario = ?
+        """
+        params = [id_usuario]
+
+        if data_inicio and data_fim:
+            sql += " AND date(Data) BETWEEN date(?) AND date(?)"
+            params.extend([data_inicio, data_fim])
+
+        resultado = self.fetch_one(sql, tuple(params))
+        return float(resultado["total"] or 0)
+
+
+
+    # ============================================================
+    # SALDO ANTES DO PERÍODO
+    # ============================================================
+    def get_saldo_antes_periodo(
+        self,
+        id_conta,
+        data_inicio,
+        id_usuario
+    ):
+        resultado = self.fetch_one("""
+            SELECT COALESCE(SUM(Valor), 0) AS Saldo
+            FROM transacoes
+            WHERE ID_Conta = ?
+              AND ID_Usuario = ?
+              AND date(Data) < date(?)
+        """, (id_conta, id_usuario, data_inicio))
+
+        return float(resultado["Saldo"] or 0)
+
 
     # ============================================================
     # RESUMO E ANÁLISE

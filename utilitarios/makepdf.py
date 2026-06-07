@@ -1,13 +1,3 @@
-from datetime import datetime
-import pdfplumber
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
-from PyPDF2 import PdfReader
-import pytesseract
-import pdf2image
-import re
-
-
 class MakePDF:
     """
     Classe de INFRAESTRUTURA para manipulação de PDF.
@@ -17,7 +7,24 @@ class MakePDF:
     - Extrair texto
     - Aplicar OCR
     - Gerar PDF
+    - Ler bytes do PDF
     """
+
+    # ==========================================================
+    # LEITURA BINÁRIA
+    # ==========================================================
+    @staticmethod
+    def ler_bytes(caminho_arquivo):
+        if not caminho_arquivo:
+            return None
+
+        try:
+            with open(caminho_arquivo, "rb") as arquivo:
+                return arquivo.read()
+
+        except Exception as e:
+            print(f"Erro ao ler bytes do PDF: {e}")
+            return None
 
     # ==========================================================
     # LEITURA SIMPLES (PyPDF2)
@@ -25,11 +32,16 @@ class MakePDF:
     @staticmethod
     def importar_pdf(caminho_arquivo):
         try:
+            from PyPDF2 import PdfReader
+
             reader = PdfReader(caminho_arquivo)
             texto = ""
+
             for page in reader.pages:
                 texto += page.extract_text() or ""
+
             return texto
+
         except Exception as e:
             print(f"Erro ao importar PDF: {e}")
             return None
@@ -40,18 +52,24 @@ class MakePDF:
     @staticmethod
     def ler_pdf(caminho_arquivo):
         try:
+            import pdfplumber
+            import pdf2image
+            import pytesseract
+
             texto = ""
 
             with pdfplumber.open(caminho_arquivo) as pdf:
                 for pagina in pdf.pages:
 
-                    # Tenta extrair tabela
                     tabela = pagina.extract_table()
+
                     if tabela:
                         for linha in tabela:
                             if linha:
                                 linha_formatada = "  ".join(
-                                    str(c).strip() for c in linha if c
+                                    str(c).strip()
+                                    for c in linha
+                                    if c
                                 )
                                 texto += linha_formatada + "\n"
                     else:
@@ -59,11 +77,16 @@ class MakePDF:
                         if texto_bruto:
                             texto += texto_bruto + "\n"
 
-            # Se não conseguiu extrair texto, tenta OCR
             if not texto.strip():
-                imagens = pdf2image.convert_from_path(caminho_arquivo)
+                imagens = pdf2image.convert_from_path(
+                    caminho_arquivo
+                )
+
                 for img in imagens:
-                    texto += pytesseract.image_to_string(img, lang="por") + "\n"
+                    texto += pytesseract.image_to_string(
+                        img,
+                        lang="por"
+                    ) + "\n"
 
             return texto.strip() or None
 
@@ -84,6 +107,9 @@ class MakePDF:
     @staticmethod
     def gerar_pdf(caminho_arquivo, titulo, conteudo):
         try:
+            from reportlab.lib.pagesizes import A4
+            from reportlab.pdfgen import canvas
+
             c = canvas.Canvas(caminho_arquivo, pagesize=A4)
             width, height = A4
 
@@ -96,6 +122,7 @@ class MakePDF:
             for linha in conteudo.split("\n"):
                 c.drawString(50, y, linha)
                 y -= 18
+
                 if y < 50:
                     c.showPage()
                     y = height - 50
@@ -113,6 +140,9 @@ class MakePDF:
     @staticmethod
     def create_pdf_from_data(data, file_path):
         try:
+            from reportlab.lib.pagesizes import A4
+            from reportlab.pdfgen import canvas
+
             c = canvas.Canvas(file_path, pagesize=A4)
             width, height = A4
 
@@ -125,6 +155,7 @@ class MakePDF:
             for item in data:
                 c.drawString(50, y, str(item))
                 y -= 20
+
                 if y < 50:
                     c.showPage()
                     y = height - 50

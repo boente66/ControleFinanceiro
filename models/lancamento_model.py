@@ -12,7 +12,7 @@ class LancamentoModel(Database):
         self.credito = CreditoModel()
 
     # ============================================================
-    # CRIAR LANÇAMENTO (SEM LÓGICA)
+    # CRIAR LANÇAMENTO
     # ============================================================
     def add_lancamento(self, dados: dict) -> bool:
 
@@ -38,7 +38,6 @@ class LancamentoModel(Database):
         if not cartao:
             raise PermissionError("Cartão não pertence ao usuário.")
 
-        # Normalizar data
         data = dados["Data"]
         if not isinstance(data, str):
             data = data.strftime("%Y-%m-%d")
@@ -52,7 +51,7 @@ class LancamentoModel(Database):
                 Descricao,
                 Valor,
                 ID_Categoria,
-                Parcelado,
+                ID_Favorecido,
                 Num_Parcelas,
                 Parcela_Atual,
                 Paga,
@@ -73,7 +72,7 @@ class LancamentoModel(Database):
             dados["Descricao"],
             float(dados["Valor"]),
             dados.get("ID_Categoria"),
-            int(dados.get("Parcelado", 0)),
+            dados.get("ID_Favorecido"),  # 🔥 NOVO
             int(dados.get("Num_Parcelas", 1)),
             int(dados.get("Parcela_Atual", 1)),
             int(dados.get("Paga", 0)),
@@ -81,7 +80,7 @@ class LancamentoModel(Database):
             dados["ID_Usuario"],
             dados.get("ID_Conta"),
             dados.get("ID_Transacao"),
-            int(dados.get("Previsto", 0))  # 🔥 SUPORTE A PREVISÃO
+            int(dados.get("Previsto", 0))
         )
 
         self.execute_query(sql, params)
@@ -102,7 +101,7 @@ class LancamentoModel(Database):
         return self.fetch_one(sql, (id_lancamento, id_usuario))
 
     # ============================================================
-    # ATUALIZAR (SEM LÓGICA)
+    # ATUALIZAR
     # ============================================================
     def update_lancamento(self, id_lancamento, dados, id_usuario):
 
@@ -138,7 +137,7 @@ class LancamentoModel(Database):
                 Competencia_Mes = ?,
                 Competencia_Ano = ?,
                 ID_Categoria = ?,
-                Parcelado = ?,
+                ID_Favorecido = ?,  -- 🔥 NOVO
                 Num_Parcelas = ?,
                 Parcela_Atual = ?,
                 Notas = ?,
@@ -154,11 +153,11 @@ class LancamentoModel(Database):
             int(dados["Competencia_Mes"]),
             int(dados["Competencia_Ano"]),
             dados.get("ID_Categoria"),
-            int(dados.get("Parcelado", 0)),
+            dados.get("ID_Favorecido"),  # 🔥 NOVO
             int(dados.get("Num_Parcelas", 1)),
             int(dados.get("Parcela_Atual", 1)),
             dados.get("Notas"),
-            int(dados.get("Previsto", 0)),  # 🔥 UPDATE PREVISTO
+            int(dados.get("Previsto", 0)),
             id_lancamento,
             id_usuario
         ))
@@ -166,22 +165,25 @@ class LancamentoModel(Database):
         return True
 
     # ============================================================
-    # FATURA (RÁPIDA)
+    # FATURA
     # ============================================================
     def get_lancamentos_por_fatura(self, id_cartao, mes, ano, id_usuario):
 
         sql = """
-SELECT l.*,
-       c.Nome AS Categoria
-FROM lancamentos l
-LEFT JOIN categorias c
-    ON c.ID_Categoria = l.ID_Categoria
-WHERE l.ID_Cartao = ?
-  AND l.ID_Usuario = ?
-  AND l.Competencia_Mes = ?
-  AND l.Competencia_Ano = ?
-ORDER BY l.Data
-""".strip()
+        SELECT l.*,
+               c.Nome AS Categoria,
+               f.Nome AS Favorecido
+        FROM lancamentos l
+        LEFT JOIN categorias c
+            ON c.ID_Categoria = l.ID_Categoria
+        LEFT JOIN favorecido f
+            ON f.ID_Favorecido = l.ID_Favorecido
+        WHERE l.ID_Cartao = ?
+          AND l.ID_Usuario = ?
+          AND l.Competencia_Mes = ?
+          AND l.Competencia_Ano = ?
+        ORDER BY l.Data
+        """
 
         return self.fetch_all(
             sql,
@@ -189,7 +191,7 @@ ORDER BY l.Data
         )
 
     # ============================================================
-    # SOMENTE PREVISTOS
+    # PREVISTOS
     # ============================================================
     def get_lancamentos_previstos(self, id_cartao, mes, ano, id_usuario):
 
@@ -210,7 +212,7 @@ ORDER BY l.Data
         )
 
     # ============================================================
-    # SOMENTE REAIS
+    # REAIS
     # ============================================================
     def get_lancamentos_reais(self, id_cartao, mes, ano, id_usuario):
 
@@ -254,7 +256,7 @@ ORDER BY l.Data
             UPDATE lancamentos
             SET Paga = 1,
                 ID_Transacao = ?,
-                Previsto = 0  -- 🔥 vira real automaticamente
+                Previsto = 0
             WHERE ID_Lancamento = ?
         """
 
@@ -262,7 +264,7 @@ ORDER BY l.Data
         return True
 
     # ============================================================
-    # CONFIRMAR PREVISTOS (EM LOTE)
+    # CONFIRMAR PREVISTOS
     # ============================================================
     def confirmar_previstos(self, id_cartao, mes, ano, id_usuario):
 
@@ -297,7 +299,9 @@ ORDER BY l.Data
         self.execute_query(sql, (id_lancamento, id_usuario))
         return True
 
-
+    # ============================================================
+    # VERIFICAR PREVISTO
+    # ============================================================
     def existe_previsto(self, id_cartao, descricao, mes, ano, id_usuario):
 
         sql = """
@@ -316,15 +320,17 @@ ORDER BY l.Data
             id_cartao, descricao, mes, ano, id_usuario
         )) is not None
 
-
-
-
+    # ============================================================
+    # POR CARTÃO
+    # ============================================================
     def get_lancamentos_por_cartao(self, id_cartao, id_usuario):
 
         sql = """
-            SELECT * FROM lancamentos WHERE ID_Cartao = ?
-            AND ID_Usuario = ?
+            SELECT *
+            FROM lancamentos
+            WHERE ID_Cartao = ?
+              AND ID_Usuario = ?
             ORDER BY Data
-            """
+        """
 
         return self.fetch_all(sql, (id_cartao, id_usuario))

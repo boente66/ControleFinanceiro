@@ -63,8 +63,17 @@ class ReconhecimentoService:
     # ------------------------------------------------------
     def _is_exportacao_sistema(self, texto):
 
+        # Cabeçalhos típicos de CSV exportado do sistema
+        if (
+            "importado" in texto
+            and "compensado" in texto
+            and "categoria" in texto
+            and ("receita" in texto or "despesa" in texto)
+        ):
+            return True
+
         # Presença clara de coluna Categoria
-        if "categoria" in texto and "descrição" in texto:
+        if "categoria" in texto and ("descrição" in texto or "descricao" in texto or "descri" in texto):
             return True
 
         # Estrutura Categoria: Subcategoria

@@ -41,8 +41,9 @@ class FaturaController:
     # ==================================================
     def registrar_despesa_cartao(self, dados: dict) -> bool:
         id_usuario = self.get_id_usuario()
-        self.service.registrar_despesa_cartao(dados, id_usuario)
-        return True
+        payload = dict(dados)
+        payload["ID_Usuario"] = id_usuario
+        return self.service.registrar_despesa_cartao(payload)
 
     # ==================================================
     # PAGAMENTO
@@ -152,6 +153,13 @@ class FaturaController:
             ano
         )
 
+    def listar_ciclos(self, id_cartao, quantidade=12):
+        return self.service.listar_ciclos(
+            id_cartao,
+            self.get_id_usuario(),
+            quantidade
+        )
+
 
     def get_painel_cartao(self, id_cartao, mes, ano, page, limit, status):
 
@@ -159,6 +167,8 @@ class FaturaController:
 
         return self.service.get_painel_cartao(
             id_cartao=id_cartao,
+            mes=mes,
+            ano=ano,
             id_usuario=id_usuario,
             page=page,
             limit=limit,

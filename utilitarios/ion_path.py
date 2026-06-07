@@ -2,7 +2,6 @@ import os
 import sys
 import platform
 import logging
-from PyQt5 import uic
 
 logger = logging.getLogger(__name__)
 
@@ -200,10 +199,12 @@ class IonPath:
 
         path = cls.recourse_paths(*paths)
 
-        if not os.path.exist(path):
+        if not os.path.exists(path):
             raise FileNotFoundError(f"UI não encontrado: {path}")
 
         try:
+            from PyQt5 import uic
+
             uic.loadUi(path, widget)
         except Exception as e:
             raise RuntimeError(f"Erro ao carregar UI:{path} \n {e}")

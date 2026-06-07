@@ -1,7 +1,4 @@
 import logging
-from datetime import datetime
-
-from dateutil.relativedelta import relativedelta
 
 from core.session import Session
 from controllers.fatura_controller import FaturaController
@@ -71,115 +68,110 @@ class MainController:
     # ======================================================
     # EXECUTAR UM AGENDAMENTO
     # ======================================================
-    def execute_schedule(self, agendamento_id: int) -> bool:
+    def _executar_movimento_agendamento(self, agendamento, usuario_id):
+
+        if agendamento.get("ID_Cartao"):
+            return self.fatura_controller.registrar_despesa_cartao({
+                "Descricao": agendamento.get("Descricao"),
+                "Valor": agendamento.get("Valor"),
+                "Data": agendamento.get("Data"),
+                "ID_Cartao": agendamento.get("ID_Cartao"),
+                "ID_Usuario": usuario_id,
+                "ID_Categoria": agendamento.get("ID_Categoria"),
+                "ID_Favorecido": agendamento.get("ID_Favorecido"),
+                "Num_Parcelas": int(agendamento.get("Parcelas", 1)),
+                "Previsto": 0,
+            })
+
+        if agendamento.get("ID_Conta"):
+            tipo = self.schedule_service.MAPA_TIPO_TRANSACAO.get(
+                agendamento.get("Tipo")
+            )
+
+            if not tipo:
+                raise ValueError(
+                    f"Tipo de agendamento inválido: {agendamento.get('Tipo')}"
+                )
+
+            valor = float(agendamento.get("Valor", 0))
+
+            if tipo == "Despesa":
+                valor = -abs(valor)
+            elif tipo == "Receita":
+                valor = abs(valor)
+            elif tipo == "Transferência":
+                raise ValueError(
+                    "Agendamento de transferência ainda não possui conta origem/destino."
+                )
+
+            return self.transaction_controller.add_transaction({
+                "ID_Conta": agendamento.get("ID_Conta"),
+                "Descricao": agendamento.get("Descricao") or "Agendamento",
+                "Valor": valor,
+                "Data": agendamento.get("Data"),
+                "Tipo": tipo,
+                "ID_Usuario": usuario_id,
+                "ID_Categoria": agendamento.get("ID_Categoria"),
+                "ID_Favorecido": agendamento.get("ID_Favorecido"),
+            })
+
+        raise ValueError("Agendamento sem conta e sem cartão.")
+
+
+    def execute_schedule(self, schedule_id: int) -> bool:
+        """
+        Executa um agendamento.
+
+        Fluxo:
+        1. Busca o agendamento
+        2. Executa o movimento financeiro
+        3. Marca como executado
+        4. Gera recorrência (se existir)
+        """
+
         try:
-            usuario = Session.get_usuario()
-            if not usuario:
+            usuario_id = self.get_usuario_id()
+
+            if not usuario_id:
                 raise PermissionError("Usuário não autenticado.")
 
-            usuario_id = usuario["ID_Usuario"]
-
             agendamento = self.schedule_controller.get_schedule_by_id(
-                agendamento_id
+                schedule_id
             )
 
             if not agendamento:
                 raise ValueError("Agendamento não encontrado.")
 
-            if agendamento["Status"] not in ("AGENDADO", "ATRASADO"):
-                raise ValueError("Agendamento não pode ser executado.")
-
-            # ==================================================
-            # BASE DO LANÇAMENTO
-            # ==================================================
-            base_lancamento = {
-                "Data": agendamento["Data"],
-                "Valor": agendamento["Valor"],
-                "Descricao": agendamento.get("Descricao") or "Agendamento",
-                "ID_Usuario": usuario_id,
-                "ID_Categoria": agendamento.get("ID_Categoria"),
-                "ID_Favorecido": agendamento.get("ID_Favorecido"),
-                "Tipo": agendamento.get("Tipo"),
-                "ID_Agendamento": agendamento_id,
-            }
-
-            sucesso = False
-
-            # ==================================================
-            # CONTA (normal)
-            # ==================================================
-            if agendamento.get("ID_Conta"):
-                lancamento = base_lancamento.copy()
-                lancamento["ID_Conta"] = agendamento["ID_Conta"]
-
-                sucesso = self.transaction_controller.add_transaction(
-                    lancamento
-                )
-
-            # ==================================================
-            # CARTÃO (com parcelas)
-            # ==================================================
-            elif agendamento.get("ID_Cartao"):
-
-                parcelas = int(agendamento.get("Parcelas", 1))
-                valor_total = float(agendamento["Valor"])
-                valor_parcela = valor_total / parcelas
-
-                data_base = datetime.fromisoformat(agendamento["Data"])
-
-                for i in range(parcelas):
-
-                    lancamento = base_lancamento.copy()
-
-                    data_parcela = data_base + relativedelta(months=i)
-
-                    lancamento.update({
-                        "ID_Cartao": agendamento["ID_Cartao"],
-                        "Valor": valor_parcela,
-                        "Data": data_parcela.date().isoformat(),
-                        "Parcela": i + 1,
-                        "Total_Parcelas": parcelas,
-                    })
-
-                    ok = self.fatura_controller.registrar_despesa_cartao(
-                        lancamento
-                    )
-
-                    if not ok:
-                        raise RuntimeError(f"Erro ao lançar parcela {i+1}")
-
-                sucesso = True
-
-            else:
-                raise ValueError("Agendamento sem conta ou cartão.")
-
-            if not sucesso:
-                raise RuntimeError("Falha ao criar lançamento.")
-
-            # ==================================================
-            # ATUALIZA STATUS
-            # ==================================================
-            self.schedule_service.execute_schedule(
-                agendamento_id,
+            # ---------------------------------------------
+            # Movimento financeiro
+            # ---------------------------------------------
+            resultado = self._executar_movimento_agendamento(
+                agendamento,
                 usuario_id
             )
 
-            logger.info(
-                "Agendamento %s executado com sucesso para usuário %s",
-                agendamento_id, usuario_id
+            if not resultado:
+                return False
+
+            # ---------------------------------------------
+            # Atualiza status / recorrência
+            # ---------------------------------------------
+            return self.schedule_service.execute_schedule(
+                schedule_id,
+                usuario_id
             )
 
-            return True
-
         except Exception as e:
+
             logger.error(
                 "Erro ao executar agendamento %s para usuário %s: %s",
-                agendamento_id,
+                schedule_id,
                 self.get_usuario_id(),
                 e,
                 exc_info=True
             )
-            return False
+
+        return False
 
     # ======================================================
     # EXECUTAR VÁRIOS

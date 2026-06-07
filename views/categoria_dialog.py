@@ -68,7 +68,30 @@ class CategoriaDialog(QDialog):
         self.button_box.rejected.connect(self.reject)
 
         # 🔥 TRADUÇÃO GLOBAL AUTOMÁTICA
-        TranslatorApp.enable_auto_translation(self)
+        TranslatorApp.bind(self._atualizar_textos, self)
+        self._atualizar_textos()
+    
+    def _atualizar_textos(self):
+        self.setWindowTitle(TranslatorApp.get("Categoria"))
+        self.lbl_nome.setText(TranslatorApp.get("Nome"))
+        self.lbl_tipo.setText(TranslatorApp.get("Tipo"))
+        self.nome_input.setPlaceholderText(
+            TranslatorApp.get("Digite o nome da categoria")
+        )
+        self.button_box.button(QDialogButtonBox.Ok).setText(
+            TranslatorApp.get("OK")
+        )
+        self.button_box.button(QDialogButtonBox.Cancel).setText(
+            TranslatorApp.get("Cancelar")
+        )
+
+    def closeEvent(self, event):
+        try:
+            TranslatorApp.unbind(self)
+        except Exception:
+            pass
+
+        super().closeEvent(event)
 
     # ==================================================
     # VALIDAÇÃO

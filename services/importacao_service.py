@@ -221,6 +221,16 @@ class ImportacaoService:
                         id_usuario=id_usuario
                     )
                     confianca = 1.0
+                else:
+                    try:
+                        id_categoria, confianca = self.categorizacao_service.categorizar(
+                            descricao,
+                            valor,
+                            id_usuario
+                        )
+                    except Exception:
+                        id_categoria = None
+                        confianca = 0.0
 
             dados_final.append({
                 "Data": data,

@@ -1,13 +1,16 @@
+# -*- coding: utf-8 -*-
 import logging
+
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QLabel, QComboBox,
-    QPushButton, QMessageBox
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
+    QPushButton, QMessageBox, QLineEdit, QFileDialog
 )
 
-from core.theme_manager import ThemeManager
+from core.session import Session
 from core.themes import available_themes
 from core.translator_app import TranslatorApp
 from controllers.configuracoes_controller import ConfiguracoesController
+from controllers.user_controller import UserController
 
 logger = logging.getLogger(__name__)
 
@@ -17,172 +20,270 @@ class ConfiguracoesView(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        # 🔥 CONTROLLER CORRETO
-        self.controller = ConfiguracoesController()
-
-        self.setWindowTitle("Configurações")
+        self.config_controller = ConfiguracoesController()
+        self.user_controller = UserController()
+        self.eh_admin = self._is_admin()
 
         self._init_ui()
         self._load_config()
+        self._connect_events()
 
-        # 🔥 tradução automática
-        TranslatorApp.enable_auto_translation(self)
+        TranslatorApp.bind(self._atualizar_textos, self)
+        self._atualizar_textos()
 
-    # ==================================================
-    # UI
-    # ==================================================
+    def _is_admin(self):
+        usuario = Session.get_usuario()
+        return bool(usuario and usuario.get("Nivel_Acesso") == "admin")
+
     def _init_ui(self):
         self.layout = QVBoxLayout(self)
 
-        # =====================
-        # TÍTULO
-        # =====================
-        self.titulo_label = QLabel("Configurações")
+        self.titulo_label = QLabel()
         self.titulo_label.setObjectName("pageTitle")
         self.layout.addWidget(self.titulo_label)
 
-        # =====================
-        # IDIOMA
-        # =====================
-        self.idioma_label = QLabel("Idioma")
+        self.idioma_label = QLabel()
         self.layout.addWidget(self.idioma_label)
 
         self.idioma_combo = QComboBox()
         self.layout.addWidget(self.idioma_combo)
 
-        # 🔥 PADRÃO INTERNO (CORRETO)
-        idiomas = [
+        for label, code in [
             ("Português", "pt"),
             ("Inglês", "en"),
             ("Espanhol", "es"),
-        ]
-
-        self.idioma_combo.blockSignals(True)
-        self.idioma_combo.clear()
-
-        for label, code in idiomas:
+        ]:
             self.idioma_combo.addItem(label, code)
 
-        self.idioma_combo.blockSignals(False)
-
-        self.idioma_combo.currentIndexChanged.connect(self._on_idioma_changed)
-
-        # =====================
-        # TEMA
-        # =====================
-        self.tema_label = QLabel("Tema")
+        self.tema_label = QLabel()
         self.layout.addWidget(self.tema_label)
 
         self.tema_combo = QComboBox()
+        self.tema_combo.addItems(available_themes())
         self.layout.addWidget(self.tema_combo)
 
-        self.tema_combo.blockSignals(True)
-        self.tema_combo.clear()
-        self.tema_combo.addItems(available_themes())
-        self.tema_combo.blockSignals(False)
-
-        self.tema_combo.currentTextChanged.connect(self._on_tema_changed)
-
-        # =====================
-        # MOEDA
-        # =====================
-        self.moeda_label = QLabel("Moeda")
+        self.moeda_label = QLabel()
         self.layout.addWidget(self.moeda_label)
 
         self.moeda_combo = QComboBox()
+        for moeda in ["BRL", "USD", "EUR"]:
+            self.moeda_combo.addItem(moeda, moeda)
         self.layout.addWidget(self.moeda_combo)
 
-        moedas = ["BRL", "USD", "EUR"]
+        # Banco: somente admin
+        self.db_label = QLabel()
+        self.db_edit = QLineEdit()
+        self.db_btn = QPushButton()
 
-        for m in moedas:
-            self.moeda_combo.addItem(m, m)
+        if self.eh_admin:
+            self.layout.addWidget(self.db_label)
 
-        # =====================
-        # BOTÃO SALVAR
-        # =====================
-        self.salvar_btn = QPushButton("Salvar")
-        self.salvar_btn.setObjectName("primaryButton")
-        self.salvar_btn.clicked.connect(self.salvar_configuracoes)
-        self.layout.addWidget(self.salvar_btn)
+            db_layout = QHBoxLayout()
+            db_layout.addWidget(self.db_edit)
+            db_layout.addWidget(self.db_btn)
+            self.layout.addLayout(db_layout)
+        else:
+            self.db_label.hide()
+            self.db_edit.hide()
+            self.db_btn.hide()
 
+        self.buttons_layout = QHBoxLayout()
+
+        self.aplicar_btn = QPushButton()
+        self.aplicar_btn.setObjectName("primaryButton")
+        self.buttons_layout.addWidget(self.aplicar_btn)
+
+        self.aplicar_todos_btn = QPushButton()
+        self.aplicar_todos_btn.setObjectName("secondaryButton")
+
+        if self.eh_admin:
+            self.buttons_layout.addWidget(self.aplicar_todos_btn)
+        else:
+            self.aplicar_todos_btn.hide()
+
+        self.layout.addLayout(self.buttons_layout)
         self.layout.addStretch()
 
-    # ==================================================
-    # EVENTOS
-    # ==================================================
-    def _on_idioma_changed(self):
-        idioma = self.idioma_combo.currentData()
+    def _connect_events(self):
+        self.aplicar_btn.clicked.connect(self.aplicar_usuario)
 
-        if not idioma:
-            return
+        if self.eh_admin:
+            self.aplicar_todos_btn.clicked.connect(self.aplicar_global)
+            self.db_btn.clicked.connect(self.selecionar_banco)
 
-        try:
-            # 🔥 AGORA CORRETO
-            self.controller.set_idioma(idioma)
-        except Exception:
-            logger.exception("Erro ao trocar idioma")
+    def _atualizar_textos(self):
+        self.setWindowTitle(TranslatorApp.get("Configurações"))
 
-    def _on_tema_changed(self, tema):
-        if not tema:
-            return
+        self.titulo_label.setText(TranslatorApp.get("Configurações"))
+        self.idioma_label.setText(TranslatorApp.get("Idioma"))
+        self.tema_label.setText(TranslatorApp.get("Tema"))
+        self.moeda_label.setText(TranslatorApp.get("Moeda"))
+        self.aplicar_btn.setText(TranslatorApp.get("Aplicar"))
+        self.aplicar_todos_btn.setText(
+            TranslatorApp.get("Aplicar para todos")
+        )
 
-        try:
-            self.controller.set_tema(tema)
-        except Exception:
-            logger.exception("Erro ao trocar tema")
+        self.db_label.setText(
+            TranslatorApp.get("Localização do banco de dados")
+        )
+        self.db_btn.setText(
+            TranslatorApp.get("Selecionar")
+        )
 
-    # ==================================================
-    # LOAD CONFIG
-    # ==================================================
     def _load_config(self):
+        config = self.config_controller.obter_configuracoes()
 
-        config = self.controller.obter_configuracoes()
+        try:
+            user_pref = self.user_controller.get_preferences() or {}
+        except Exception:
+            user_pref = {}
+
+        idioma = (
+            user_pref.get("Idioma")
+            or user_pref.get("idioma")
+            or config.get("idioma")
+        )
+
+        tema = (
+            user_pref.get("Tema")
+            or user_pref.get("tema")
+            or config.get("tema")
+        )
+
+        moeda = config.get("moeda")
+        db_path = config.get("db_path")
 
         self.idioma_combo.blockSignals(True)
         self.tema_combo.blockSignals(True)
         self.moeda_combo.blockSignals(True)
 
-        self._set_combo_by_data(self.idioma_combo, config.get("idioma"))
-        self.tema_combo.setCurrentText(config.get("tema"))
-        self._set_combo_by_data(self.moeda_combo, config.get("moeda"))
+        self._set_combo_by_data(self.idioma_combo, idioma)
+
+        if tema:
+            self.tema_combo.setCurrentText(tema)
+
+        self._set_combo_by_data(self.moeda_combo, moeda)
+
+        if self.eh_admin and db_path:
+            self.db_edit.setText(db_path)
 
         self.idioma_combo.blockSignals(False)
         self.tema_combo.blockSignals(False)
         self.moeda_combo.blockSignals(False)
 
-    # ==================================================
-    # UTIL
-    # ==================================================
+    def _get_dados_config(self):
+        return {
+            "idioma": self.idioma_combo.currentData(),
+            "tema": self.tema_combo.currentText(),
+            "moeda": self.moeda_combo.currentData(),
+            "db_path": self.db_edit.text().strip()
+            if self.eh_admin else None,
+        }
+
     def _set_combo_by_data(self, combo, value):
         index = combo.findData(value)
+
         if index >= 0:
             combo.setCurrentIndex(index)
 
-    # ==================================================
-    # SALVAR
-    # ==================================================
-    def salvar_configuracoes(self):
+    def selecionar_banco(self):
+        caminho, _ = QFileDialog.getSaveFileName(
+            self,
+            TranslatorApp.get("Selecionar banco de dados"),
+            self.db_edit.text().strip() or "",
+            "SQLite Database (*.db);;Todos os arquivos (*)"
+        )
 
-        idioma = self.idioma_combo.currentData()
-        tema = self.tema_combo.currentText()
-        moeda = self.moeda_combo.currentData()
+        if caminho:
+            self.db_edit.setText(caminho)
+
+    def aplicar_usuario(self):
+        dados = self._get_dados_config()
 
         try:
-            # 🔥 CENTRALIZADO NO CONTROLLER
-            self.controller.set_idioma(idioma)
-            self.controller.set_tema(tema)
-            self.controller.set_moeda(moeda)
+            ok = self.user_controller.update_preferences(
+                tema=dados["tema"],
+                idioma=dados["idioma"]
+            )
+
+            if not ok:
+                raise RuntimeError(
+                    "Não foi possível salvar as preferências do usuário."
+                )
+
+            self.config_controller.set_tema(dados["tema"])
+            self.config_controller.set_idioma(dados["idioma"])
 
             QMessageBox.information(
                 self,
                 TranslatorApp.get("Configurações"),
-                TranslatorApp.get("Configurações salvas com sucesso")
+                TranslatorApp.get("Configurações aplicadas ao usuário.")
             )
 
         except Exception:
-            logger.exception("Erro ao salvar configurações")
+            logger.exception("Erro ao aplicar configurações do usuário")
+
             QMessageBox.critical(
                 self,
                 TranslatorApp.get("Erro"),
-                TranslatorApp.get("Erro ao salvar configurações")
+                TranslatorApp.get("Erro ao aplicar configurações.")
             )
+
+    def aplicar_global(self):
+        if not self.eh_admin:
+            QMessageBox.warning(
+                self,
+                TranslatorApp.get("Permissão negada"),
+                TranslatorApp.get(
+                    "Apenas administradores podem alterar configurações globais."
+                )
+            )
+            return
+
+        dados = self._get_dados_config()
+        db_antigo = self.config_controller.get_db_path()
+
+        try:
+            ok = self.config_controller.set_configuracoes_globais(
+                idioma=dados["idioma"],
+                tema=dados["tema"],
+                moeda=dados["moeda"],
+                db_path=dados["db_path"],
+            )
+
+            if not ok:
+                raise RuntimeError(
+                    "Não foi possível salvar as configurações globais."
+                )
+
+            mensagem = TranslatorApp.get(
+                "Configurações aplicadas para todos."
+            )
+
+            if dados["db_path"] and dados["db_path"] != db_antigo:
+                mensagem += "\n\n" + TranslatorApp.get(
+                    "A nova localização do banco será usada após reiniciar o sistema."
+                )
+
+            QMessageBox.information(
+                self,
+                TranslatorApp.get("Configurações"),
+                mensagem
+            )
+
+        except Exception:
+            logger.exception("Erro ao aplicar configurações globais")
+
+            QMessageBox.critical(
+                self,
+                TranslatorApp.get("Erro"),
+                TranslatorApp.get("Erro ao aplicar configurações globais.")
+            )
+
+    def closeEvent(self, event):
+        try:
+            TranslatorApp.unbind(self)
+        except Exception:
+            pass
+
+        super().closeEvent(event)

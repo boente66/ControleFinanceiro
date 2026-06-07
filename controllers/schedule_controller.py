@@ -122,3 +122,6 @@ class ScheduleController:
         except Exception:
             logger.exception("Erro ao cancelar agendamento")
             return False
+
+    def cancelar_agendamento(self, schedule_id: int) -> bool:
+        return self.cancel_schedule(schedule_id)

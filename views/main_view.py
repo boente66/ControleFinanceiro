@@ -1,3 +1,4 @@
+import importlib
 import logging
 import os
 
@@ -13,19 +14,6 @@ from core.theme_manager import ThemeManager
 from core.translator_app import TranslatorApp
 
 from utilitarios.ion_path import IonPath
-
-from views.transacao_view import TransacaoView
-from views.agendamento_view import AgendamentoView
-from views.favorecido_view import FavorecidoView
-from views.relatorio_view import RelatorioView
-from views.lista_categorias_view import ListaCategoriasView
-from views.configuracoes_view import ConfiguracoesView
-from views.backup_view import BackupView
-from views.perfil_view import PerfilView
-from views.gerenciamento_usuarios_view import GerenciamentoUsuariosView
-from views.resumo_financeiro_view import ResumoFinanceiroView
-from views.meta_view import MetaView
-from views.login_dialog import LoginDialog
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +99,7 @@ class MainView(QMainWindow):
     # ==================================================
     def _criar_menu(self):
 
-        def add_btn(texto, view_cls, icon_name):
+        def add_btn(texto, view_ref, icon_name):
 
             btn = QPushButton(texto)
             btn.setObjectName("menuButton")
@@ -123,19 +111,43 @@ class MainView(QMainWindow):
             btn.setContentsMargins(15, 8, 10, 8)
 
             btn.clicked.connect(
-                lambda _, b=btn, v=view_cls: self._handle_menu_click(b, v)
+                lambda _, b=btn, v=view_ref: self._handle_menu_click(b, v)
             )
 
             self.sidebar_layout.addWidget(btn)
-            self._menu_buttons.append((btn, view_cls))
+            self._menu_buttons.append((btn, view_ref))
 
-        add_btn("Resumo Financeiro", ResumoFinanceiroView, "resumo")
-        add_btn("Contas e Lançamentos", TransacaoView, "transacoes")
-        add_btn("Metas Financeiras", MetaView, "metas")
-        add_btn("Lista de Categorias", ListaCategoriasView, "categorias")
-        add_btn("Relatórios", RelatorioView, "relatorios")
-        add_btn("Favorecidos", FavorecidoView, "favorecidos")
-        add_btn("Agendamentos", AgendamentoView, "agendamentos")
+        add_btn(
+            "Resumo Financeiro",
+            ("views.resumo_financeiro_view", "ResumoFinanceiroView"),
+            "resumo"
+        )
+        add_btn(
+            "Contas e Lançamentos",
+            ("views.transacao_view", "TransacaoView"),
+            "transacoes"
+        )
+        add_btn("Metas Financeiras", ("views.meta_view", "MetaView"), "metas")
+        add_btn(
+            "Lista de Categorias",
+            ("views.lista_categorias_view", "ListaCategoriasView"),
+            "categorias"
+        )
+        add_btn(
+            "Relatórios",
+            ("views.relatorio_view", "RelatorioView"),
+            "relatorios"
+        )
+        add_btn(
+            "Favorecidos",
+            ("views.favorecido_view", "FavorecidoView"),
+            "favorecidos"
+        )
+        add_btn(
+            "Agendamentos",
+            ("views.agendamento_view", "AgendamentoView"),
+            "agendamentos"
+        )
 
         self.sidebar_layout.addStretch()
 
@@ -177,7 +189,7 @@ class MainView(QMainWindow):
     # ==================================================
     def _criar_menu_usuario(self):
 
-        def add_user_btn(texto, view_cls, icon_name):
+        def add_user_btn(texto, view_ref, icon_name):
 
             btn = QPushButton(texto)
             btn.setObjectName("menuButton")
@@ -186,22 +198,30 @@ class MainView(QMainWindow):
             btn.setIconSize(QSize(16, 16))
             btn.setContentsMargins(30, 8, 10, 8)
 
-            btn.clicked.connect(lambda _, v=view_cls: self._carregar_view(v))
+            btn.clicked.connect(lambda _, v=view_ref: self._carregar_view(v))
 
             self.user_menu_layout.addWidget(btn)
-            self._user_menu_buttons.append(btn)
+            self._user_menu_buttons.append((btn, view_ref))
 
-        add_user_btn("Perfil", PerfilView, "perfil")
+        add_user_btn("Perfil", ("views.perfil_view", "PerfilView"), "perfil")
 
         if self._is_admin():
             add_user_btn(
                 "Gerenciamento de Usuários",
-                GerenciamentoUsuariosView,
+                ("views.gerenciamento_usuarios_view", "GerenciamentoUsuariosView"),
                 "gerenciar_usuarios"
             )
 
-        add_user_btn("Configurações", ConfiguracoesView, "configuracoes")
-        add_user_btn("Backup e Restauração", BackupView, "backup")
+        add_user_btn(
+            "Configurações",
+            ("views.configuracoes_view", "ConfiguracoesView"),
+            "configuracoes"
+        )
+        add_user_btn(
+            "Backup e Restauração",
+            ("views.backup_view", "BackupView"),
+            "backup"
+        )
 
     # ==================================================
     # TOGGLE MENU
@@ -219,12 +239,13 @@ class MainView(QMainWindow):
             self._handle_menu_click(btn, view_cls)
 
     def _handle_menu_click(self, clicked_button, view_cls):
+        resolved_view = self._resolve_view_class(view_cls)
 
-        if self._current_view_class == view_cls:
+        if self._current_view_class == resolved_view:
             return
 
         self._ativar_botao(clicked_button)
-        self._carregar_view(view_cls)
+        self._carregar_view(resolved_view)
 
     def _ativar_botao(self, clicked_button):
 
@@ -238,12 +259,22 @@ class MainView(QMainWindow):
             clicked_button.style().unpolish(clicked_button)
             clicked_button.style().polish(clicked_button)
 
+    def _resolve_view_class(self, view_ref):
+        if isinstance(view_ref, tuple):
+            module_name, class_name = view_ref
+            module = importlib.import_module(module_name)
+            return getattr(module, class_name)
+
+        return view_ref
+
     # ==================================================
     # TROCA DE VIEW (CORRIGIDO)
     # ==================================================
     def _carregar_view(self, view_cls):
 
         try:
+            view_cls = self._resolve_view_class(view_cls)
+
             if self._current_widget:
 
                 if self._current_widget.parent() is not None:
@@ -270,7 +301,8 @@ class MainView(QMainWindow):
             self._current_view_class = view_cls
 
         except Exception:
-            logger.exception(f"Erro ao carregar view {view_cls.__name__}")
+            view_name = getattr(view_cls, "__name__", str(view_cls))
+            logger.exception(f"Erro ao carregar view {view_name}")
 
     # ==================================================
     # LOGOUT
@@ -280,6 +312,8 @@ class MainView(QMainWindow):
         self.close()
 
         try:
+            from views.login_dialog import LoginDialog
+
             login = LoginDialog()
             if login.exec_() == QDialog.Accepted:
                 nova_main = MainView(login.usuario_logado)
@@ -293,8 +327,8 @@ class MainView(QMainWindow):
 
     def aplicar_tema(self):
         try:
-           tema = Session.get_config("tema", "Claro")
-           app = QApplication.instance()
-           ThemeManager.aplicar_tema(app, tema)
+            tema = Session.get_config("tema", "Claro")
+            app = QApplication.instance()
+            ThemeManager.aplicar_tema(tema, app)
         except Exception:
-         logger.exception("Erro ao aplicar tema")
+            logger.exception("Erro ao aplicar tema")

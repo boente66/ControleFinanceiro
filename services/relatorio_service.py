@@ -75,7 +75,7 @@ RENDIMENTOS TRIBUTÁVEIS RECEBIDOS DE PESSOA JURÍDICA:
         for item in dados["receitas"]:
             fonte = item.get("Fonte", "N/D")
             cnpj = NameFormat.formatCNPJ(item.get("CNPJ", ""))
-            valor = CurrencyFormatter.format("pt_BR.UTF-8", item.get("Valor", 0))
+            valor = CurrencyFormatter.format(item.get("Valor", 0))
 
             texto += f"""
 Fonte Pagadora: {fonte}
@@ -93,9 +93,9 @@ DESPESAS DEDUTÍVEIS / PAGAMENTOS A PESSOAS JURÍDICAS OU FÍSICAS:
 
         for item in dados["gastos"]:
             fav = item.get("Fonte", "N/D")
-            doc = item.get("CNPJ", "")
+            doc = item.get("Documento", "")
             doc_formatado = NameFormat.formatCNPJ(doc) if len(doc) > 11 else NameFormat.formatCPF(doc)
-            valor = CurrencyFormatter.format("pt_BR.UTF-8", item.get("Valor", 0))
+            valor = CurrencyFormatter.format(item.get("Valor", 0),)
 
             texto += f"""
 Favorecido: {fav}

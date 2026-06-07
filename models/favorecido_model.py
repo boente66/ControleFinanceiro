@@ -148,7 +148,7 @@ class FavorecidoModel(Database):
             raise ValueError("CNPJ é obrigatório para Pessoa Jurídica.")
 
         try:
-            self.connection.execute("BEGIN")
+            self.begin()
 
             self.execute_query("""
                 INSERT INTO favorecido (Nome, Tipo, ID_Usuario)
@@ -182,11 +182,11 @@ class FavorecidoModel(Database):
                     telefone
                 ))
 
-            self.connection.commit()
+            self.commit()
             return id_favorecido
 
         except Exception as e:
-            self.connection.rollback()
+            self.rollback()
             raise DatabaseError(str(e))
 
     # =========================================================
@@ -202,7 +202,7 @@ class FavorecidoModel(Database):
             cnpj = self._somente_numeros(dados.get("CNPJ"))
             telefone = self._somente_numeros(dados.get("Telefone"))  # 🔥 CORRIGIDO
 
-            self.connection.execute("BEGIN")
+            self.begin()
 
             self.execute_query("""
                 UPDATE favorecido
@@ -242,11 +242,11 @@ class FavorecidoModel(Database):
                     id_favorecido
                 ))
 
-            self.connection.commit()
+            self.commit()
             return True, "Favorecido atualizado."
 
         except Exception as e:
-            self.connection.rollback()
+            self.rollback()
             raise DatabaseError(str(e))
 
     # =========================================================
@@ -254,7 +254,7 @@ class FavorecidoModel(Database):
     # =========================================================
     def delete_favorecido(self, id_favorecido, id_usuario):
         try:
-            self.connection.execute("BEGIN")
+            self.begin()
 
             self.execute_query("""
                 DELETE FROM pessoa_fisica
@@ -271,9 +271,9 @@ class FavorecidoModel(Database):
                 WHERE ID_Favorecido = ? AND ID_Usuario = ?
             """, (id_favorecido, id_usuario))
 
-            self.connection.commit()
+            self.commit()
             return True
 
         except Exception as e:
-            self.connection.rollback()
+            self.rollback()
             raise DatabaseError(str(e))

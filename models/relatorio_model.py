@@ -1,5 +1,4 @@
 from database.database import Database
-import sqlite3
 
 
 class RelatorioModel(Database):
@@ -10,6 +9,7 @@ class RelatorioModel(Database):
     # RELATÓRIO DIÁRIO
     # -------------------------
     def get_relatorio_diario(self, dias, id_usuario):
+        """ Retorna um relatório diário agrupado por data e categoria para os últimos 'dias' dias. """
         try:
             query = """
             SELECT 
@@ -19,92 +19,108 @@ class RelatorioModel(Database):
                 SUM(CASE WHEN t.Valor < 0 THEN ABS(t.Valor) ELSE 0 END) AS Despesa,
                 SUM(t.Valor) AS Economia
             FROM transacoes t
-            LEFT JOIN categorias c ON c.ID_Categoria = t.ID_Categoria
+            LEFT JOIN categorias c 
+                ON c.ID_Categoria = t.ID_Categoria
             WHERE date(t.Data) >= date('now', ?)
               AND t.ID_Usuario = ?
             GROUP BY t.Data, c.Nome
             ORDER BY t.Data DESC
             """
-            return self.fetch_all(query, (f'-{dias} days', id_usuario)) or []
-        except sqlite3.Error:
+            return self.fetch_all(query, (f"-{dias} days", id_usuario)) or []
+        except Exception:
             return []
 
     # -------------------------
     # RELATÓRIO ANUAL
     # -------------------------
     def get_relatorio_anual(self, ano, id_usuario):
+        """ Retorna um relatório anual agrupado por mês e categoria para o ano especificado. """
         try:
             query = """
             SELECT 
                 strftime('%m', t.Data) AS Mes,
                 c.Nome AS Categoria,
-                SUM(CASE WHEN LOWER(t.Tipo) = 'receita' THEN t.Valor ELSE 0 END) AS Receita,
-                SUM(CASE WHEN LOWER(t.Tipo) = 'despesa' THEN ABS(t.Valor) ELSE 0 END) AS Despesa,
+                SUM(CASE WHEN t.Valor > 0 THEN t.Valor ELSE 0 END) AS Receita,
+                SUM(CASE WHEN t.Valor < 0 THEN ABS(t.Valor) ELSE 0 END) AS Despesa,
                 SUM(t.Valor) AS Economia
             FROM transacoes t
-            LEFT JOIN categorias c ON c.ID_Categoria = t.ID_Categoria
+            LEFT JOIN categorias c 
+                ON c.ID_Categoria = t.ID_Categoria
             WHERE strftime('%Y', t.Data) = ?
-              AND t.ID_Usuario = ?
+            AND t.ID_Usuario = ?
             GROUP BY Mes, c.Nome
             ORDER BY Mes
             """
             return self.fetch_all(query, (str(ano), id_usuario)) or []
-        except sqlite3.Error:
+        except Exception:
             return []
-
     # -------------------------
-    # INFORME COMPLETO (Receita Federal)
+    # INFORME COMPLETO
     # -------------------------
     def get_transacoes_ano(self, ano, id_usuario):
+        """ Retorna todas as transações do ano especificado para o usuário. """
         try:
             query = """
             SELECT *
             FROM transacoes
             WHERE strftime('%Y', Data) = ?
               AND ID_Usuario = ?
+            ORDER BY Data
             """
             return self.fetch_all(query, (str(ano), id_usuario)) or []
-        except sqlite3.Error:
+        except Exception:
             return []
 
     # -------------------------
-    # RENDIMENTOS (PJ)
+    # RENDIMENTOS
     # -------------------------
     def get_informe_rendimentos(self, ano, id_usuario):
+        """ Retorna um relatório de rendimentos (receitas) do ano especificado para o usuário. """
         try:
             query = """
             SELECT 
                 f.Nome AS Fonte,
-                f.CNPJ,
+                pj.CNPJ AS CNPJ,
                 SUM(t.Valor) AS Valor
             FROM transacoes t
-            JOIN favorecido f ON t.ID_Favorecido = f.ID_Favorecido
+            JOIN favorecido f 
+                ON t.ID_Favorecido = f.ID_Favorecido
+            LEFT JOIN pessoa_juridica pj 
+                ON pj.ID_Favorecido = f.ID_Favorecido
             WHERE strftime('%Y', t.Data) = ?
-              AND LOWER(t.Tipo) = 'receita'
+              AND t.Tipo = 'Receita'
               AND t.ID_Usuario = ?
-            GROUP BY f.Nome, f.CNPJ
+            GROUP BY f.Nome, pj.CNPJ
+            ORDER BY f.Nome
             """
             return self.fetch_all(query, (str(ano), id_usuario)) or []
-        except sqlite3.Error:
+        except Exception:
             return []
 
     # -------------------------
-    # GASTOS (PF + PJ)
+    # GASTOS
     # -------------------------
     def get_informe_gastos(self, ano, id_usuario):
         try:
             query = """
             SELECT 
                 f.Nome AS Fonte,
-                f.CNPJ,
-                SUM(t.Valor) AS Valor
+                COALESCE(pj.CNPJ, pf.CPF) AS Documento,
+                f.Tipo AS Tipo_Favorecido,
+                SUM(ABS(t.Valor)) AS Valor
             FROM transacoes t
-            JOIN favorecido f ON t.ID_Favorecido = f.ID_Favorecido
+            JOIN favorecido f 
+                ON t.ID_Favorecido = f.ID_Favorecido
+            LEFT JOIN pessoa_juridica pj 
+                ON pj.ID_Favorecido = f.ID_Favorecido
+            LEFT JOIN pessoa_fisica pf 
+                ON pf.ID_Favorecido = f.ID_Favorecido
             WHERE strftime('%Y', t.Data) = ?
-              AND LOWER(t.Tipo) = 'despesa'
+              AND t.Tipo = 'Despesa'
               AND t.ID_Usuario = ?
-            GROUP BY f.Nome, f.CNPJ
+            GROUP BY f.Nome, Documento, f.Tipo
+            ORDER BY f.Nome
             """
             return self.fetch_all(query, (str(ano), id_usuario)) or []
-        except sqlite3.Error:
+        except Exception:
             return []

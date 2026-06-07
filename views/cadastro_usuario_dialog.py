@@ -19,6 +19,7 @@ class CadastroUsuarioDialog(QDialog):
         self.setMinimumSize(420, 420)
 
         self.controller = UserController()
+        self.usuario_edicao = None
 
         self._init_ui()
 
@@ -89,6 +90,7 @@ class CadastroUsuarioDialog(QDialog):
         self.lbl_senha = QLabel("Senha")
         self.senha_input = QLineEdit()
         self.senha_input.setEchoMode(QLineEdit.Password)
+        self.senha_input.setPlaceholderText("Obrigatória no cadastro")
         form.addRow(self.lbl_senha, self.senha_input)
 
         # Nível
@@ -108,6 +110,42 @@ class CadastroUsuarioDialog(QDialog):
 
         layout.addWidget(self.btn_salvar)
 
+    def preencher_dados(self, usuario):
+        if not usuario:
+            return
+
+        self.usuario_edicao = usuario
+        self.setWindowTitle("Editar Usuário")
+        self.senha_input.setPlaceholderText("Deixe em branco para manter")
+
+        self.nome_input.setText(usuario.get("Nome", ""))
+        self.cpf_input.setText(usuario.get("CPF", "") or "")
+        self.telefone_input.setText(usuario.get("Telefone", "") or "")
+        self.celular_input.setText(usuario.get("Celular", "") or "")
+        self.email_input.setText(usuario.get("Email", "") or "")
+        self.login_input.setText(usuario.get("Login", "") or "")
+
+        data = QDate.fromString(
+            usuario.get("DataNascimento", "") or "",
+            "yyyy-MM-dd"
+        )
+        if data.isValid():
+            self.nascimento_input.setDate(data)
+
+        self._selecionar_combo_por_data(
+            self.sexo_input,
+            usuario.get("Sexo")
+        )
+        self._selecionar_combo_por_data(
+            self.nivel_input,
+            usuario.get("Nivel_Acesso")
+        )
+
+    def _selecionar_combo_por_data(self, combo, valor):
+        index = combo.findData(valor)
+        if index >= 0:
+            combo.setCurrentIndex(index)
+
     # -----------------------------------------------------------
     # SALVAR USUÁRIO
     # -----------------------------------------------------------
@@ -118,7 +156,7 @@ class CadastroUsuarioDialog(QDialog):
         senha = self.senha_input.text().strip()
         email = self.email_input.text().strip()
 
-        if not nome or not login or not senha or not email:
+        if not nome or not login or not email or (not self.usuario_edicao and not senha):
             QMessageBox.warning(
                 self,
                 TranslatorApp.get("Erro"),
@@ -148,13 +186,21 @@ class CadastroUsuarioDialog(QDialog):
         }
 
         try:
-            sucesso = self.controller.register_user(dados)
+            if self.usuario_edicao:
+                sucesso = self.controller.update_user(
+                    self.usuario_edicao["ID_Usuario"],
+                    dados
+                )
+                mensagem_sucesso = "Usuário atualizado com sucesso"
+            else:
+                sucesso = self.controller.register_user(dados)
+                mensagem_sucesso = "Usuário cadastrado com sucesso"
 
             if sucesso:
                 QMessageBox.information(
                     self,
                     TranslatorApp.get("Sucesso"),
-                    TranslatorApp.get("Usuário cadastrado com sucesso")
+                    TranslatorApp.get(mensagem_sucesso)
                 )
                 self.accept()
             else:

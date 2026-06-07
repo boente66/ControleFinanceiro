@@ -2,6 +2,13 @@
 # AMBIENTE VIRTUAL
 # ========================
 assistente/
+.venv/
+venv/
+env/
+ENV/
+build-env/
+source/
+financeiro/
 
 # ========================
 # VARIÁVEIS SENSÍVEIS
@@ -14,6 +21,9 @@ assistente/
 *.db
 *.sqlite
 *.sqlite3
+*.db-shm
+*.db-wal
+*.db-journal
 
 # ========================
 # BACKUP

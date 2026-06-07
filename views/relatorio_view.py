@@ -11,9 +11,6 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt
 from PyQt5.QtPrintSupport import QPrinter, QPrintDialog
 
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
-
 from controllers.relatorio_controller import RelatorioController
 from utilitarios.makepdf import MakePDF
 from utilitarios.currency_formatter import CurrencyFormatter
@@ -119,13 +116,27 @@ class RelatorioView(QWidget):
     # 📊 GRÁFICOS COMPLETOS
     # ==================================================
     def _create_chart(self):
+        try:
+            from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+            from matplotlib.figure import Figure
 
-        self.figure = Figure(figsize=(8, 4))
-        self.canvas = FigureCanvas(self.figure)
+            self.figure = Figure(figsize=(8, 4))
+            self.canvas = FigureCanvas(self.figure)
+            return self.canvas
 
-        return self.canvas
+        except Exception:
+            self.figure = None
+            self.canvas = QLabel(
+                "Gráficos indisponíveis neste ambiente. "
+                "Os relatórios continuam funcionando sem visualização gráfica."
+            )
+            self.canvas.setWordWrap(True)
+            self.canvas.setObjectName("infoLabel")
+            return self.canvas
 
     def _update_chart(self, dados):
+        if not self.figure or not hasattr(self.canvas, "draw"):
+            return
 
         self.figure.clear()
 

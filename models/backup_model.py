@@ -19,7 +19,7 @@ class BackupModel:
 
     def __init__(self, database_path: str):
         self.database_path = database_path
-        self.db = Database()
+        self.db = Database(database_path)
 
     # =====================================================
     # EXTRAÇÃO DE DADOS
@@ -31,10 +31,14 @@ class BackupModel:
             "categorias",
             "contas",
             "credito",
+            "favorecido",
+            "pessoa_fisica",
+            "pessoa_juridica",
             "transacoes",
             "agendamentos",
             "lancamentos",
-            "metas"
+            "metas",
+            "recuperacao_senha"
         ]
 
         dados = {}
@@ -118,6 +122,10 @@ class BackupModel:
                 "transacoes",
                 "agendamentos",
                 "metas",
+                "recuperacao_senha",
+                "pessoa_fisica",
+                "pessoa_juridica",
+                "favorecido",
                 "credito",
                 "contas",
                 "categorias",

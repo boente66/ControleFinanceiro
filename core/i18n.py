@@ -2,9 +2,6 @@
 
 from core.session import Session
 
-# ======================================================
-# TRADUÇÕES BASE (USANDO CÓDIGO DE IDIOMA)
-# ======================================================
 TRADUCOES = {
     "pt": {
         "Configurações": "Configurações",
@@ -32,48 +29,43 @@ TRADUCOES = {
 DEFAULT_LANG = "pt"
 
 
-# ======================================================
-# CORE
-# ======================================================
+def _lang_code(idioma: str = None) -> str:
+    idioma = idioma or DEFAULT_LANG
+    return idioma.replace("-", "_").split("_", 1)[0]
+
+
 def t(texto: str, idioma: str = None) -> str:
-    """
-    Tradução principal
-
-    - Usa idioma atual da Session se não for passado
-    - Fallback seguro
-    """
-
     if not texto:
         return texto
 
-    idioma = idioma or Session.get_config("idioma", DEFAULT_LANG)
+    idioma = _lang_code(
+        idioma or Session.get_config("idioma", DEFAULT_LANG)
+    )
 
-    try:
-        return TRADUCOES.get(idioma, {}).get(texto, texto)
-    except Exception:
-        return texto
+    return TRADUCOES.get(idioma, {}).get(texto, texto)
 
 
-# ======================================================
-# VERIFICA SE EXISTE
-# ======================================================
 def has(texto: str, idioma: str = None) -> bool:
-    idioma = idioma or Session.get_config("idioma", DEFAULT_LANG)
+    idioma = _lang_code(
+        idioma or Session.get_config("idioma", DEFAULT_LANG)
+    )
+
     return texto in TRADUCOES.get(idioma, {})
 
 
-# ======================================================
-# REGISTRAR NOVAS TRADUÇÕES
-# ======================================================
 def register(idioma: str, chave: str, valor: str):
+    idioma = _lang_code(idioma)
+
     if idioma not in TRADUCOES:
         TRADUCOES[idioma] = {}
 
     TRADUCOES[idioma][chave] = valor
 
 
-# ======================================================
-# LISTAR IDIOMAS DISPONÍVEIS
-# ======================================================
+def get_language_dict(idioma: str) -> dict:
+    idioma = _lang_code(idioma)
+    return TRADUCOES.get(idioma, {})
+
+
 def idiomas_disponiveis():
     return list(TRADUCOES.keys())

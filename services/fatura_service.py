@@ -5,6 +5,7 @@ from models.lancamento_model import LancamentoModel
 from models.credito_model import CreditoModel
 from models.transaction_model import TransactionModel
 from models.category_model import CategoryModel
+from models.account_model import AccountModel
 
 
 class FaturaService:
@@ -14,6 +15,7 @@ class FaturaService:
         self.credito_model = CreditoModel()
         self.transaction_model = TransactionModel()
         self.category_model = CategoryModel()
+        self.account_model = AccountModel()
 
         self._cache_fatura = {}
 
@@ -40,13 +42,13 @@ class FaturaService:
         return self.credito_model.add_cartao(dados)
 
     def editar_cartao(self, id_cartao: int, dados: dict, id_usuario: int):
-        cartao = self.credito_model.get_cartao_by_id(id_cartao, id_usuario)
+        cartao = self.buscar_cartao_por_id(id_cartao, id_usuario)
         if not cartao:
             raise ValueError("Cartão não encontrado.")
         return self.credito_model.update_cartao(id_cartao, dados, id_usuario)
 
     def excluir_cartao(self, id_cartao: int, id_usuario: int):
-        cartao = self.credito_model.get_cartao_by_id(id_cartao, id_usuario)
+        cartao = self.buscar_cartao_por_id(id_cartao, id_usuario)
         if not cartao:
             raise ValueError("Cartão não encontrado.")
         return self.credito_model.delete_cartao(id_cartao, id_usuario)
@@ -74,13 +76,72 @@ class FaturaService:
         return data_compra.month, data_compra.year
 
     # ============================================================
+    # 🔥 REGISTRAR DESPESA (COM PARCELAMENTO)
+    # ============================================================
+    def registrar_despesa_cartao(self, dados: dict):
+
+        id_usuario = dados["ID_Usuario"]
+        id_cartao = dados["ID_Cartao"]
+
+        cartao = self.buscar_cartao_por_id(id_cartao, id_usuario)
+        if not cartao:
+            raise ValueError("Cartão inválido")
+
+        dia_fechamento = cartao["Dia_Fechamento"]
+
+        parcelas = int(dados.get("Num_Parcelas", 1))
+        valor_total = float(dados["Valor"])
+        valor_parcela = round(valor_total / parcelas, 2)
+
+        data_base = dados["Data"]
+
+        if isinstance(data_base, str):
+            data_base = datetime.fromisoformat(data_base).date()
+
+        self.lancamento_model.begin()
+
+        try:
+            for i in range(parcelas):
+
+                data_parcela = data_base + relativedelta(months=i)
+
+                mes, ano = self.aplicar_fatura(
+                    data_parcela,
+                    dia_fechamento
+                )
+
+                self.lancamento_model.add_lancamento({
+                    "ID_Usuario": id_usuario,
+                    "ID_Cartao": id_cartao,
+                    "Descricao": dados["Descricao"],
+                    "Valor": valor_parcela,
+                    "Data": data_parcela.isoformat(),
+                    "Competencia_Mes": mes,
+                    "Competencia_Ano": ano,
+                    "ID_Categoria": dados.get("ID_Categoria"),
+                    "ID_Favorecido": dados.get("ID_Favorecido"),
+                    "Num_Parcelas": parcelas,
+                    "Parcela_Atual": i + 1,
+                    "Notas": dados.get("Notas"),
+                    "Previsto": int(dados.get("Previsto", 0))
+                })
+
+            self.lancamento_model.commit()
+            self._clear_cache()
+            return True
+
+        except Exception:
+            self.lancamento_model.rollback()
+            raise
+
+    # ============================================================
     # FATURA
     # ============================================================
     def obter_fatura(self, id_cartao, mes, ano, id_usuario):
 
-        cache_key = self._cache_key(id_cartao, mes, ano, id_usuario)
+        key = self._cache_key(id_cartao, mes, ano, id_usuario)
 
-        cached = self._get_cache(cache_key)
+        cached = self._get_cache(key)
         if cached:
             return cached
 
@@ -93,14 +154,12 @@ class FaturaService:
 
             if id_cat:
                 l["Categoria"] = self.category_model.get_nome_categoria_by_id(
-                    id_cat,
-                    id_usuario
+                    id_cat, id_usuario
                 )
             else:
                 l["Categoria"] = "Sem categoria"
 
-        self._set_cache(cache_key, lancamentos)
-
+        self._set_cache(key, lancamentos)
         return lancamentos
 
     def obter_fatura_paginada(self, id_cartao, mes, ano, id_usuario, limit=50, offset=0):
@@ -113,13 +172,16 @@ class FaturaService:
         }
 
     # ============================================================
-    # TOTAL
+    # TOTAIS
     # ============================================================
     def calcular_total_fatura(self, id_cartao, mes, ano, id_usuario):
 
         fatura = self.obter_fatura(id_cartao, mes, ano, id_usuario)
 
         return sum(float(l["Valor"]) for l in fatura if not l.get("Paga"))
+
+    def calcular_fatura_mes(self, id_cartao, mes, ano, id_usuario):
+        return self.calcular_total_fatura(id_cartao, mes, ano, id_usuario)
 
     # ============================================================
     # LIMITE
@@ -145,14 +207,7 @@ class FaturaService:
         }
 
     def calcular_limite_disponivel(self, id_cartao, id_usuario):
-        resumo = self.get_resumo_cartao(id_cartao, id_usuario)
-        return resumo.get("disponivel", 0.0)
-
-    def calcular_fatura_mes(self, id_cartao, mes, ano, id_usuario):
-
-        fatura = self.obter_fatura(id_cartao, mes, ano, id_usuario)
-
-        return sum(float(l["Valor"]) for l in fatura if not l.get("Paga"))
+        return self.get_resumo_cartao(id_cartao, id_usuario).get("disponivel", 0.0)
 
     def verificar_limite(self, id_cartao, id_usuario):
 
@@ -179,24 +234,22 @@ class FaturaService:
         total = sum(float(l["Valor"]) for l in fatura if not l.get("Paga"))
 
         if total <= 0:
-            raise ValueError("Nenhum valor em aberto para pagamento.")
+            raise ValueError("Nenhum valor em aberto.")
 
-        conta = self.transaction_model.get_account_by_id(id_conta, id_usuario)
+        conta = self.account_model.get_account_by_id(id_conta, id_usuario)
 
         if not conta:
-            raise ValueError("Conta não encontrada.")
+            raise ValueError("Conta inválida.")
 
         if float(conta["Saldo_Atual"]) < total:
             raise ValueError("Saldo insuficiente.")
 
         cartao = self.buscar_cartao_por_id(id_cartao, id_usuario)
 
-        descricao = f"Pagamento Fatura {mes:02d}/{ano} - {cartao.get('Nome', '')}"
-
         categoria_id = self._get_categoria_pagamento_fatura(id_usuario)
 
         transacao_id = self.transaction_model.add_transaction({
-            "Descricao": descricao,
+            "Descricao": f"Pagamento Fatura {mes:02d}/{ano} - {cartao.get('Nome', '')}",
             "Valor": -abs(total),
             "Data": date.today().isoformat(),
             "Tipo": "Despesa",
@@ -205,68 +258,72 @@ class FaturaService:
             "ID_Categoria": categoria_id
         })
 
-        for l in fatura:
-            if not l.get("Paga"):
-                self.lancamento_model.marcar_como_pago(
-                    l["ID_Lancamento"],
-                    transacao_id
-                )
+        self.account_model.update_saldo(id_conta, -abs(total), id_usuario)
 
-        self._clear_cache()
-        return True
+        self.lancamento_model.begin()
 
-    # ============================================================
-    # CATEGORIA
-    # ============================================================
-    def _get_categoria_pagamento_fatura(self, id_usuario):
+        try:
+            for l in fatura:
+                if not l.get("Paga"):
+                    self.lancamento_model.marcar_como_pago(
+                        l["ID_Lancamento"],
+                        transacao_id
+                    )
 
-        categoria = self.category_model.get_by_nome(
-            "Pagamento de Fatura",
-            id_usuario
-        )
+            self.lancamento_model.commit()
+            self._clear_cache()
+            return True
 
-        if categoria:
-            return categoria["ID_Categoria"]
-
-        return self.category_model.add_categoria({
-            "Nome": "Pagamento de Fatura",
-            "Tipo": "Despesa",
-            "ID_Usuario": id_usuario
-        })
+        except Exception:
+            self.lancamento_model.rollback()
+            raise
 
     # ============================================================
-    # PAINEL
+    # CICLOS
     # ============================================================
-    def get_painel_cartao(self, id_cartao, id_usuario, page=0, limit=50, status="Todos"):
+    def listar_ciclos(self, id_cartao, id_usuario, quantidade=12):
+        cartao = self.buscar_cartao_por_id(id_cartao, id_usuario)
+        if not cartao:
+            return []
 
         hoje = date.today()
+        ciclos = []
+        for offset in range(quantidade):
+            mes_ref = hoje + relativedelta(months=offset)
+            ciclos.append({
+                "Mes": mes_ref.month,
+                "Ano": mes_ref.year,
+                "Texto": f"{mes_ref.month:02d}/{mes_ref.year}"
+            })
+
+        return ciclos
+
+    def get_painel_cartao(self, id_cartao, mes, ano, id_usuario, page=0, limit=50, status="Todos"):
 
         cartao = self.buscar_cartao_por_id(id_cartao, id_usuario)
         if not cartao:
             return {}
 
-        dia_fechamento = cartao["Dia_Fechamento"]
-
-        competencia = hoje - relativedelta(months=1) if hoje.day <= dia_fechamento else hoje
-
-        mes = competencia.month
-        ano = competencia.year
-
-        lancamentos = self.lancamento_model.get_lancamentos_nao_pagos(
+        lancamentos_todos = self.lancamento_model.get_lancamentos_por_cartao(
             id_cartao, id_usuario
         )
 
         fatura_atual = []
         futuras = {}
 
-        for l in lancamentos:
-
+        for l in lancamentos_todos:
             valor = float(l["Valor"])
+            comp_mes = int(l["Competencia_Mes"])
+            comp_ano = int(l["Competencia_Ano"])
 
-            comp_mes = l["Competencia_Mes"]
-            comp_ano = l["Competencia_Ano"]
-
-            if comp_mes == mes and comp_ano == ano:
+            if comp_mes == int(mes) and comp_ano == int(ano):
+                if l.get("ID_Categoria"):
+                    l["Categoria"] = self.category_model.get_nome_categoria_by_id(
+                        l["ID_Categoria"],
+                        id_usuario
+                    )
+                else:
+                    l["Categoria"] = "Sem categoria"
                 fatura_atual.append(l)
             else:
                 chave = f"{comp_mes:02d}/{comp_ano}"
@@ -301,3 +358,52 @@ class FaturaService:
             "lancamentos": fatura_paginada,
             "total_registros": total_registros
         }
+
+    def exportar_fatura_pdf(self, cartao, lancamentos, caminho):
+        if not caminho:
+            raise ValueError("Caminho do PDF não informado.")
+
+        from utilitarios.makepdf import MakePDF
+
+        nome_cartao = (cartao or {}).get("Nome", "Cartão")
+        linhas = [f"Cartão: {nome_cartao}", ""]
+
+        total = 0.0
+        for item in lancamentos or []:
+            valor = float(item.get("Valor") or 0)
+            total += valor
+            data = item.get("Data", "")
+            descricao = item.get("Descricao", "")
+            categoria = item.get("Categoria", "Sem categoria")
+            status = "Pago" if item.get("Paga") else "Aberto"
+
+            linhas.append(
+                f"{data} | {descricao} | {categoria} | R$ {valor:.2f} | {status}"
+            )
+
+        linhas.extend(["", f"Total: R$ {total:.2f}"])
+        return MakePDF.gerar_pdf(
+            caminho,
+            f"Fatura - {nome_cartao}",
+            "\n".join(linhas)
+        )
+
+    # ============================================================
+    # CATEGORIA
+    # ============================================================
+    def _get_categoria_pagamento_fatura(self, id_usuario):
+
+        categoria = self.category_model.get_category_by_name(
+            "Pagamento de Fatura",
+            id_usuario
+        )
+
+        if categoria:
+            return categoria["ID_Categoria"]
+
+        return self.category_model.add_category(
+            nome="Pagamento de Fatura",
+            tipo="Despesa",
+            id_usuario=id_usuario,
+            id_categoria_pai=None
+        )

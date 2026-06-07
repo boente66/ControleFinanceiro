@@ -109,6 +109,60 @@ class UserService:
             logger.exception("Erro ao listar usuários")
             return []
 
+    def update_user(
+        self,
+        id_usuario_alvo: int,
+        user_data: dict,
+        usuario_logado: dict
+    ) -> bool:
+        try:
+            self._ensure_admin_permission(usuario_logado)
+
+            usuario_alvo = self.get_user_by_id(id_usuario_alvo)
+            if not usuario_alvo:
+                return False
+
+            if not user_data.get("Nome") or not user_data.get("Login") or not user_data.get("Email"):
+                raise ValueError("Dados obrigatórios ausentes.")
+
+            existente = self.user_model.fetch_one(
+                """
+                SELECT ID_Usuario
+                FROM usuarios
+                WHERE (Login = ? OR Email = ?)
+                  AND ID_Usuario <> ?
+                """,
+                (
+                    user_data.get("Login"),
+                    user_data.get("Email"),
+                    id_usuario_alvo
+                )
+            )
+
+            if existente:
+                return False
+
+            novo_nivel = self._normalize_access_level(
+                user_data.get("Nivel_Acesso")
+            )
+            total_admins = self._count_admins()
+
+            if novo_nivel == "admin" and usuario_alvo.get("Nivel_Acesso", "").lower() != "admin":
+                if total_admins >= self.MAX_ADMINS:
+                    raise ValueError("Limite máximo de administradores atingido.")
+
+            if usuario_alvo.get("Nivel_Acesso", "").lower() == "admin" and novo_nivel != "admin":
+                if total_admins <= 1:
+                    raise ValueError("O sistema deve possuir pelo menos um administrador.")
+
+            user_data["Nivel_Acesso"] = novo_nivel
+            self.user_model.update_user(id_usuario_alvo, user_data)
+            return True
+
+        except (DatabaseError, PermissionError, ValueError):
+            logger.exception("Erro ao atualizar usuário")
+            return False
+
     # ======================================================
     # ALTERAÇÃO DE NÍVEL
     # ======================================================
@@ -138,6 +192,10 @@ class UserService:
         except (DatabaseError, PermissionError, ValueError):
             logger.exception("Erro ao atualizar nível de acesso")
             return False
+
+    def allow_editor_access(self, login: str) -> bool:
+        usuario = self.get_user_details(login)
+        return bool(usuario)
 
     # ======================================================
     # EXCLUSÃO

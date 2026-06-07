@@ -68,14 +68,12 @@ class IAImportController:
         self,
         lista_lancamentos: List[dict]
     ) -> int:
-        id_usuario = self.get_id_usuario()
         if not lista_lancamentos:
             return 0
 
         try:
             total = self.transaction_controller.salvar_lote_importado(
-                lista_lancamentos,
-                id_usuario
+                lista_lancamentos
             )
 
             return total
@@ -95,9 +93,7 @@ class IAImportController:
 
         try:
             comprovante = self.import_service.importar_comprovante_pdf(
-                caminho_arquivo=caminho_arquivo,
-                id_usuario=id_usuario,
-                id_conta=id_conta
+                caminho_arquivo=caminho_arquivo
             )
 
             return comprovante

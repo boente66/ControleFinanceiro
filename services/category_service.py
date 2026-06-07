@@ -47,6 +47,14 @@ class CategoryService:
     def get_subcategories(self, id_categoria_pai, id_usuario):
         return self.model.get_subcategories(id_categoria_pai, id_usuario)
 
+    def add_subcategory(self, nome, tipo, id_categoria_pai, id_usuario):
+        return self.model.add_subcategory(
+            nome=nome,
+            tipo=tipo,
+            id_categoria_pai=id_categoria_pai,
+            id_usuario=id_usuario
+        )
+
     # ==================================================
     # 🔥 RESOLVER CATEGORIA NA IMPORTAÇÃO (1:N CORRETO)
     # ==================================================

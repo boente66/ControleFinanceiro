@@ -9,7 +9,6 @@ from PyQt5.QtWidgets import (
 )
 
 from core.translator_app import TranslatorApp
-from core.translator_binding import TranslatorBinding
 
 
 class SubcategoriaDialog(QDialog):

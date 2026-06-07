@@ -1,7 +1,3 @@
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
-import numpy as np
-
 from services.category_service import CategoryService
 
 
@@ -9,10 +5,32 @@ class CategorizacaoService:
 
     def __init__(self):
         self.category_service = CategoryService()
-        self.model = SentenceTransformer("all-MiniLM-L6-v2")
+        self.model = None
 
         self._categorias_cache = {}
         self._embeddings_cache = {}
+
+    def _get_model(self):
+        if self.model is not None:
+            return self.model
+
+        try:
+            from sentence_transformers import SentenceTransformer
+        except ImportError as exc:
+            raise RuntimeError(
+                "Nao foi possivel carregar a dependencia 'sentence-transformers'. "
+                "Instale o ambiente completo para usar a categorizacao automatica."
+            ) from exc
+
+        try:
+            self.model = SentenceTransformer("all-MiniLM-L6-v2")
+            return self.model
+        except Exception as exc:
+            raise RuntimeError(
+                "Nao foi possivel inicializar o modelo de categorizacao "
+                "'all-MiniLM-L6-v2'. Verifique o cache local do modelo ou o "
+                "acesso a internet."
+            ) from exc
 
     # ======================================================
     # MÉTODO PRINCIPAL
@@ -27,7 +45,12 @@ class CategorizacaoService:
         if not categorias:
             return None, 0.0
 
-        emb_desc = self.model.encode([descricao])
+        import numpy as np
+        from sklearn.metrics.pairwise import cosine_similarity
+
+        model = self._get_model()
+
+        emb_desc = model.encode([descricao])
         emb_cats = self._embeddings_cache[id_usuario]
 
         similaridades = cosine_similarity(emb_desc, emb_cats)[0]
@@ -78,10 +101,11 @@ class CategorizacaoService:
         if not categorias_formatadas:
             return None
 
+        model = self._get_model()
         textos = [c["Texto"] for c in categorias_formatadas]
 
         self._categorias_cache[id_usuario] = categorias_formatadas
-        self._embeddings_cache[id_usuario] = self.model.encode(textos)
+        self._embeddings_cache[id_usuario] = model.encode(textos)
 
         return categorias_formatadas
 

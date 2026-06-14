@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 class ExecuteScheduleDialog(QDialog):
     """
     Dialog de baixa individual de agendamento.
+
     Apenas monta dados_execucao.
     A regra pesada fica no PaymentService.
     """
@@ -54,9 +55,6 @@ class ExecuteScheduleDialog(QDialog):
         TranslatorApp.bind(self._atualizar_textos, self)
         self._atualizar_textos()
 
-    # ======================================================
-    # UI
-    # ======================================================
     def _init_ui(self):
         layout = QVBoxLayout(self)
 
@@ -69,7 +67,6 @@ class ExecuteScheduleDialog(QDialog):
         layout.addWidget(self.detalhesDoPagamentoLabel)
 
         detalhes_layout = QHBoxLayout()
-
         form_esq = QFormLayout()
         form_dir = QFormLayout()
 
@@ -108,7 +105,6 @@ class ExecuteScheduleDialog(QDialog):
 
         detalhes_layout.addLayout(form_esq)
         detalhes_layout.addLayout(form_dir)
-
         layout.addLayout(detalhes_layout)
 
         self.Dado_pag = QLabel()
@@ -116,7 +112,6 @@ class ExecuteScheduleDialog(QDialog):
         layout.addWidget(self.Dado_pag)
 
         dados_layout = QHBoxLayout()
-
         form_pag_esq = QFormLayout()
         form_pag_dir = QFormLayout()
 
@@ -174,7 +169,6 @@ class ExecuteScheduleDialog(QDialog):
 
         dados_layout.addLayout(form_pag_esq)
         dados_layout.addLayout(form_pag_dir)
-
         layout.addLayout(dados_layout)
 
         btn_layout = QHBoxLayout()
@@ -188,9 +182,6 @@ class ExecuteScheduleDialog(QDialog):
 
         layout.addLayout(btn_layout)
 
-    # ======================================================
-    # EVENTOS
-    # ======================================================
     def _connect_events(self):
         self.btn_cancelar.clicked.connect(self.reject)
         self.btn_confirmar.clicked.connect(self.confirmar)
@@ -199,9 +190,6 @@ class ExecuteScheduleDialog(QDialog):
         self.multa_edit.valueChanged.connect(self._recalcular_total)
         self.jurus_edit.valueChanged.connect(self._recalcular_total)
 
-    # ======================================================
-    # LOAD
-    # ======================================================
     def _carregar_dados(self):
         if self.agendamento_id:
             agendamento = self.schedule_controller.get_schedule_by_id(
@@ -304,9 +292,6 @@ class ExecuteScheduleDialog(QDialog):
 
         self._recalcular_total()
 
-    # ======================================================
-    # TRADUÇÃO
-    # ======================================================
     def _atualizar_textos(self, *_):
         self.setWindowTitle(TranslatorApp.get("Baixa de Agendamento"))
 
@@ -361,9 +346,6 @@ class ExecuteScheduleDialog(QDialog):
             TranslatorApp.get("Cancelar")
         )
 
-    # ======================================================
-    # HELPERS DE TIPO
-    # ======================================================
     def _tipo(self):
         return self.tipo_combox.currentData() or self.agendamento.get("Tipo")
 
@@ -376,9 +358,6 @@ class ExecuteScheduleDialog(QDialog):
     def _is_transferencia(self):
         return self.agendamento.get("Tipo") == self.TIPO_TRANSFERENCIA
 
-    # ======================================================
-    # HELPERS DE TEXTO
-    # ======================================================
     def _titulo_dados_execucao(self):
         return (
             "Dados do Recebimento:"
@@ -424,9 +403,6 @@ class ExecuteScheduleDialog(QDialog):
     def _texto_botao(self):
         return "Receber" if self._is_receita() else "Pagar"
 
-    # ======================================================
-    # CÁLCULO
-    # ======================================================
     def _recalcular_total(self):
         previsto = self.valor_previsto_edit.value()
         desconto = self.desconto_edit.value()
@@ -442,15 +418,9 @@ class ExecuteScheduleDialog(QDialog):
         self.valor_pago_edit.setValue(total)
         self.valor_pago_edit.blockSignals(False)
 
-    # ======================================================
-    # RETORNO
-    # ======================================================
     def get_dados_execucao(self):
         return self.dados_execucao
 
-    # ======================================================
-    # CONFIRMAR
-    # ======================================================
     def confirmar(self):
         try:
             id_conta = self.conta_combo.currentData()
@@ -474,12 +444,6 @@ class ExecuteScheduleDialog(QDialog):
                     TranslatorApp.get("Valor inválido.")
                 )
 
-            valor_transacao = (
-                abs(valor_final)
-                if self._is_receita()
-                else -abs(valor_final)
-            )
-
             self.dados_execucao = {
                 "ID_Agendamento": self.agendamento.get(
                     "ID_Agendamento",
@@ -490,7 +454,6 @@ class ExecuteScheduleDialog(QDialog):
                 "ID_Conta": id_conta,
                 "Descricao": descricao,
                 "Data": self.datapg_edit.date().toString("yyyy-MM-dd"),
-                "Valor": valor_transacao,
                 "Valor_Final": valor_final,
                 "Valor_Previsto": self.valor_previsto_edit.value(),
                 "Desconto": self.desconto_edit.value(),
@@ -510,9 +473,6 @@ class ExecuteScheduleDialog(QDialog):
                 str(e)
             )
 
-    # ======================================================
-    # CICLO DE VIDA
-    # ======================================================
     def closeEvent(self, event):
         try:
             TranslatorApp.unbind(self)

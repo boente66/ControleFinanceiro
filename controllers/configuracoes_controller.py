@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 import logging
 
@@ -6,7 +5,13 @@ from services.argos_service import ArgosService
 from core.session import Session
 from core.theme_manager import ThemeManager
 from core.translator_app import TranslatorApp
-from database.json_database import JsonDatabase
+
+from core.settings import (
+    CONFIG_PADRAO,
+    carregar_config,
+    salvar_config,
+    normalizar_idioma,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -22,24 +27,17 @@ class ConfiguracoesController:
     - Controlar localização global do banco via db_path.
     - Não salvar preferência individual do usuário.
 
+    Persistência global:
+    core/settings.py -> JsonDatabase -> configuracoes.json
+
     Preferências do usuário logado pertencem ao domínio Usuário:
     UserController -> UserService -> UserModel -> SQLite usuarios.
     """
 
-    DEFAULT_CONFIG = {
-        "tema": "Claro",
-        "idioma": "pt",
-        "moeda": "BRL",
-        "db_path": "financeiro.db",
-    }
+    DEFAULT_CONFIG = CONFIG_PADRAO
 
     def __init__(self):
         self.argos_service = ArgosService()
-
-        self.global_config_db = JsonDatabase(
-            "configuracoes.json",
-            default_data=self.DEFAULT_CONFIG
-        )
 
     # ==================================================
     # PERMISSÃO
@@ -80,16 +78,18 @@ class ConfiguracoesController:
     # ==================================================
     def obter_configuracoes_globais(self):
         try:
-            config = self.global_config_db.load() or {}
+            config = carregar_config() or {}
 
             return {
                 "tema": config.get(
                     "tema",
                     self.DEFAULT_CONFIG["tema"]
                 ),
-                "idioma": config.get(
-                    "idioma",
-                    self.DEFAULT_CONFIG["idioma"]
+                "idioma": normalizar_idioma(
+                    config.get(
+                        "idioma",
+                        self.DEFAULT_CONFIG["idioma"]
+                    )
                 ),
                 "moeda": config.get(
                     "moeda",
@@ -128,9 +128,9 @@ class ConfiguracoesController:
                     "Apenas administradores podem alterar configurações globais."
                 )
 
-            config = self.global_config_db.load() or {}
+            config = carregar_config() or {}
 
-            config["idioma"] = (
+            config["idioma"] = normalizar_idioma(
                 idioma
                 or config.get("idioma")
                 or self.DEFAULT_CONFIG["idioma"]
@@ -154,7 +154,10 @@ class ConfiguracoesController:
                 or self.DEFAULT_CONFIG["db_path"]
             )
 
-            self.global_config_db.save(config)
+            if not salvar_config(config):
+                raise RuntimeError(
+                    "Não foi possível salvar as configurações globais."
+                )
 
             self.set_idioma(config["idioma"])
             self.set_tema(config["tema"])
@@ -171,11 +174,6 @@ class ConfiguracoesController:
     # APLICAÇÃO EM RUNTIME
     # ==================================================
     def set_tema(self, tema, app=None):
-        """
-        Aplica tema na sessão/interface.
-        Não salva preferência individual no usuário.
-        """
-
         try:
             tema = tema or self.DEFAULT_CONFIG["tema"]
 
@@ -189,13 +187,10 @@ class ConfiguracoesController:
             return False
 
     def set_idioma(self, idioma):
-        """
-        Aplica idioma na sessão/interface.
-        Não salva preferência individual no usuário.
-        """
-
         try:
-            idioma = idioma or self.DEFAULT_CONFIG["idioma"]
+            idioma = normalizar_idioma(
+                idioma or self.DEFAULT_CONFIG["idioma"]
+            )
 
             Session.set_config("idioma", idioma)
             TranslatorApp.set_language(idioma)
@@ -207,11 +202,6 @@ class ConfiguracoesController:
             return False
 
     def set_moeda(self, moeda):
-        """
-        Aplica moeda na sessão atual.
-        Moeda continua sendo configuração global.
-        """
-
         try:
             moeda = moeda or self.DEFAULT_CONFIG["moeda"]
 
@@ -224,16 +214,6 @@ class ConfiguracoesController:
             return False
 
     def set_db_path(self, db_path):
-        """
-        Aplica db_path somente na Session atual.
-
-        Importante:
-        - Não reabre banco.
-        - Não move arquivo.
-        - Não altera conexão SQLite aberta.
-        - Novo caminho só terá efeito após reiniciar a aplicação.
-        """
-
         try:
             if not db_path:
                 return False
@@ -255,9 +235,11 @@ class ConfiguracoesController:
         )
 
     def get_idioma(self):
-        return Session.get_config(
-            "idioma",
-            self.DEFAULT_CONFIG["idioma"]
+        return normalizar_idioma(
+            Session.get_config(
+                "idioma",
+                self.DEFAULT_CONFIG["idioma"]
+            )
         )
 
     def get_moeda(self):

@@ -1,89 +1,98 @@
-# core/settings.py
+# -*- coding: utf-8 -*-
 
-import json
-import os
+from database.json_database import JsonDatabase
 
-# ---------------------------------------
-# ARQUIVO DE CONFIGURAÇÃO
-# ---------------------------------------
+
+# ==================================================
+# ARQUIVO
+# ==================================================
 ARQUIVO_CONFIG = "configuracoes.json"
 
-# ---------------------------------------
-# NORMALIZAÇÃO DE IDIOMA 🔥
-# ---------------------------------------
+
+# ==================================================
+# IDIOMAS
+# ==================================================
 IDIOMA_MAP = {
     "Português": "pt",
     "Inglês": "en",
     "Espanhol": "es",
+
     "pt": "pt",
     "en": "en",
-    "es": "es"
+    "es": "es",
+
+    "pt_BR": "pt",
+    "pt-BR": "pt",
+
+    "en_US": "en",
+    "en-US": "en",
+
+    "es_ES": "es",
+    "es-ES": "es",
 }
 
-def _normalize_idioma(valor):
+
+def normalizar_idioma(valor):
     return IDIOMA_MAP.get(valor, "pt")
 
 
-# ---------------------------------------
-# CONFIGURAÇÕES PADRÃO
-# ---------------------------------------
+# ==================================================
+# PADRÃO
+# ==================================================
 CONFIG_PADRAO = {
-    "idioma": "pt",   # 🔥 corrigido
+    "idioma": "pt",
     "tema": "Claro",
-    "moeda": "BRL"
+    "moeda": "BRL",
+    "db_path": "financeiro.db",
 }
 
-# ---------------------------------------
-# CARREGAR CONFIGURAÇÕES
-# ---------------------------------------
-def carregar_config() -> dict:
-    """
-    Carrega configurações do JSON
-    - aplica defaults
-    - normaliza idioma
-    """
 
-    if not os.path.exists(ARQUIVO_CONFIG):
+# ==================================================
+# PERSISTÊNCIA
+# ==================================================
+_db = JsonDatabase(
+    ARQUIVO_CONFIG,
+    default_data=CONFIG_PADRAO.copy()
+)
+
+
+# ==================================================
+# HELPERS
+# ==================================================
+def _normalizar_config(config):
+    cfg = CONFIG_PADRAO.copy()
+
+    if isinstance(config, dict):
+        cfg.update(config)
+
+    cfg["idioma"] = normalizar_idioma(
+        cfg.get("idioma")
+    )
+
+    return cfg
+
+
+# ==================================================
+# LOAD
+# ==================================================
+def carregar_config():
+    try:
+        config = _db.load()
+
+        return _normalizar_config(config)
+
+    except Exception:
         return CONFIG_PADRAO.copy()
 
+
+# ==================================================
+# SAVE
+# ==================================================
+def salvar_config(config):
     try:
-        with open(ARQUIVO_CONFIG, "r", encoding="utf-8") as f:
-            dados = json.load(f)
+        cfg = _normalizar_config(config)
 
-        config = CONFIG_PADRAO.copy()
-        config.update(dados)
+        return _db.save(cfg)
 
-        # 🔥 normalização automática
-        config["idioma"] = _normalize_idioma(config.get("idioma"))
-
-        return config
-
-    except (json.JSONDecodeError, OSError):
-        return CONFIG_PADRAO.copy()
-
-
-# ---------------------------------------
-# SALVAR CONFIGURAÇÕES
-# ---------------------------------------
-def salvar_config(config: dict):
-    """
-    Salva configurações no JSON
-    - garante padrão correto antes de salvar
-    """
-
-    try:
-        config = config.copy()
-
-        # 🔥 garante idioma correto
-        config["idioma"] = _normalize_idioma(config.get("idioma"))
-
-        with open(ARQUIVO_CONFIG, "w", encoding="utf-8") as f:
-            json.dump(
-                config,
-                f,
-                indent=4,
-                ensure_ascii=False
-            )
-
-    except OSError:
-        pass
+    except Exception:
+        return False

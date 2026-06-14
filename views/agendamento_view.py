@@ -22,7 +22,6 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon
 
-from controllers.main_controller import MainController
 from views.agendamento_dialog import AgendamentoDialog
 from controllers.schedule_controller import ScheduleController
 from controllers.account_controller import AccountController
@@ -47,7 +46,7 @@ class AgendamentoView(QWidget):
         self.account_controller = AccountController()
         self.fatura_controller = FaturaController()
         self.favorecido_controller = FavorecidoController()
-        self.main_controller = MainController()
+        
 
         self._icon_cache = {}
 
@@ -799,25 +798,57 @@ class AgendamentoView(QWidget):
 
         ids = self._get_selected_ids()
 
-        if ids:
-            sucesso, falha = (
-                self.main_controller.execute_multiple_schedules(ids)
+        if not ids:
+            QMessageBox.warning(
+                self,
+                TranslatorApp.get("Aviso"),
+                TranslatorApp.get(
+                    "Selecione um agendamento."
+                ),
             )
-        else:
-            sucesso, falha = (
-                self.main_controller.execute_all_schedules()
-            )
+            return
 
-        QMessageBox.information(
-            self,
-            TranslatorApp.get("Resultado"),
-            (
-                f"{TranslatorApp.get('Sucesso')}: {len(sucesso)} | "
-                f"{TranslatorApp.get('Falha')}: {len(falha)}"
-            ),
+        if len(ids) > 1:
+            QMessageBox.warning(
+                self,
+                TranslatorApp.get("Aviso"),
+                TranslatorApp.get(
+                    "Selecione apenas um agendamento."
+                ),
+            )
+            return
+
+        agendamento = self.schedule_controller.get_schedule_by_id(
+            ids[0]
         )
 
-        self.load_data()
+        if not agendamento:
+            return
+
+        from views.execute_schedule_dialog import ExecuteScheduleDialog
+
+        dialog = ExecuteScheduleDialog(
+            parent=self,
+            agendamento=agendamento
+        )
+
+        if dialog.exec_():
+
+            dados_execucao = dialog.get_dados_execucao()
+
+            self.schedule_controller.execute_schedule(
+                dados_execucao
+            )
+
+            self.load_data()
+
+            QMessageBox.information(
+                self,
+                TranslatorApp.get("Sucesso"),
+                TranslatorApp.get(
+                    "Agendamento executado com sucesso."
+                ),
+            )
 
     def apply_quick_filter(self, tipo):
 

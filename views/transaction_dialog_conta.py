@@ -1,18 +1,31 @@
+# -*- coding: utf-8 -*-
+import logging
 import os
-from venv import logger
+import re
+
 from PyQt5.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
-    QComboBox, QPushButton, QTextEdit, QDateEdit, QMessageBox
+    QDialog,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QComboBox,
+    QTextEdit,
+    QDateEdit,
+    QMessageBox,
 )
 from PyQt5.QtCore import QDate
-import re
-from PyQt5.QtCore import Qt, QSize
+from PyQt5.QtGui import QIcon
+
 from controllers.main_controller import MainController
 from controllers.favorecido_controller import FavorecidoController
 from controllers.category_controller import CategoryController
+
 from core.translator_app import TranslatorApp
 from utilitarios.ion_path import IonPath
-from views.agendamento_view import QIcon
+
+logger = logging.getLogger(__name__)
 
 
 class TransactionDialogConta(QDialog):
@@ -28,17 +41,22 @@ class TransactionDialogConta(QDialog):
         self.main_controller = MainController()
         self.favorecido_controller = FavorecidoController()
         self.category_controller = CategoryController()
+
         self._icon_cache = {}
+
         self._init_ui()
         self._configurar_ui()
-        self._carregar_dados()
+        self._carregar_categorias()
+        self._carregar_favorecidos()
         self._conectar_eventos()
 
+        TranslatorApp.bind(self._atualizar_textos, self)
+        self._atualizar_textos()
+
     # ======================================================
-    # UI (CONSTRUÇÃO)
+    # UI
     # ======================================================
     def _init_ui(self):
-        self.setWindowTitle("Novo Lançamento")
         self.resize(616, 404)
         self.setMinimumSize(616, 404)
 
@@ -46,12 +64,9 @@ class TransactionDialogConta(QDialog):
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(8)
 
-        # ======================
-        # TIPO
-        # ======================
         tipo_layout = QHBoxLayout()
 
-        self.tipo_label = QLabel("Tipo:")
+        self.tipo_label = QLabel()
         self.tipo_combo = QComboBox()
 
         tipo_layout.addWidget(self.tipo_label)
@@ -59,13 +74,10 @@ class TransactionDialogConta(QDialog):
 
         layout.addLayout(tipo_layout)
 
-        # ======================
-        # DESCRIÇÃO + DATA
-        # ======================
         top_layout = QHBoxLayout()
 
         desc_layout = QVBoxLayout()
-        self.descricao_label = QLabel("Descrição:")
+        self.descricao_label = QLabel()
         self.descricao_edit = QLineEdit()
         self.descricao_edit.setMinimumHeight(28)
 
@@ -73,7 +85,7 @@ class TransactionDialogConta(QDialog):
         desc_layout.addWidget(self.descricao_edit)
 
         data_layout = QVBoxLayout()
-        self.data_label = QLabel("Data:")
+        self.data_label = QLabel()
         self.data_edit = QDateEdit()
         self.data_edit.setCalendarPopup(True)
         self.data_edit.setMinimumHeight(28)
@@ -88,14 +100,10 @@ class TransactionDialogConta(QDialog):
 
         layout.addLayout(top_layout)
 
-        # ======================
-        # FAVORECIDO + CATEGORIA
-        # ======================
         mid_layout = QHBoxLayout()
 
-        # favorecido
         fav_layout = QVBoxLayout()
-        self.lbl_favorecido = QLabel("Pagar para:")
+        self.lbl_favorecido = QLabel()
 
         fav_row = QHBoxLayout()
         self.favorecido_combo = QComboBox()
@@ -111,9 +119,8 @@ class TransactionDialogConta(QDialog):
         fav_layout.addWidget(self.lbl_favorecido)
         fav_layout.addLayout(fav_row)
 
-        # categoria
         cat_layout = QVBoxLayout()
-        self.lbl_categoria = QLabel("Categoria:")
+        self.lbl_categoria = QLabel()
 
         cat_row = QHBoxLayout()
         self.categoria_combo = QComboBox()
@@ -134,11 +141,9 @@ class TransactionDialogConta(QDialog):
 
         layout.addLayout(mid_layout)
 
-        # ======================
-        # VALOR
-        # ======================
         valor_layout = QVBoxLayout()
-        self.valor_label = QLabel("Valor:")
+
+        self.valor_label = QLabel()
         self.valor_edit = QLineEdit()
         self.valor_edit.setMinimumHeight(28)
 
@@ -147,11 +152,9 @@ class TransactionDialogConta(QDialog):
 
         layout.addLayout(valor_layout)
 
-        # ======================
-        # NOTAS
-        # ======================
         notas_layout = QVBoxLayout()
-        self.notas_label = QLabel("Notas:")
+
+        self.notas_label = QLabel()
         self.notas_edit = QTextEdit()
 
         notas_layout.addWidget(self.notas_label)
@@ -159,20 +162,70 @@ class TransactionDialogConta(QDialog):
 
         layout.addLayout(notas_layout)
 
-        # ======================
-        # BOTÕES
-        # ======================
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
 
-        self.btn_cancelar = QPushButton("Cancelar")
-        self.btn_salvar = QPushButton("Salvar")
+        self.btn_cancelar = QPushButton()
+        self.btn_salvar = QPushButton()
 
         btn_layout.addWidget(self.btn_cancelar)
         btn_layout.addWidget(self.btn_salvar)
 
         layout.addLayout(btn_layout)
 
+    # ======================================================
+    # TRADUÇÃO
+    # ======================================================
+    def _atualizar_textos(self):
+        self.setWindowTitle(
+            TranslatorApp.get("Novo Lançamento")
+        )
+
+        self.tipo_label.setText(
+            TranslatorApp.get("Tipo:")
+        )
+
+        self.descricao_label.setText(
+            TranslatorApp.get("Descrição:")
+        )
+
+        self.descricao_edit.setPlaceholderText(
+            TranslatorApp.get("Descrição")
+        )
+
+        self.data_label.setText(
+            TranslatorApp.get("Data:")
+        )
+
+        self.lbl_categoria.setText(
+            TranslatorApp.get("Categoria:")
+        )
+
+        self.valor_label.setText(
+            TranslatorApp.get("Valor:")
+        )
+
+        self.valor_edit.setPlaceholderText(
+            TranslatorApp.get("0,00")
+        )
+
+        self.notas_label.setText(
+            TranslatorApp.get("Notas:")
+        )
+
+        self.btn_cancelar.setText(
+            TranslatorApp.get("Cancelar")
+        )
+
+        self.btn_salvar.setText(
+            TranslatorApp.get("Salvar")
+        )
+
+        self._update_label()
+
+    # ======================================================
+    # ICON
+    # ======================================================
     def _icon(self, nome):
         if nome in self._icon_cache:
             return self._icon_cache[nome]
@@ -184,38 +237,38 @@ class TransactionDialogConta(QDialog):
             return icon
 
         except Exception:
-            logger.exception(f"Erro ao carregar ícone: {nome}")
+            logger.exception("Erro ao carregar ícone: %s", nome)
             return QIcon()
 
     # ======================================================
     # CONFIG
     # ======================================================
     def _configurar_ui(self):
+        self.tipo_combo.clear()
         self.tipo_combo.addItem("Despesa", "Despesa")
         self.tipo_combo.addItem("Receita", "Receita")
         self.tipo_combo.setCurrentIndex(0)
 
         self.data_edit.setDate(QDate.currentDate())
-
         self.btn_salvar.setDefault(True)
-
         self.descricao_edit.setFocus()
-
-        self._update_label()
 
     # ======================================================
     # DADOS
     # ======================================================
     def _carregar_categorias(self, selecionar_id=None):
         self.categoria_combo.clear()
-        self.categoria_combo.addItem("Nenhum", None)
+        self.categoria_combo.addItem(
+            TranslatorApp.get("Nenhum"),
+            None
+        )
 
         categorias = self.category_controller.get_all_categories() or []
 
         for categoria in categorias:
             self.categoria_combo.addItem(
-                categoria["Nome"],
-                categoria["ID_Categoria"]
+                categoria.get("Nome", ""),
+                categoria.get("ID_Categoria")
             )
 
         if selecionar_id:
@@ -225,14 +278,17 @@ class TransactionDialogConta(QDialog):
 
     def _carregar_favorecidos(self, selecionar_id=None):
         self.favorecido_combo.clear()
-        self.favorecido_combo.addItem("Nenhum", None)
+        self.favorecido_combo.addItem(
+            TranslatorApp.get("Nenhum"),
+            None
+        )
 
-        favorecidos = self.favorecido_controller.listar_favorecidos()
+        favorecidos = self.favorecido_controller.listar_favorecidos() or []
 
         for favorecido in favorecidos:
             self.favorecido_combo.addItem(
-                favorecido["Nome"],
-                favorecido["ID_Favorecido"]
+                favorecido.get("Nome", ""),
+                favorecido.get("ID_Favorecido")
             )
 
         if selecionar_id:
@@ -246,8 +302,10 @@ class TransactionDialogConta(QDialog):
     def _conectar_eventos(self):
         self.btn_salvar.clicked.connect(self.salvar)
         self.btn_cancelar.clicked.connect(self.reject)
+
         self.valor_edit.textChanged.connect(self._formatar_moeda)
         self.tipo_combo.currentIndexChanged.connect(self._update_label)
+
         self.btn_add_cat.clicked.connect(self._adicionar_categoria)
         self.btn_add_fav.clicked.connect(self._adicionar_favorecido)
 
@@ -259,14 +317,21 @@ class TransactionDialogConta(QDialog):
 
             if dialog.exec_() == QDialog.Accepted:
                 dados = dialog.get_data()
+
                 nova_id = self.category_controller.add_category(
                     dados["Nome"],
                     dados["Tipo"]
                 )
+
                 self._carregar_categorias(nova_id)
 
         except Exception as e:
-            QMessageBox.warning(self, "Erro", str(e))
+            logger.exception("Erro ao adicionar categoria")
+            QMessageBox.warning(
+                self,
+                TranslatorApp.get("Erro"),
+                str(e)
+            )
 
     def _adicionar_favorecido(self):
         try:
@@ -275,17 +340,39 @@ class TransactionDialogConta(QDialog):
             dialog = FavorecidoDialog(parent=self)
 
             if dialog.exec_() == QDialog.Accepted:
-                id_favorecido = dialog.get_id()
-                self._carregar_favorecidos(id_favorecido)
+                dados = dialog.get_dados()
+
+                novo_id = self.favorecido_controller.criar_favorecido(
+                    dados
+                )
+
+                self._carregar_favorecidos(novo_id)
 
         except Exception as e:
-            QMessageBox.warning(self, "Erro", str(e))
+            logger.exception("Erro ao adicionar favorecido")
+            QMessageBox.warning(
+                self,
+                TranslatorApp.get("Erro"),
+                str(e)
+            )
 
+    # ======================================================
+    # LABEL DINÂMICA
     # ======================================================
     def _update_label(self):
         tipo = self.tipo_combo.currentData()
-        self.lbl_favorecido.setText("Receber de" if tipo == "Receita" else "Pagar para")
 
+        if tipo == "Receita":
+            self.lbl_favorecido.setText(
+                TranslatorApp.get("Receber de:")
+            )
+        else:
+            self.lbl_favorecido.setText(
+                TranslatorApp.get("Pagar para:")
+            )
+
+    # ======================================================
+    # MOEDA
     # ======================================================
     def _formatar_moeda(self):
         texto = re.sub(r"[^\d]", "", self.valor_edit.text())
@@ -297,18 +384,42 @@ class TransactionDialogConta(QDialog):
 
         self.valor_edit.blockSignals(True)
         self.valor_edit.setText(
-            f"{valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            f"{valor:,.2f}"
+            .replace(",", "X")
+            .replace(".", ",")
+            .replace("X", ".")
         )
         self.valor_edit.blockSignals(False)
 
     # ======================================================
+    # SALVAR
+    # ======================================================
     def salvar(self):
         try:
             descricao = self.descricao_edit.text().strip()
-            if not descricao:
-                raise ValueError("Descrição obrigatória")
 
-            valor = float(self.valor_edit.text().replace(".", "").replace(",", "."))
+            if not descricao:
+                raise ValueError(
+                    TranslatorApp.get("Descrição obrigatória")
+                )
+
+            valor_texto = self.valor_edit.text().strip()
+
+            if not valor_texto:
+                raise ValueError(
+                    TranslatorApp.get("Valor obrigatório")
+                )
+
+            valor = float(
+                valor_texto
+                .replace(".", "")
+                .replace(",", ".")
+            )
+
+            if valor <= 0:
+                raise ValueError(
+                    TranslatorApp.get("Valor deve ser maior que zero.")
+                )
 
             tipo = self.tipo_combo.currentData()
             valor = -abs(valor) if tipo == "Despesa" else abs(valor)
@@ -321,11 +432,32 @@ class TransactionDialogConta(QDialog):
                 "Tipo": tipo,
                 "ID_Categoria": self.categoria_combo.currentData(),
                 "ID_Favorecido": self.favorecido_combo.currentData(),
-                "Notas": self.notas_edit.toPlainText()
+                "Notas": self.notas_edit.toPlainText(),
             }
 
-            self.main_controller.inserir_lancamento(dados)
+            sucesso = self.main_controller.inserir_lancamento(dados)
+
+            if not sucesso:
+                raise RuntimeError(
+                    TranslatorApp.get("Não foi possível salvar o lançamento.")
+                )
+
             self.accept()
 
         except Exception as e:
-            QMessageBox.warning(self, "Erro", str(e))
+            QMessageBox.warning(
+                self,
+                TranslatorApp.get("Erro"),
+                str(e)
+            )
+
+    # ======================================================
+    # CICLO DE VIDA
+    # ======================================================
+    def closeEvent(self, event):
+        try:
+            TranslatorApp.unbind(self)
+        except Exception:
+            pass
+
+        super().closeEvent(event)

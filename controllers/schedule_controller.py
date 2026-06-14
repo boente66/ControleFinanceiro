@@ -2,6 +2,7 @@ import logging
 from services.schedule_service import ScheduleService
 from core.session import Session
 from core.translator_app import TranslatorApp
+from services.payment_service import PaymentService
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,7 @@ class ScheduleController:
 
     def __init__(self):
         self.schedule_service = ScheduleService()
+        self.payment_service = PaymentService()
 
     # ============================================================
     # 🔥 UTIL
@@ -125,3 +127,37 @@ class ScheduleController:
 
     def cancelar_agendamento(self, schedule_id: int) -> bool:
         return self.cancel_schedule(schedule_id)
+    
+        # ============================================================
+    # BAIXAR / EXECUTAR AGENDAMENTO
+    # ============================================================
+    def execute_schedule(self, dados_execucao: dict) -> bool:
+        """
+        Executa a baixa de um agendamento.
+
+        Fluxo:
+        Dialog
+            ↓
+        ScheduleController
+            ↓
+        PaymentService
+            ↓
+        TransactionService
+            ↓
+        ScheduleService
+        """
+
+        try:
+            user_id = self._get_usuario_id()
+
+            return self.payment_service.baixar_agendamento(
+                dados_execucao,
+                user_id
+            )
+
+        except Exception:
+            logger.exception("Erro ao executar agendamento")
+            raise
+
+
+    

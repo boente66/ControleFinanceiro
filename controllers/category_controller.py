@@ -25,7 +25,7 @@ class CategoryController:
         )
 
     def get_category_by_id(self, id_categoria):
-        return self.service.model.get_category_by_id(
+        return self.service.get_category_by_id(
             id_categoria,
             self._get_user_id()
         )
@@ -44,7 +44,7 @@ class CategoryController:
         )
 
     def update_category(self, id_categoria, nome, tipo):
-        return self.service.model.update_category(
+        return self.service.update_category(
             id_categoria,
             nome,
             tipo,

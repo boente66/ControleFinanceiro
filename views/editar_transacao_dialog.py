@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from PyQt5.QtWidgets import (
     QDialog,
     QVBoxLayout,
@@ -19,7 +21,6 @@ from controllers.category_controller import CategoryController
 from controllers.favorecido_controller import FavorecidoController
 from controllers.transaction_controller import TransactionController
 
-from core.session import Session
 from core.translator_app import TranslatorApp
 
 
@@ -29,11 +30,6 @@ class EditTransactionDialog(QDialog):
         super().__init__(parent)
 
         self.modo_temporario = modo_temporario
-
-        self.usuario = Session.get_usuario()
-        if not self.usuario:
-            raise RuntimeError("Usuário não autenticado")
-
         self.transacao = transacao or {}
 
         self.transaction_controller = TransactionController()
@@ -43,14 +39,11 @@ class EditTransactionDialog(QDialog):
 
         self.setMinimumSize(520, 420)
 
-        # 🔥 título base (auto traduzido)
-        self.setWindowTitle("Editar Transação")
-
         self._build_ui()
         self._preencher_campos()
 
-        # 🔥 tradução automática global
-        TranslatorApp.enable_auto_translation(self)
+        TranslatorApp.bind(self._atualizar_textos, self)
+        self._atualizar_textos()
 
     # ======================================================
     # UI
@@ -59,39 +52,43 @@ class EditTransactionDialog(QDialog):
         layout = QVBoxLayout(self)
         self.form = QFormLayout()
 
-        # Labels
-        self.lbl_conta = QLabel("Conta:")
-        self.lbl_tipo = QLabel("Tipo:")
-        self.lbl_desc = QLabel("Descrição:")
-        self.lbl_valor = QLabel("Valor:")
-        self.lbl_categoria = QLabel("Categoria:")
-        self.lbl_favorecido = QLabel("Favorecido:")
-        self.lbl_data = QLabel("Data:")
-        self.lbl_notas = QLabel("Notas:")
-        self.lbl_destino = QLabel("Conta destino:")
+        self.lbl_conta = QLabel()
+        self.lbl_tipo = QLabel()
+        self.lbl_desc = QLabel()
+        self.lbl_valor = QLabel()
+        self.lbl_categoria = QLabel()
+        self.lbl_favorecido = QLabel()
+        self.lbl_data = QLabel()
+        self.lbl_notas = QLabel()
+        self.lbl_destino = QLabel()
 
         # Conta origem
         self.conta_origem_combo = QComboBox()
         self.contas = self.account_controller.get_all_accounts() or []
+
         for conta in self.contas:
             self.conta_origem_combo.addItem(
-                conta.get("Nome_Conta", ""), conta.get("ID_Conta")
+                conta.get("Nome_Conta", ""),
+                conta.get("ID_Conta")
             )
+
         self.form.addRow(self.lbl_conta, self.conta_origem_combo)
 
-        # Tipo (🔥 corrigido com DATA)
+        # Tipo
         self.tipo_combo = QComboBox()
+
         tipos = [
             ("Despesa", "Despesa"),
             ("Receita", "Receita"),
         ]
+
         for texto, valor in tipos:
             self.tipo_combo.addItem(texto, valor)
+
         self.form.addRow(self.lbl_tipo, self.tipo_combo)
 
         # Descrição
         self.desc_edit = QLineEdit()
-        self.desc_edit.setPlaceholderText("Descrição")
         self.form.addRow(self.lbl_desc, self.desc_edit)
 
         # Valor
@@ -104,10 +101,13 @@ class EditTransactionDialog(QDialog):
         # Categoria
         self.categoria_combo = QComboBox()
         categorias = self.category_controller.get_all_categories() or []
+
         for cat in categorias:
             self.categoria_combo.addItem(
-                cat.get("Nome", ""), cat.get("ID_Categoria")
+                cat.get("Nome", ""),
+                cat.get("ID_Categoria")
             )
+
         self.form.addRow(self.lbl_categoria, self.categoria_combo)
 
         # Favorecido
@@ -118,6 +118,7 @@ class EditTransactionDialog(QDialog):
         # Data
         self.data_edit = QDateEdit()
         self.data_edit.setCalendarPopup(True)
+        self.data_edit.setDate(QDate.currentDate())
         self.form.addRow(self.lbl_data, self.data_edit)
 
         # Notas
@@ -125,19 +126,26 @@ class EditTransactionDialog(QDialog):
         self.notas_edit.setFixedHeight(80)
         self.form.addRow(self.lbl_notas, self.notas_edit)
 
-        # Transferência
-        self.transfer_checkbox = QCheckBox("Converter em transferência")
-        self.transfer_checkbox.stateChanged.connect(self._toggle_transferencia)
+        # Converter em transferência
+        self.transfer_checkbox = QCheckBox()
+        self.transfer_checkbox.stateChanged.connect(
+            self._toggle_transferencia
+        )
         self.form.addRow(QLabel(""), self.transfer_checkbox)
 
         # Conta destino
         self.conta_destino_combo = QComboBox()
+
         for conta in self.contas:
             self.conta_destino_combo.addItem(
-                conta.get("Nome_Conta", ""), conta.get("ID_Conta")
+                conta.get("Nome_Conta", ""),
+                conta.get("ID_Conta")
             )
-        self.conta_destino_combo.setVisible(False)
+
         self.form.addRow(self.lbl_destino, self.conta_destino_combo)
+
+        self.lbl_destino.setVisible(False)
+        self.conta_destino_combo.setVisible(False)
 
         layout.addLayout(self.form)
 
@@ -148,66 +156,210 @@ class EditTransactionDialog(QDialog):
 
         layout.addWidget(self.button_box)
 
-        # texto base (auto traduzido)
-        self.button_box.button(QDialogButtonBox.Save).setText("Salvar")
-        self.button_box.button(QDialogButtonBox.Cancel).setText("Cancelar")
-
         self.button_box.accepted.connect(self.salvar)
         self.button_box.rejected.connect(self.reject)
+
+    # ======================================================
+    # TRADUÇÃO
+    # ======================================================
+    def _atualizar_textos(self):
+        self.setWindowTitle(
+            TranslatorApp.get("Editar Transação")
+        )
+
+        self.lbl_conta.setText(
+            TranslatorApp.get("Conta:")
+        )
+
+        self.lbl_tipo.setText(
+            TranslatorApp.get("Tipo:")
+        )
+
+        self.lbl_desc.setText(
+            TranslatorApp.get("Descrição:")
+        )
+
+        self.lbl_valor.setText(
+            TranslatorApp.get("Valor:")
+        )
+
+        self.lbl_categoria.setText(
+            TranslatorApp.get("Categoria:")
+        )
+
+        self.lbl_favorecido.setText(
+            TranslatorApp.get("Favorecido:")
+        )
+
+        self.lbl_data.setText(
+            TranslatorApp.get("Data:")
+        )
+
+        self.lbl_notas.setText(
+            TranslatorApp.get("Notas:")
+        )
+
+        self.lbl_destino.setText(
+            TranslatorApp.get("Conta destino:")
+        )
+
+        self.desc_edit.setPlaceholderText(
+            TranslatorApp.get("Descrição")
+        )
+
+        self.transfer_checkbox.setText(
+            TranslatorApp.get("Converter em transferência")
+        )
+
+        self.button_box.button(
+            QDialogButtonBox.Cancel
+        ).setText(
+            TranslatorApp.get("Cancelar")
+        )
+
+        if self.transfer_checkbox.isChecked():
+            self.button_box.button(
+                QDialogButtonBox.Save
+            ).setText(
+                TranslatorApp.get("Converter")
+            )
+        else:
+            self.button_box.button(
+                QDialogButtonBox.Save
+            ).setText(
+                TranslatorApp.get("Salvar")
+            )
 
     # ======================================================
     # DADOS
     # ======================================================
     def _preencher_campos(self):
-        self.desc_edit.setText(self.transacao.get("Descricao", ""))
+        self.desc_edit.setText(
+            self.transacao.get("Descricao", "")
+        )
 
-        valor = abs(float(self.transacao.get("Valor", 0)))
+        valor = abs(
+            float(self.transacao.get("Valor", 0))
+        )
         self.valor_spin.setValue(valor)
 
         tipo = self.transacao.get("Tipo", "Despesa")
         index_tipo = self.tipo_combo.findData(tipo)
+
         if index_tipo >= 0:
             self.tipo_combo.setCurrentIndex(index_tipo)
 
-        idx_conta = self.conta_origem_combo.findData(self.transacao.get("ID_Conta"))
+        idx_conta = self.conta_origem_combo.findData(
+            self.transacao.get("ID_Conta")
+        )
+
         if idx_conta >= 0:
             self.conta_origem_combo.setCurrentIndex(idx_conta)
 
-        idx_cat = self.categoria_combo.findData(self.transacao.get("ID_Categoria"))
+        idx_cat = self.categoria_combo.findData(
+            self.transacao.get("ID_Categoria")
+        )
+
         if idx_cat >= 0:
             self.categoria_combo.setCurrentIndex(idx_cat)
 
-        idx_fav = self.favorecido_combo.findData(self.transacao.get("ID_Favorecido"))
+        idx_fav = self.favorecido_combo.findData(
+            self.transacao.get("ID_Favorecido")
+        )
+
         if idx_fav >= 0:
             self.favorecido_combo.setCurrentIndex(idx_fav)
 
         data = self.transacao.get("Data")
-        if data:
-            self.data_edit.setDate(QDate.fromString(data, "yyyy-MM-dd"))
 
-        self.notas_edit.setText(self.transacao.get("Notas", ""))
+        if data:
+            data_qt = QDate.fromString(data, "yyyy-MM-dd")
+
+            if data_qt.isValid():
+                self.data_edit.setDate(data_qt)
+
+        self.notas_edit.setText(
+            self.transacao.get("Notas", "")
+        )
 
     def _carregar_favorecidos(self):
         self.favorecido_combo.clear()
-        favorecidos = self.favorecido_controller.listar_favorecidos() or []
+
+        favorecidos = (
+            self.favorecido_controller.listar_favorecidos()
+            or []
+        )
 
         for fav in favorecidos:
             self.favorecido_combo.addItem(
-                fav.get("Nome", ""), fav.get("ID_Favorecido")
+                fav.get("Nome", ""),
+                fav.get("ID_Favorecido")
             )
 
+    # ======================================================
+    # TRANSFERÊNCIA
+    # ======================================================
     def _toggle_transferencia(self):
-        self.conta_destino_combo.setVisible(
-            self.transfer_checkbox.isChecked()
+        converter = self.transfer_checkbox.isChecked()
+
+        self.lbl_destino.setVisible(converter)
+        self.conta_destino_combo.setVisible(converter)
+
+        self.lbl_tipo.setVisible(not converter)
+        self.tipo_combo.setVisible(not converter)
+
+        self.lbl_categoria.setVisible(not converter)
+        self.categoria_combo.setVisible(not converter)
+
+        self.lbl_favorecido.setVisible(not converter)
+        self.favorecido_combo.setVisible(not converter)
+
+        self.lbl_notas.setVisible(not converter)
+        self.notas_edit.setVisible(not converter)
+
+        self._atualizar_textos()
+
+    def _converter_em_transferencia(self):
+        id_transacao = self.transacao.get("ID_Transacao")
+        id_origem = self.conta_origem_combo.currentData()
+        id_destino = self.conta_destino_combo.currentData()
+
+        if not id_transacao:
+            raise ValueError("Transação inválida.")
+
+        if not id_destino:
+            raise ValueError("Conta destino obrigatória.")
+
+        if id_origem == id_destino:
+            raise ValueError(
+                "Conta origem e destino não podem ser iguais."
+            )
+
+        self.transaction_controller.converter_em_transferencia(
+            id_transacao,
+            id_destino
         )
+
+        QMessageBox.information(
+            self,
+            TranslatorApp.get("Sucesso"),
+            TranslatorApp.get(
+                "Transação convertida em transferência."
+            )
+        )
+
+        self.accept()
 
     # ======================================================
     # SALVAR
     # ======================================================
     def salvar(self):
         try:
-            valor = self.valor_spin.value()
+            if self.transfer_checkbox.isChecked():
+                self._converter_em_transferencia()
+                return
 
+            valor = self.valor_spin.value()
             tipo = self.tipo_combo.currentData()
 
             if tipo == "Despesa":
@@ -237,7 +389,9 @@ class EditTransactionDialog(QDialog):
             QMessageBox.information(
                 self,
                 TranslatorApp.get("Sucesso"),
-                TranslatorApp.get("Transação atualizada com sucesso."),
+                TranslatorApp.get(
+                    "Transação atualizada com sucesso."
+                ),
             )
 
             self.accept()
@@ -248,3 +402,14 @@ class EditTransactionDialog(QDialog):
                 TranslatorApp.get("Erro"),
                 str(e)
             )
+
+    # ======================================================
+    # CICLO DE VIDA
+    # ======================================================
+    def closeEvent(self, event):
+        try:
+            TranslatorApp.unbind(self)
+        except Exception:
+            pass
+
+        super().closeEvent(event)

@@ -31,7 +31,20 @@ class MetaDialog(QDialog):
         self._carregar_categorias()
 
         # 🔥 tradução automática global
-        TranslatorApp.enable_auto_translation(self)
+        TranslatorApp.bind(self._atualizar_textos, self)
+        self._atualizar_textos()
+
+
+    def _atualizar_textos(self):
+        self.setWindowTitle(TranslatorApp.get("Nova Meta"))
+        self.lbl_nome.setText(TranslatorApp.get("Nome da Meta"))
+        self.lbl_tipo.setText(TranslatorApp.get("Tipo"))
+        self.lbl_categoria.setText(TranslatorApp.get("Categoria"))
+        self.lbl_valor.setText(TranslatorApp.get("Valor Alvo"))
+        self.lbl_inicio.setText(TranslatorApp.get("Data Início"))
+        self.lbl_fim.setText(TranslatorApp.get("Data Fim"))
+        self.btn_salvar.setText(TranslatorApp.get("Salvar"))
+        self.btn_cancelar.setText(TranslatorApp.get("Cancelar"))
 
     # ==================================================
     # UI
@@ -192,3 +205,14 @@ class MetaDialog(QDialog):
                 TranslatorApp.get("Erro"),
                 str(e)
             )
+
+    # ======================================================
+    # CICLO DE VIDA
+    # ======================================================
+    def closeEvent(self, event):
+        try:
+            TranslatorApp.unbind(self)
+        except Exception:
+            pass
+
+        super().closeEvent(event)        

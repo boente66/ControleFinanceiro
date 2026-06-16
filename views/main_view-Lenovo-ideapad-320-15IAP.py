@@ -1,3 +1,4 @@
+import importlib
 # -*- coding: utf-8 -*-
 import importlib
 import logging
@@ -57,8 +58,8 @@ class MainView(QMainWindow):
             self._atualizar_textos,
             self
         )
-        self._atualizar_textos()
 
+        self._atualizar_textos()
         self._abrir_primeira_view()
 
     # ==================================================
@@ -107,8 +108,8 @@ class MainView(QMainWindow):
             )
 
             icon = QIcon(path) if os.path.exists(path) else QIcon()
-            self._icon_cache[nome] = icon
 
+            self._icon_cache[nome] = icon
             return icon
 
         except Exception:
@@ -329,11 +330,7 @@ class MainView(QMainWindow):
             TranslatorApp.get("Agendamentos")
         )
 
-        nome = (
-            self.usuario.get("Nome")
-            or TranslatorApp.get("Usuário")
-        )
-
+        nome = self.usuario.get("Nome") or TranslatorApp.get("Usuário")
         self.lbl_usuario.setText(nome)
 
         if hasattr(self, "btn_perfil"):
@@ -482,7 +479,7 @@ class MainView(QMainWindow):
 
             app = QApplication.instance()
 
-            ThemeManager.aplicar_tema(
+            ThemeManager.definir_tema(
                 tema,
                 app
             )

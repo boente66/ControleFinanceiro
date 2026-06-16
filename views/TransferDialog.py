@@ -41,6 +41,7 @@ class TransferDialog(QDialog):
 
         # 🔥 precisa (labels + combos dinâmicos)
         TranslatorApp.bind(self._on_translate,self)
+        self._on_translate()
 
     # --------------------------------------------------
     # REATIVIDADE
@@ -169,3 +170,14 @@ class TransferDialog(QDialog):
                 TranslatorApp.get("Erro"),
                 TranslatorApp.get("Erro inesperado ao realizar transferência."),
             )
+    
+    # ======================================================
+    # CICLO DE VIDA
+    # ======================================================
+    def closeEvent(self, event):
+        try:
+            TranslatorApp.unbind(self)
+        except Exception:
+            pass
+
+        super().closeEvent(event)

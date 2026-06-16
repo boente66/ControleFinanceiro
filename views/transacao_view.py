@@ -380,3 +380,16 @@ class TransacaoView(QWidget):
         container.addWidget(lista)
 
         return container, lista, label
+
+
+
+    # ======================================================
+    # CICLO DE VIDA
+    # ======================================================
+    def closeEvent(self, event):
+        try:
+            TranslatorApp.unbind(self)
+        except Exception:
+            pass
+
+        super().closeEvent(event)    

@@ -139,3 +139,14 @@ class SubcategoriaDialog(QDialog):
             return None
 
         return {"Nome": nome, "ID_Categoria_Pai": id_categoria_pai}
+    
+    # ==================================================
+    # CICLO DE VIDA 
+    # ==================================================
+    def closeEvent(self, event):
+        try:
+            TranslatorApp.unbind(self)
+        except Exception:
+            pass
+
+        super().closeEvent(event)

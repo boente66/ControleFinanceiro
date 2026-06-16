@@ -32,8 +32,18 @@ class RelatorioView(QWidget):
         self.setWindowTitle("Relatórios")
 
         self._init_ui()
-        TranslatorApp.enable_auto_translation(self)
-
+        TranslatorApp.bind(self._atualizar_textos, self)
+        self._atualizar_textos()
+    
+    def _atualizar_textos(self):
+        self.setWindowTitle(TranslatorApp.get("Relatórios"))
+        self.titulo.setText(TranslatorApp.get("Relatórios"))
+        self.sections.clear()
+        self.sections.addItems([
+            TranslatorApp.get("Relatório Diário"),
+            TranslatorApp.get("Relatório Anual"),
+            TranslatorApp.get("Informe de Rendimentos")
+        ])
     # ==================================================
     # UI
     # ==================================================
@@ -352,3 +362,15 @@ class RelatorioView(QWidget):
         table.setRowCount(1)
         table.setColumnCount(1)
         table.setItem(0, 0, QTableWidgetItem("📭 Nenhum dado"))
+
+
+    # ======================================================
+    # CICLO DE VIDA
+    # ======================================================
+    def closeEvent(self, event):
+        try:
+            TranslatorApp.unbind(self)
+        except Exception:
+            pass
+
+        super().closeEvent(event)

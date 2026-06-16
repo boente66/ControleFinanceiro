@@ -36,8 +36,22 @@ class CriarContaDialog(QDialog):
         self._init_ui()
 
         # 🔥 tradução automática global
-        TranslatorApp.enable_auto_translation(self)
-
+        TranslatorApp.bind(self._on_translate, self)
+        self._on_translate()
+    
+    # ==================================================
+    # REATIVIDADE
+    # ==================================================
+    def _on_translate(self, *_):
+        self.setWindowTitle(TranslatorApp.get("Criar Conta"))
+        self.lbl_nome.setText(TranslatorApp.get("Nome da Conta") + ":")
+        self.lbl_instituicao.setText(TranslatorApp.get("Instituição") + ":")
+        self.lbl_tipo.setText(TranslatorApp.get("Tipo") + ":")
+        self.lbl_saldo.setText(TranslatorApp.get("Saldo Inicial") + ":")
+        self.buttons.button(QDialogButtonBox.Ok).setText(TranslatorApp.get("Salvar"))
+        self.buttons.button(QDialogButtonBox.Cancel).setText(
+            TranslatorApp.get("Cancelar")
+        )
     # --------------------------------------------------
     # UI
     # --------------------------------------------------
@@ -153,3 +167,13 @@ class CriarContaDialog(QDialog):
                 TranslatorApp.get("Erro"),
                 TranslatorApp.get("Não foi possível criar a conta."),
             )
+    # ======================================================
+    # CICLO DE VIDA
+    # ======================================================
+    def closeEvent(self, event):
+        try:
+            TranslatorApp.unbind(self)
+        except Exception:
+            pass
+
+        super().closeEvent(event)

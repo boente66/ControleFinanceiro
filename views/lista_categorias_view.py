@@ -38,10 +38,33 @@ class ListaCategoriasView(QWidget):
         self.resize(600, 400)
 
         self._init_ui()
+        
         self.load_categorias()
-
+       
         # 🔥 tradução automática global
-        TranslatorApp.enable_auto_translation(self)
+        TranslatorApp.bind(self._atualizar_textos, self)
+        self._atualizar_textos()
+
+    def _atualizar_textos(self, *_):
+        self.setWindowTitle(
+            TranslatorApp.get("Listas e Categorias")
+        )
+
+        self.title.setText(
+            TranslatorApp.get("Listas e Categorias")
+        )
+
+        self.btn_nova.setText(
+            TranslatorApp.get("Nova Categoria")
+        )
+
+        self.btn_sub.setText(
+            TranslatorApp.get("Nova Subcategoria")
+        )
+
+        self.btn_excluir.setText(
+            TranslatorApp.get("Excluir")
+        )
 
     # ==================================================
     # UI
@@ -341,3 +364,15 @@ class ListaCategoriasView(QWidget):
                     TranslatorApp.get("Erro"),
                     str(e)
                 )
+    
+
+    # ======================================================
+    # CICLO DE VIDA
+    # ======================================================
+    def closeEvent(self, event):
+        try:
+            TranslatorApp.unbind(self)
+        except Exception:
+            pass
+
+        super().closeEvent(event)

@@ -177,3 +177,15 @@ class MetaView(QWidget):
     def _excluir(self, id_meta):
         self.controller.excluir_meta(id_meta)
         self.carregar_metas()
+
+
+    # ======================================================
+    # CICLO DE VIDA
+    # ======================================================
+    def closeEvent(self, event):
+        try:
+            TranslatorApp.unbind(self)
+        except Exception:
+            pass
+
+        super().closeEvent(event)

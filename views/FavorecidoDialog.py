@@ -193,7 +193,7 @@ class FavorecidoDialog(QDialog):
             if id_fav:
                 self.controller.atualizar_favorecido(id_fav, self.dados)
             else:
-                self.controller.criar_favorecido(self.dados)
+                self.controller.adicionar_favorecido(self.dados)
 
             self.accept()
 

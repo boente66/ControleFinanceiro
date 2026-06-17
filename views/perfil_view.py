@@ -85,7 +85,8 @@ class PerfilView(QWidget):
     # DADOS DINÂMICOS
     # --------------------------------------------------
     def _update_user_info(self):
-
+        self.titulo.setText(f"{TranslatorApp.get('Perfil do Usuário')}")
+        
         self.lbl_nome.setText(
             f"{TranslatorApp.get('Nome')}: {self.usuario.get('Nome', '-')}"
         )

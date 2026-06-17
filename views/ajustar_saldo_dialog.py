@@ -40,6 +40,10 @@ class AjustarSaldoDialog(QDialog):
 
     def _atualizar_textos(self):
             self.lbl_conta.setText(TranslatorApp.get("Ajustar Saldo da Conta"))
+            self.lbl_saldo.setText(TranslatorApp.get("Novo saldo") + ":")
+            self.btn_salvar.setText(TranslatorApp.get("Salvar Ajuste"))
+            self.btn_cancelar.setText(TranslatorApp.get("Cancelar"))
+
 
     # --------------------------------------------------
     # UI
@@ -112,3 +116,14 @@ class AjustarSaldoDialog(QDialog):
                 TranslatorApp.get("Erro"),
                 str(e)
             )
+
+    #--------------------------------------------------
+    # CICLO DE VIDA
+    #--------------------------------------------------
+    def closeEvent(self, event):
+        try:
+            TranslatorApp.unbind(self)
+        except Exception:
+            pass
+
+        super().closeEvent(event)

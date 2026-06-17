@@ -49,12 +49,19 @@ class ResumoFinanceiroView(QWidget):
         self.load_data()
 
         # 🔥 dashboard → precisa de bind
-        TranslatorApp.bind(self._on_translate,self)
+        TranslatorApp.bind(self._atualizar_textos, self)
+        self._atualizar_textos()
 
     # ==================================================
     # CICLO DE VIDA
     # ==================================================
     def closeEvent(self, event):
+
+        try:
+            TranslatorApp.unbind(self)
+        except Exception:
+            pass
+
         try:
             if self._canvas:
                 self._canvas.deleteLater()
@@ -67,7 +74,40 @@ class ResumoFinanceiroView(QWidget):
     # ==================================================
     # REATIVIDADE
     # ==================================================
-    def _on_translate(self, *_):
+    def _atualizar_textos(self, *_):
+
+        self.setWindowTitle(
+            TranslatorApp.get("Resumo Financeiro")
+        )
+
+        self.title.setText(
+            TranslatorApp.get("Resumo Financeiro")
+        )
+
+        self.contas_group.setTitle(
+            TranslatorApp.get("Saldos das Contas")
+        )
+
+        self.cartoes_group.setTitle(
+            TranslatorApp.get("Cartões de Crédito")
+        )
+
+        self.lancamentos_group.setTitle(
+            TranslatorApp.get("Próximos Lançamentos Agendados")
+        )
+
+        self.receitas_group.setTitle(
+            TranslatorApp.get("Receitas e Despesas do Mês")
+        )
+
+        self.analise_group.setTitle(
+            TranslatorApp.get("Análise do Mês")
+        )
+
+        self.metas_group.setTitle(
+            TranslatorApp.get("Metas Financeiras")
+        )
+
         self.load_data()
 
     # ==================================================

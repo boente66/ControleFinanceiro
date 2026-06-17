@@ -27,7 +27,26 @@ class CadastroUsuarioDialog(QDialog):
         self.setWindowTitle("Cadastro de Usuário")
 
         # 🔥 tradução automática global
-        TranslatorApp.enable_auto_translation(self)
+        TranslatorApp.bind(self._atualizar_textos, self)
+        self._atualizar_textos()
+    
+    #==================================================
+    # REATIVIDADE
+    #==================================================
+    def _atualizar_textos(self, *_):
+        self.setWindowTitle(TranslatorApp.get("Cadastro de Usuário"))
+        self.lbl_nome.setText(TranslatorApp.get("Nome") + ":")
+        self.lbl_nascimento.setText(TranslatorApp.get("Data de Nascimento") + ":")
+        self.lbl_sexo.setText(TranslatorApp.get("Sexo") + ":")
+        self.lbl_cpf.setText(TranslatorApp.get("CPF") + ":")
+        self.lbl_tel.setText(TranslatorApp.get("Telefone") + ":")
+        self.lbl_cel.setText(TranslatorApp.get("Celular") + ":")
+        self.lbl_email.setText(TranslatorApp.get("Email") + ":")
+        self.lbl_login.setText(TranslatorApp.get("Login") + ":")
+        self.lbl_senha.setText(TranslatorApp.get("Senha") + ":")
+        self.lbl_nivel.setText(TranslatorApp.get("Nível de Acesso") + ":")
+
+        self.btn_salvar.setText(TranslatorApp.get("Salvar"))
 
     # -------------------------------------------------
     # UI
@@ -216,3 +235,13 @@ class CadastroUsuarioDialog(QDialog):
                 TranslatorApp.get("Erro"),
                 f"{TranslatorApp.get('Erro ao cadastrar usuário')}:\n{e}"
             )
+    #-----------------------------------------------------------
+    # CICLO DE VIDA
+    #-----------------------------------------------------------
+    def closeEvent(self, event):
+        try:
+            TranslatorApp.unbind(self)
+        except Exception:
+            pass
+
+        super().closeEvent(event)

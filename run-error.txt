@@ -1,1 +1,0 @@
-bash: ./financeiro/bin/python: Arquivo ou diretório inexistente

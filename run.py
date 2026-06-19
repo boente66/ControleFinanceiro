@@ -3,7 +3,7 @@ import sys
 import logging
 import traceback
 
-from PyQt5.QtWidgets import QApplication, QDialog
+from PyQt5.QtWidgets import QApplication, QDialog, QMessageBox
 
 from core.config import carregar_config
 from core.session import Session
@@ -14,32 +14,31 @@ from views.login_dialog import LoginDialog
 from views.main_view import MainView
 
 
-# ============================================================
-# LOG GLOBAL
-# ============================================================
 logging.basicConfig(
     level=logging.DEBUG,
+    filename="finance-assist.log",
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 )
 
 logger = logging.getLogger(__name__)
 
 
-# ============================================================
-# CAPTURA GLOBAL DE ERRO
-# ============================================================
 def excecao_global(exctype, value, tb):
-    print("\n========== ERRO GLOBAL ==========")
-    traceback.print_exception(exctype, value, tb)
-    input("\nPressione ENTER para sair...")
+    erro = "".join(traceback.format_exception(exctype, value, tb))
+    logger.critical("ERRO GLOBAL:\n%s", erro)
+
+    app = QApplication.instance()
+    if app:
+        QMessageBox.critical(
+            None,
+            "Erro",
+            f"Ocorreu um erro inesperado:\n\n{value}"
+        )
 
 
 sys.excepthook = excecao_global
 
 
-# ============================================================
-# TEMA
-# ============================================================
 def aplicar_tema(tema, app=None):
     try:
         app = app or QApplication.instance()
@@ -63,58 +62,30 @@ def aplicar_tema(tema, app=None):
             app.setStyleSheet("")
 
 
-# ============================================================
-# MAIN
-# ============================================================
 def main():
-    print(">>> INICIANDO APLICAÇÃO")
-
     app = QApplication(sys.argv)
 
     try:
-        # ==============================
-        # CONFIG
-        # ==============================
-        print(">>> Carregando config")
         config = carregar_config()
         Session.load_config(config)
 
-        # ==============================
-        # TRADUÇÕES
-        # ==============================
-        print(">>> Carregando traduções")
         TranslatorApp.initialize()
 
-        # ==============================
-        # IDIOMA
-        # ==============================
-        print(">>> Aplicando idioma")
         Session.on_idioma_change(TranslatorApp.set_language)
         TranslatorApp.set_language(
             Session.get_config("idioma", "pt")
         )
 
-        # ==============================
-        # TEMA
-        # ==============================
-        print(">>> Aplicando tema")
         tema = Session.get_config("tema", "Claro")
         aplicar_tema(tema, app)
 
-        def on_theme_change(novo_tema):
-            aplicar_tema(novo_tema, app)
+        Session.on_tema_change(
+            lambda novo_tema: aplicar_tema(novo_tema, app)
+        )
 
-        Session.on_tema_change(on_theme_change)
-
-        # ==============================
-        # LOGIN
-        # ==============================
-        print(">>> Abrindo login")
         login = LoginDialog()
 
         if login.exec_() == QDialog.Accepted:
-            print(">>> Login OK")
-
             usuario = login.usuario_logado
 
             if not usuario:
@@ -122,27 +93,24 @@ def main():
 
             Session.set_usuario(usuario)
 
-            print(">>> Abrindo MainView")
-
             main_window = MainView(usuario)
             main_window.show()
 
-            print(">>> App rodando")
-
             return app.exec_()
 
-        print(">>> Login cancelado")
         return 0
 
-    except Exception:
-        print("\n========== ERRO NO MAIN ==========")
-        traceback.print_exc()
-        input("\nPressione ENTER para sair...")
+    except Exception as e:
+        logger.exception("Erro no main")
+
+        QMessageBox.critical(
+            None,
+            "Erro",
+            f"Erro ao iniciar o Finance Assist:\n\n{e}"
+        )
+
         return 1
 
 
-# ============================================================
-# ENTRYPOINT
-# ============================================================
 if __name__ == "__main__":
     sys.exit(main())

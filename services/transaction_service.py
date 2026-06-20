@@ -424,10 +424,33 @@ class TransactionService:
             else data.strftime("%Y-%m-%d")
         )
 
+
+        conta_origem = self.account_model.get_account_by_id(
+            id_origem,
+            id_usuario
+        )
+
+        conta_destino = self.account_model.get_account_by_id(
+            id_destino,
+            id_usuario
+        )
+
+        nome_origem = (
+            conta_origem.get("Nome_Conta")
+            if conta_origem
+            else f"Conta {id_origem}"
+        )
+
+        nome_destino = (
+            conta_destino.get("Nome_Conta")
+            if conta_destino
+            else f"Conta {id_destino}"
+        )
+
         self._criar_transacao_base(
             {
                 "ID_Conta": id_origem,
-                "Descricao": f"Transferência para conta {id_destino}",
+                "Descricao": f"Transferência para conta {nome_destino}",
                 "Valor": -abs(float(valor)),
                 "Data": data_str,
                 "Tipo": "Transferência",
@@ -439,7 +462,7 @@ class TransactionService:
         self._criar_transacao_base(
             {
                 "ID_Conta": id_destino,
-                "Descricao": f"Transferência recebida da conta {id_origem}",
+                "Descricao": f"Transferência recebida da conta {nome_origem}",
                 "Valor": abs(float(valor)),
                 "Data": data_str,
                 "Tipo": "Transferência",

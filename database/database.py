@@ -171,7 +171,7 @@ CREATE TABLE IF NOT EXISTS favorecido (
 
 CREATE TABLE IF NOT EXISTS pessoa_fisica (
     ID_Favorecido INTEGER PRIMARY KEY,
-    CPF TEXT UNIQUE,
+    CPF TEXT ,
     Telefone TEXT,
 
     FOREIGN KEY(ID_Favorecido)
@@ -181,7 +181,7 @@ CREATE TABLE IF NOT EXISTS pessoa_fisica (
 
 CREATE TABLE IF NOT EXISTS pessoa_juridica (
     ID_Favorecido INTEGER PRIMARY KEY,
-    CNPJ TEXT UNIQUE,
+    CNPJ TEXT ,
     Razao_Social TEXT,
     Telefone TEXT,
 
